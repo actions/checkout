@@ -1,0 +1,30 @@
+name: 'Checkout'
+description: 'Get sources from a GitHub repository.'
+author: 'GitHub'
+inputs: 
+  repository:
+    description: 'Repository name'
+    required: true
+    default: ${{ github.repository }}
+  ref:
+    description: 'Ref to checkout when version is not specified'
+    default: ${{ github.ref }}
+  version:
+    description: 'Commit SHA to checkout'
+    default: ${{ github.version }}
+  token:
+    description: 'Access token for clone repository'
+    default: ${{ github.token }}
+  clean:
+    description: 'If true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching'
+    default: true
+  submodules:
+    description: 'Directory containing files to upload'
+  lfs:
+    description: 'Whether to download Git-LFS files; defaults to false'
+  fetchDepth:
+    description: 'The depth of commits to ask Git to fetch; defaults to no limit'  
+  path:
+    description: 'Optional path to check out source code'  
+runs:
+  plugin: 'checkout'
