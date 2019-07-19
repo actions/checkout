@@ -26,5 +26,6 @@ inputs:
     description: 'The depth of commits to ask Git to fetch; defaults to no limit'  
   path:
     description: 'Optional path to check out source code'  
+    default: 'foo/${{github.ref}}'
 runs:
   plugin: 'checkout'
