@@ -9,8 +9,8 @@ See [action.yml](action.yml)
 Basic:
 ```yaml
 actions:
-- uses: actions/checkout@latest
-- uses: actions/setup-node@latest
+- uses: actions/checkout@master
+- uses: actions/setup-node@master
   with:
     version: 10.x 
 - run: npm install
