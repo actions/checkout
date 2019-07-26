@@ -8,7 +8,7 @@ See [action.yml](action.yml)
 
 Basic:
 ```yaml
-actions:
+steps:
 - uses: actions/checkout@master
 - uses: actions/setup-node@master
   with:
