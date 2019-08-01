@@ -11,7 +11,7 @@ inputs:
     description: 'If true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
   submodules:
-    description: 'Directory containing files to upload'
+    description: 'Whether to recursively clone submodules; defaults to false'
   lfs:
     description: 'Whether to download Git-LFS files; defaults to false'
   fetch-depth:
