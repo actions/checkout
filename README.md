@@ -2,6 +2,9 @@
 
 This action checks out your repository so that your workflow operates from the root of the repository
 
+By default, this is equivalent to running `git fetch` and `git checkout $GITHUB_SHA`, so that you'll always have your repo contents at the version that triggered the workflow.
+See [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn what `$GITHUBS_SHA` is for different kinds of events.
+
 # Usage
 
 See [action.yml](action.yml)
