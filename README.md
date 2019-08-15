@@ -15,7 +15,7 @@ steps:
 - uses: actions/checkout@master
 - uses: actions/setup-node@master
   with:
-    version: 10.x 
+    node-version: 10.x 
 - run: npm install
 - run: npm test
 ```
