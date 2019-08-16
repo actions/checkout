@@ -1,6 +1,6 @@
 # checkout
 
-This action checks out your repository to `$GITHUB_WORKSPACE`, so that you so that your workflow can access the contents of your repository.
+This action checks out your repository to `$GITHUB_WORKSPACE`, so that your workflow can access the contents of your repository.
 
 # Usage
 
