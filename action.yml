@@ -1,5 +1,5 @@
 name: 'Checkout'
-description: 'Get sources from a GitHub repository.'
+description: 'Checkout a Git repository.'
 inputs: 
   repository:
     description: 'Repository name'
