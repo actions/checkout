@@ -1,6 +1,6 @@
 # checkout
 
-This action checks out your repository so that your workflow operates from the root of the repository
+This action checks out your repository to `$GITHUB_WORKSPACE`, so that your workflow can access the contents of your repository.
 
 By default, this is equivalent to running `git fetch` and `git checkout $GITHUB_SHA`, so that you'll always have your repo contents at the version that triggered the workflow.
 See [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn what `$GITHUB_SHA` is for different kinds of events.
