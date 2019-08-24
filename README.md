@@ -10,6 +10,7 @@ See [here](https://help.github.com/en/articles/events-that-trigger-workflows) to
 See [action.yml](action.yml)
 
 Basic:
+
 ```yaml
 steps:
 - uses: actions/checkout@master
@@ -19,6 +20,16 @@ steps:
 - run: npm install
 - run: npm test
 ```
+
+To check out the branch or tag ref that triggered the workflow run:
+
+```yaml
+- uses: actions/checkout@master
+  with:
+    ref: ${{ github.ref }}
+```
+
+For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions)
 
 # License
 
