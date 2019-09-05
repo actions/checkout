@@ -21,12 +21,12 @@ steps:
 - run: npm test
 ```
 
-To check out the branch or tag ref that triggered the workflow run:
+By default, the branch or tag ref that triggered the workflow will be checked out. If you wish to check out a different branch, specify that using `with.ref`:
 
 ```yaml
 - uses: actions/checkout@master
   with:
-    ref: ${{ github.ref }}
+    ref: some-branch
 ```
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions)
