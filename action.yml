@@ -19,4 +19,5 @@ inputs:
   path:
     description: 'Optional path to check out source code'  
 runs:
+  # Plugins live on the runner and are only available to a certain set of first party actions.
   plugin: 'checkout'
