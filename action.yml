@@ -11,7 +11,7 @@ inputs:
     description: 'If true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
   submodules:
-    description: 'Whether to recursively clone submodules; defaults to false'
+    description: 'Whether to clone submodules; defaults to false. To clone submodules, use `true`; to clone recursively, use `recursive`.'
   lfs:
     description: 'Whether to download Git-LFS files; defaults to false'
   fetch-depth:
