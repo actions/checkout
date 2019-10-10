@@ -1,23 +1,28 @@
 name: 'Checkout'
-description: 'Checkout a Git repository.'
+description: 'Checkout a Git repository'
 inputs: 
   repository:
     description: 'Repository name'
+    default: ${{ github.repository }}
   ref:
-    description: 'Ref to checkout (SHA, branch, tag)'
+    description: >
+      Ref to checkout (SHA, branch, tag). For the repository that triggered the
+      workflow, defaults to the ref/SHA for the event. Otherwise defaults to master.
   token:
     description: 'Access token for clone repository'
-  clean:
-    description: 'If true, execute `execute git clean -ffdx && git reset --hard HEAD` before fetching'
-    default: true
-  submodules:
-    description: 'Whether to include submodules: false to exclude submodules, true to include only one level of submodules, or recursive to recursively clone submodules; defaults to false'
-  lfs:
-    description: 'Whether to download Git-LFS files; defaults to false'
-  fetch-depth:
-    description: 'The depth of commits to ask Git to fetch; defaults to no limit'  
+    default: ${{ github.token }}
   path:
-    description: 'Optional path to check out source code'  
+    description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+  clean:
+    description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
+    default: true
+  fetch-depth:
+    description: 'Number of commits to fetch. 0 indicates all history.'
+    default: 1
+  lfs:
+    description: 'Whether to download Git-LFS files'
+    default: false
 runs:
-  # Plugins live on the runner and are only available to a certain set of first party actions.
-  plugin: 'checkout'
+  using: node12
+  main: dist/index.js
+  post: dist/index.js

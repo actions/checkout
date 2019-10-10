@@ -1,13 +1,23 @@
 # Changelog
 
-## Unreleased Changes
-- N/A
+## v2 (preview)
 
-## v1.2.0
-- Reverted the breaking behavior change in v1.1.0 that broke custom authentication flows
+- Improved fetch performance
+  - The default behavior now fetches only the SHA being checked-out.
+- Script authenticated git commands
+  - Persists `with.token` in the local git config.
+  - Enables your scripts to run authenticated git commands.
+  - Post-job cleanup removes the token.
+  - Coming soon: Opt out by setting `with.persist-credentials` to `false`.
+- Creates a local branch
+  - No longer detached HEAD when checking out a branch.
+  - A local branch is created with the corresponding upstream branch set.
+- Improved layout
+  - `with.path` is always relative to `github.workspace`.
+  - Aligns better with container actions, where `github.workspace` gets mapped in.
+- Removed input `submodules`
 
-## v1.1.0 (Not reccomended for use, this functionality will be ported to the 2.0 update)
-- Persist `with.token` or `${{ github.token }}` into checkout repository's git config as `http.https://github.com/.extraheader=AUTHORIZATION: basic ***` to better support scripting git
 
-## v1.0.0
-- Initial Release of the checkout action
+## v1
+
+Refer [here](https://github.com/actions/checkout/blob/v1/CHANGELOG.md) for the V1 changelog
