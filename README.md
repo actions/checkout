@@ -51,6 +51,11 @@ Checkout private submodules:
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
+# Changelog
+
+## master (unreleased)
+- Persist `with.token` or `${{ github.token }}` into checkout repository's git config as `http.https://github.com/.extraheader=AUTHORIZATION: basic ***` to better support scripting git
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
