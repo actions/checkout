@@ -13,7 +13,7 @@ Basic:
 
 ```yaml
 steps:
-- uses: actions/checkout@master
+- uses: actions/checkout@v1.0.0
 - uses: actions/setup-node@master
   with:
     node-version: 10.x 
@@ -21,15 +21,35 @@ steps:
 - run: npm test
 ```
 
-By default, the branch or tag ref that triggered the workflow will be checked out. If you wish to check out a different branch, specify that using `with.ref`:
+By default, the branch or tag ref that triggered the workflow will be checked out, `${{ github.token }}` will be used for any Git server authentication. If you wish to check out a different branch, a different repository or use different token to checkout, specify that using `with.ref`, `with.repository` and `with.token`:
 
+Checkout different branch from the workflow repository:
 ```yaml
-- uses: actions/checkout@master
+- uses: actions/checkout@v1.0.0
   with:
     ref: some-branch
 ```
 
-For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions)
+Checkout different private repository:
+```yaml
+- uses: actions/checkout@v1.0.0
+  with:
+    repository: myAccount/myRepository
+    ref: refs/heads/release
+    token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
+```
+
+Checkout private submodules:
+```yaml
+- uses: actions/checkout@v1.0.0
+  with:
+    submodules: recursive
+    token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
+```
+> - `with.token` will be used as `Basic` authentication header for https requests talk to https://github.com from `git(.exe)`, ensure those private submodules are configured via `https` not `ssh`.
+> - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that comes from private repository, you will have to add your PAT as secret and use the secret in `with.token` to make `checkout` action work.
+
+For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
 # License
 
