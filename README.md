@@ -13,8 +13,8 @@ Basic:
 
 ```yaml
 steps:
-- uses: actions/checkout@v1.0.0
-- uses: actions/setup-node@master
+- uses: actions/checkout@v1
+- uses: actions/setup-node@v1
   with:
     node-version: 10.x 
 - run: npm install
@@ -25,14 +25,14 @@ By default, the branch or tag ref that triggered the workflow will be checked ou
 
 Checkout different branch from the workflow repository:
 ```yaml
-- uses: actions/checkout@v1.0.0
+- uses: actions/checkout@v1
   with:
     ref: some-branch
 ```
 
 Checkout different private repository:
 ```yaml
-- uses: actions/checkout@v1.0.0
+- uses: actions/checkout@v1
   with:
     repository: myAccount/myRepository
     ref: refs/heads/release
@@ -41,7 +41,7 @@ Checkout different private repository:
 
 Checkout private submodules:
 ```yaml
-- uses: actions/checkout@v1.0.0
+- uses: actions/checkout@v1
   with:
     submodules: recursive
     token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
@@ -53,7 +53,7 @@ For more details, see [Contexts and expression syntax for GitHub Actions](https:
 
 # Changelog
 
-## master (unreleased)
+## v1.1.0 (unreleased)
 - Persist `with.token` or `${{ github.token }}` into checkout repository's git config as `http.https://github.com/.extraheader=AUTHORIZATION: basic ***` to better support scripting git
 
 # License
