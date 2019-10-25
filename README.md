@@ -1,4 +1,8 @@
-# checkout
+<p align="center">
+  <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
+</p>
+
+# Checkout
 
 This action checks out your repository to `$GITHUB_WORKSPACE`, so that your workflow can access the contents of your repository.
 
