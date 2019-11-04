@@ -59,7 +59,7 @@ For more details, see [Contexts and expression syntax for GitHub Actions](https:
 # Changelog
 
 # V1.1.0
-Reverted Changes to automatically set Git Config and Authentication. These features did not work with some custom workflows and we will revisit them in the future.
+- Reverted Changes to automatically set Git Config and Authentication. These features did not work with some custom workflows and we will revisit them in the future.
 
 # License
 
