@@ -25,16 +25,16 @@ steps:
 - run: npm test
 ```
 
-By default, the branch or tag ref that triggered the workflow will be checked out. If you wish to check out a different branch, specify that using `with.ref`:
+By default, the branch or tag ref that triggered the workflow will be checked out. If you wish to check out a different branch, a different repository or use different token to checkout, specify that using `with.ref`, `with.repository` and `with.token`.
 
-Checkout different branch from the workflow repository:
+## Checkout different branch from the workflow repository
 ```yaml
 - uses: actions/checkout@v1
   with:
     ref: some-branch
 ```
 
-Checkout different private repository:
+## Checkout different private repository
 ```yaml
 - uses: actions/checkout@v1
   with:
@@ -42,8 +42,9 @@ Checkout different private repository:
     ref: refs/heads/master
     token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
 ```
+> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout another repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
-Checkout private submodules:
+## Checkout private submodules
 ```yaml
 - uses: actions/checkout@v1
   with:
@@ -51,7 +52,7 @@ Checkout private submodules:
     token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
 ```
 > - Private submodules must be configured via `https` not `ssh`.
-> - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that come from private repositories, you will need to add your PAT as secret and use the secret in `with.token` to make the `checkout` action work.
+> - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that come from private repositories, you will need to add your [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line) as secret and use the secret in `with.token` to make the `checkout` action work.
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
