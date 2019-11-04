@@ -25,7 +25,7 @@ steps:
 - run: npm test
 ```
 
-By default, the branch or tag ref that triggered the workflow will be checked out, `${{ github.token }}` will be used for any Git server authentication. If you wish to check out a different branch, a different repository or use different token to checkout, specify that using `with.ref`, `with.repository` and `with.token`:
+By default, the branch or tag ref that triggered the workflow will be checked out. If you wish to check out a different branch, specify that using `with.ref`:
 
 Checkout different branch from the workflow repository:
 ```yaml
@@ -34,31 +34,22 @@ Checkout different branch from the workflow repository:
     ref: some-branch
 ```
 
-Checkout different private repository:
-```yaml
-- uses: actions/checkout@v1
-  with:
-    repository: myAccount/myRepository
-    ref: refs/heads/release
-    token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
-```
-
 Checkout private submodules:
 ```yaml
 - uses: actions/checkout@v1
   with:
-    submodules: recursive
+    submodules: true // 'recursive' 'true' or 'false'
     token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
 ```
-> - `with.token` will be used as `Basic` authentication header for https requests talk to https://github.com from `git(.exe)`, ensure those private submodules are configured via `https` not `ssh`.
-> - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that comes from private repository, you will have to add your PAT as secret and use the secret in `with.token` to make `checkout` action work.
+> - Private submodules must be configured via `https` not `ssh`.
+> - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that come from private repositories, you will need to add your PAT as secret and use the secret in `with.token` to make the `checkout` action work.
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
 # Changelog
 
-## v1.1.0 (unreleased)
-- Persist `with.token` or `${{ github.token }}` into checkout repository's git config as `http.https://github.com/.extraheader=AUTHORIZATION: basic ***` to better support scripting git
+# V1.1.0
+Reverted Changes to automatically set Git Config and Authentication. These features did not work with some custom workflows and we will revisit them in the future.
 
 # License
 
