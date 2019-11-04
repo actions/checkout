@@ -34,6 +34,15 @@ Checkout different branch from the workflow repository:
     ref: some-branch
 ```
 
+Checkout different private repository:
+```yaml
+- uses: actions/checkout@v1
+  with:
+    repository: myAccount/myRepository
+    ref: refs/heads/master
+    token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
+```
+
 Checkout private submodules:
 ```yaml
 - uses: actions/checkout@v1
