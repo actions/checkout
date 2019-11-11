@@ -25,7 +25,7 @@ steps:
 - run: npm test
 ```
 
-By default, the branch or tag ref that triggered the workflow will be checked out, `${{ github.token }}` will be used for any Git server authentication. If you wish to check out a different branch, a different repository or use different token to checkout, specify that using `with.ref`, `with.repository` and `with.token`:
+By default, the sha for the given branch or tag ref that triggered the workflow will be checked out, (leaving the repository in detached HEAD state). `${{ github.token }}` will be used for any Git server authentication. If you wish to check out a different branch, a different repository or use a different token to checkout, specify that using `with.ref`, `with.repository` or `with.token` respectively:
 
 Checkout different branch from the workflow repository:
 ```yaml
