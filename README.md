@@ -53,7 +53,7 @@ Checkout private submodules:
 > - `with.token` will be used as `Basic` authentication header for https requests talk to https://github.com from `git(.exe)`, ensure those private submodules are configured via `https` not `ssh`.
 > - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that comes from private repository, you will have to add your PAT as secret and use the secret in `with.token` to make `checkout` action work.
 
-For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
+For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using encrypted secrets](https://help.github.com/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
 
 # Changelog
 
