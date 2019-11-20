@@ -56,11 +56,6 @@ By default, the branch or tag ref that triggered the workflow will be checked ou
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
-# Changelog
-
-# V1.1.0
-- Reverted Changes to automatically set Git Config and Authentication. These features did not work with some custom workflows and we will revisit them in the future.
-
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
