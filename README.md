@@ -58,8 +58,11 @@ For more details, see [Contexts and expression syntax for GitHub Actions](https:
 
 # Changelog
 
-# V1
-- Reverted Changes to automatically set Git Config and Authentication.
+## v1.2.0
+- Reverted persisting auth token changes to fix a bug with custom auth flows
+
+## v1.1.0
+- Persist `with.token` or `${{ github.token }}` into checkout repository's git config as `http.https://github.com/.extraheader=AUTHORIZATION: basic ***` to better support scripting git
 
 # License
 
