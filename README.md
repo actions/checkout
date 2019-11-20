@@ -56,6 +56,9 @@ By default, the branch or tag ref that triggered the workflow will be checked ou
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
+## Versioning
+The checkout action follows the action versioning [guidelines](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md). We strongly recommend that you bind to major version tags like `v1`, rather then referencing the `master` branch or you may encounter breaking changes.
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
