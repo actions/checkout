@@ -58,7 +58,7 @@ For more details, see [Contexts and expression syntax for GitHub Actions](https:
 
 # Changelog
 
-# V1.1.0
+# V1
 - Reverted Changes to automatically set Git Config and Authentication.
 
 # License
