@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased Changes
+- N/A
 
 ## v1.2.0
 - Reverted the breaking behavior change in v1.1.0 that broke custom authentication flows
