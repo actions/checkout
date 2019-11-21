@@ -40,7 +40,7 @@ By default, the branch or tag ref that triggered the workflow will be checked ou
   with:
     repository: myAccount/myRepository
     ref: refs/heads/master
-    token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
+    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret contains your PAT.
 ```
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout another repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
@@ -48,16 +48,21 @@ By default, the branch or tag ref that triggered the workflow will be checked ou
 ```yaml
 - uses: actions/checkout@v1
   with:
-    submodules: true // 'recursive' 'true' or 'false'
-    token: ${{ secrets.GitHub_PAT }} // `GitHub_PAT` is a secret contains your PAT.
+    submodules: true # 'recursive' 'true' or 'false'
+    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret contains your PAT.
 ```
 > - Private submodules must be configured via `https` not `ssh`.
 > - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that come from private repositories, you will need to add your [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line) as secret and use the secret in `with.token` to make the `checkout` action work.
 
 For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using secrets (encrypted variables)](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables)
 
-## Versioning
-The checkout action follows the action versioning [guidelines](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md). We strongly recommend that you bind to major version tags like `v1`, rather then referencing the `master` branch or you may encounter breaking changes.
+# Changelog
+
+## v1.2.0
+- Reverted persisting auth token changes to fix a bug with custom auth flows
+
+## v1.1.0 (Not reccomended for use, this functionalit)
+- Persist `with.token` or `${{ github.token }}` into checkout repository's git config as `http.https://github.com/.extraheader=AUTHORIZATION: basic ***` to better support scripting git
 
 # License
 
