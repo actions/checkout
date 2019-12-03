@@ -2,7 +2,7 @@ name: 'Checkout'
 description: 'Checkout a Git repository'
 inputs: 
   repository:
-    description: 'Repository name'
+    description: 'Repository name with owner. For example, actions/checkout'
     default: ${{ github.repository }}
   ref:
     description: >

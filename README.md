@@ -34,7 +34,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```yaml
 - uses: actions/checkout@v2-beta
   with:
-    # Repository name
+    # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
     repository: ''
 
