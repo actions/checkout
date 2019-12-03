@@ -66,7 +66,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@preview
+- uses: actions/checkout@v2-beta
   with:
     ref: some-branch
 ```
@@ -74,13 +74,21 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different, private repository
 
 ```yaml
-- uses: actions/checkout@preview
+- uses: actions/checkout@v2-beta
   with:
     repository: myAccount/myRepository
     ref: refs/heads/master
     token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
 ```
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout another repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
+
+## Checkout the HEAD commit of a PR, rather than the merge commit
+
+```yaml
+- uses: actions/checkout@v2-beta
+  with:
+    ref: ${{ github.event.after }}
+```
 
 # License
 
