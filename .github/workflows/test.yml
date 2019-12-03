@@ -9,10 +9,7 @@ on:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        runs-on: [ubuntu-latest]
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
