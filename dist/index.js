@@ -4981,7 +4981,7 @@ function getSource(settings) {
             // Delete the contents of the directory. Don't delete the directory itself
             // since it may be the current working directory.
             for (const file of yield fs.promises.readdir(settings.repositoryPath)) {
-                yield io.rmRF(settings.repositoryPath);
+                yield io.rmRF(path.join(settings.repositoryPath, file));
             }
         }
         // Initialize the repository
