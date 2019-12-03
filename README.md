@@ -2,7 +2,7 @@
   <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
 </p>
 
-# Checkout V2 (beta)
+# Checkout V2 beta
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
