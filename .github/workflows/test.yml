@@ -15,4 +15,4 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2-beta
         with:
-          ref: refs/pull/${{ github.event.number }}/head
+          ref: ${{ github.event.after }}
