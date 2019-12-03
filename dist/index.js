@@ -4980,6 +4980,7 @@ function getSource(settings) {
             !(yield tryPrepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean))) {
             // Delete the contents of the directory. Don't delete the directory itself
             // since it may be the current working directory.
+            core.info(`Deleting the contents of '${settings.repositoryPath}'`);
             for (const file of yield fs.promises.readdir(settings.repositoryPath)) {
                 yield io.rmRF(path.join(settings.repositoryPath, file));
             }
