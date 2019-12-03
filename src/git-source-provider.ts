@@ -59,8 +59,12 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
       settings.clean
     ))
   ) {
-    await io.rmRF(settings.repositoryPath)
-    await io.mkdirP(settings.repositoryPath)
+    // Delete the contents of the directory. Don't delete the directory itself
+    // since it may be the current working directory.
+    core.info(`Deleting the contents of '${settings.repositoryPath}'`)
+    for (const file of await fs.promises.readdir(settings.repositoryPath)) {
+      await io.rmRF(path.join(settings.repositoryPath, file))
+    }
   }
 
   // Initialize the repository

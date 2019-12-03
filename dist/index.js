@@ -4978,8 +4978,12 @@ function getSource(settings) {
         // Try prepare existing directory, otherwise recreate
         if (isExisting &&
             !(yield tryPrepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean))) {
-            yield io.rmRF(settings.repositoryPath);
-            yield io.mkdirP(settings.repositoryPath);
+            // Delete the contents of the directory. Don't delete the directory itself
+            // since it may be the current working directory.
+            core.info(`Deleting the contents of '${settings.repositoryPath}'`);
+            for (const file of yield fs.promises.readdir(settings.repositoryPath)) {
+                yield io.rmRF(path.join(settings.repositoryPath, file));
+            }
         }
         // Initialize the repository
         if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
