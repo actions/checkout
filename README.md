@@ -2,7 +2,7 @@
   <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
 </p>
 
-# Checkout V2 (preview)
+# Checkout V2 (beta)
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -10,13 +10,29 @@ By default, the repository that triggered the workflow is checked-out, for the r
 
 Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
+Changes in V2:
+- Improved fetch performance
+  - The default behavior now fetches only the SHA being checked-out
+- Script authenticated git commands
+  - Persists `with.token` in the local git config
+  - Enables your scripts to run authenticated git commands
+  - Post-job cleanup removes the token
+  - Coming soon: Opt out by setting `with.persist-credentials` to `false`
+- Creates a local branch
+  - No longer detached HEAD when checking out a branch
+  - A local branch is created with the corresponding upstream branch set
+- Improved layout
+  - `with.path` is always relative to `github.workspace`
+  - Aligns better with container actions, where `github.workspace` gets mapped in
+- Removed input `submodules`
+
 Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
 
 # Usage
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@preview
+- uses: actions/checkout@v2-beta
   with:
     # Repository name
     # Default: ${{ github.repository }}
