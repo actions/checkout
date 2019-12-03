@@ -1,0 +1,13 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "checkout-git",
+            "pattern": [
+                {
+                    "regexp": "^(fatal|error): (.*)$",
+                    "message": 2
+                }
+            ]
+        }
+    ]
+}

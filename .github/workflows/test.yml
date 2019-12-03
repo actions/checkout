@@ -1,19 +1,83 @@
-name: "test-local"
+name: Build and Test
+
 on:
   pull_request:
   push:
     branches:
       - master
-      - 'releases/*'
+      - releases/*
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1 # todo: switch to v2
+      - run: npm ci
+      - run: npm run build
+      - run: npm run format-check
+      - run: npm run lint
+      - run: npm run pack
+      - run: npm run gendocs
+      - name: Verify no unstaged changes
+        run: __test__/verify-no-unstaged-changes.sh
+
   test:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macOS-latest]
-    runs-on: ${{ matrix.os }}
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.runs-on }}
+
     steps:
-    - uses: actions/checkout@master
-    - uses: ./
-      with:
-        ref: master
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v1 # todo: switch to V2
+
+      # Basic checkout
+      - name: Basic checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        shell: bash
+        run: __test__/verify-basic.sh
+
+      # Clean
+      - name: Modify work tree
+        shell: bash
+        run: __test__/modify-work-tree.sh
+      - name: Clean checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify clean
+        shell: bash
+        run: __test__/verify-clean.sh
+
+      # Side by side
+      - name: Side by side checkout 1
+        uses: ./
+        with:
+          ref: test-data/v2/side-by-side-1
+          path: side-by-side-1
+      - name: Side by side checkout 2
+        uses: ./
+        with:
+          ref: test-data/v2/side-by-side-2
+          path: side-by-side-2
+      - name: Verify side by side
+        shell: bash
+        run: __test__/verify-side-by-side.sh
+
+      # LFS
+      - name: LFS checkout
+        uses: ./
+        with:
+          repository: actions/checkout # hardcoded, otherwise doesn't work from a fork
+          ref: test-data/v2/lfs
+          path: lfs
+          lfs: true
+      - name: Verify LFS
+        shell: bash
+        run: __test__/verify-lfs.sh

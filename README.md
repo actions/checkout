@@ -2,59 +2,69 @@
   <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
 </p>
 
-# Checkout
+# Checkout V2 (preview)
 
-This action checks out your repository to `$GITHUB_WORKSPACE`, so that your workflow can access the contents of your repository.
+This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-By default, this is equivalent to running `git fetch` and `git checkout $GITHUB_SHA`, so that you'll always have your repo contents at the version that triggered the workflow.
-See [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn what `$GITHUB_SHA` is for different kinds of events.
+By default, the repository that triggered the workflow is checked-out, for the ref/SHA that triggered the event.
+
+Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+
+Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
 
 # Usage
 
-See [action.yml](action.yml)
-
-Basic:
-
+<!-- start usage -->
 ```yaml
-steps:
-- uses: actions/checkout@v1
-- uses: actions/setup-node@v1
+- uses: actions/checkout@preview
   with:
-    node-version: 10.x 
-- run: npm install
-- run: npm test
+    # Repository name
+    # Default: ${{ github.repository }}
+    repository: ''
+
+    # Ref to checkout (SHA, branch, tag). For the repository that triggered the
+    # workflow, defaults to the ref/SHA for the event. Otherwise defaults to master.
+    ref: ''
+
+    # Access token for clone repository
+    # Default: ${{ github.token }}
+    token: ''
+
+    # Relative path under $GITHUB_WORKSPACE to place the repository
+    path: ''
+
+    # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
+    # Default: true
+    clean: ''
+
+    # Number of commits to fetch. 0 indicates all history.
+    # Default: 1
+    fetch-depth: ''
+
+    # Whether to download Git-LFS files
+    # Default: false
+    lfs: ''
 ```
+<!-- end usage -->
 
-By default, the branch or tag ref that triggered the workflow will be checked out. If you wish to check out a different branch, a different repository or use different token to checkout, specify that using `with.ref`, `with.repository` and `with.token`.
+## Checkout a different branch
 
-## Checkout different branch from the workflow repository
 ```yaml
-- uses: actions/checkout@v1
+- uses: actions/checkout@preview
   with:
     ref: some-branch
 ```
 
-## Checkout different private repository
+## Checkout a different, private repository
+
 ```yaml
-- uses: actions/checkout@v1
+- uses: actions/checkout@preview
   with:
     repository: myAccount/myRepository
     ref: refs/heads/master
-    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret contains your PAT.
+    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
 ```
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout another repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
-
-## Checkout private submodules
-```yaml
-- uses: actions/checkout@v1
-  with:
-    submodules: true # 'recursive' 'true' or 'false'
-    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret contains your PAT.
-```
-> - Private submodules must be configured via `https` not `ssh`.
-> - `${{ github.token }}` only has permission to the workflow triggering repository. If the repository contains any submodules that come from private repositories, you will need to add your [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line) as secret and use the secret in `with.token` to make the `checkout` action work.
-
-For more details, see [Contexts and expression syntax for GitHub Actions](https://help.github.com/en/articles/contexts-and-expression-syntax-for-github-actions) and [Creating and using encrypted secrets](https://help.github.com/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
 
 # License
 
