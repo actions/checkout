@@ -2,7 +2,7 @@
   "name": "checkout",
   "version": "2.0.0",
   "description": "checkout action",
-  "main": "lib/main.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "format": "prettier --write **/*.ts",
