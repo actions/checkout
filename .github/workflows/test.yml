@@ -6,7 +6,6 @@ on:
     branches:
       - master
       - releases/*
-      - users/ericsciple/m162testing
 
 jobs:
   build:
@@ -26,4 +25,4 @@ jobs:
       - run: |
           echo bar is "${{ steps.foo.outputs.bar }}"
         env:
-          bar: ${{ toJson(steps.foo) }}
+          bar: ${{ toJson(github.event) }}
