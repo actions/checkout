@@ -39,7 +39,7 @@ async function cleanup(): Promise<void> {
 
 // Main
 if (!cleanupRepositoryPath) {
-  core.setOutput('bar', 'baz')
+  core.setOutput('baR', 'baZ')
   run()
 }
 // Post
