@@ -3,6 +3,7 @@
 </p>
 
 # Checkout V2 beta
+The Checkout V2 beta is now available! You have automatically upgraded if you bound to the `master` branch. If you did not mean to upgrade, please bind to `uses: actions/checkout@v1`. Please see the [action versioning docs](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md) for more information.
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -66,7 +67,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@preview
+- uses: actions/checkout@v2-beta
   with:
     ref: some-branch
 ```
@@ -74,7 +75,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different, private repository
 
 ```yaml
-- uses: actions/checkout@preview
+- uses: actions/checkout@v2-beta
   with:
     repository: myAccount/myRepository
     ref: refs/heads/master
