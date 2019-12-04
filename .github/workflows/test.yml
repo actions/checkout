@@ -19,6 +19,7 @@ jobs:
         id: foo
         uses: ./
         with:
+          repository: actions/checkout
           ref: test-data/v2/basic
           path: basic
 
