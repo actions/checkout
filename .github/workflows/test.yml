@@ -26,4 +26,4 @@ jobs:
       - run: |
           echo bar is "${{ steps.foo.outputs.bar }}"
         env:
-          bar: ${{ toJson(steps.foo.outputs.bar) }}
+          bar: ${{ toJson(steps.foo) }}
