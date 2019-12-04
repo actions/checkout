@@ -23,4 +23,7 @@ jobs:
           ref: test-data/v2/basic
           path: basic
 
-      - run: echo foo.outputs.bar is '${{ steps.foo.outputs.bar }}'
+      - run: |
+          echo bar is "${{ steps.foo.outputs.bar }}"
+        env:
+          bar: ${{ toJson(steps.foo.outputs.bar) }}
