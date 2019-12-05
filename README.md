@@ -38,8 +38,9 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: ${{ github.repository }}
     repository: ''
 
-    # Ref to checkout (SHA, branch, tag). For the repository that triggered the
-    # workflow, defaults to the ref/SHA for the event. Otherwise defaults to master.
+    # The branch, tag or SHA to checkout.  When checking out the repository that
+    # triggered a workflow, this defaults to the reference or SHA for that event.
+    # Otherwise, defaults to `master`.
     ref: ''
 
     # Access token for clone repository
