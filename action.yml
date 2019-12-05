@@ -1,13 +1,14 @@
 name: 'Checkout'
-description: 'Checkout a Git repository'
+description: 'Checkout a Git repository at a particular version'
 inputs: 
   repository:
     description: 'Repository name with owner. For example, actions/checkout'
     default: ${{ github.repository }}
   ref:
     description: >
-      Ref to checkout (SHA, branch, tag). For the repository that triggered the
-      workflow, defaults to the ref/SHA for the event. Otherwise defaults to master.
+      The branch, tag or SHA to checkout.  When checking out the repository
+      that triggered a workflow, this defaults to the reference or SHA for
+      that event.  Otherwise, defaults to `master`.
   token:
     description: 'Access token for clone repository'
     default: ${{ github.token }}
