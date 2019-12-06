@@ -10,7 +10,8 @@ By default, the repository that triggered the workflow is checked-out, for the r
 
 Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
-Changes in V2:
+# What's new
+
 - Improved fetch performance
   - The default behavior now fetches only the SHA being checked-out
 - Script authenticated git commands
