@@ -3,7 +3,7 @@ import {ReposGetArchiveLinkParams} from '@octokit/rest'
 
 const IS_WINDOWS = process.platform === 'win32'
 
-export async function download(
+export async function downloadRepository(
   accessToken: string,
   owner: string,
   repo: string,
@@ -20,5 +20,5 @@ export async function download(
   const response = await octokit.repos.getArchiveLink(params)
   console.log(`status=${response.status}`)
   console.log(`headers=${JSON.stringify(response.headers)}`)
-  console.log(`data=${JSON.stringify(response.data)}`)
+  console.log(`data=${JSON.stringify(typeof response.data)}`)
 }

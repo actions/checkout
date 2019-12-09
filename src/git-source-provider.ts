@@ -6,7 +6,7 @@ import * as gitCommandManager from './git-command-manager'
 import * as io from '@actions/io'
 import * as path from 'path'
 import * as refHelper from './ref-helper'
-import * as repositoryApiHelper from './repository-api-helper'
+import * as githubApiHelper from './github-api-helper'
 import {IGitCommandManager} from './git-command-manager'
 
 const authConfigKey = `http.https://github.com/.extraheader`
@@ -79,7 +79,7 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
   }
 
   if (!git || `${1}` == '1') {
-    await repositoryApiHelper.download(
+    await githubApiHelper.downloadRepository(
       settings.accessToken,
       settings.repositoryOwner,
       settings.repositoryName,

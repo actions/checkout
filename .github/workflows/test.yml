@@ -12,26 +12,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1 # todo: switch to v2
-      - run: npm ci
-      - run: npm run build
-      - run: npm run format-check
-      - run: npm run lint
-      - run: npm run pack
-      - run: npm run gendocs
-      - name: Verify no unstaged changes
-        run: __test__/verify-no-unstaged-changes.sh
+      - uses: actions/checkout@v2-beta
+  #     - run: npm ci
+  #     - run: npm run build
+  #     - run: npm run format-check
+  #     - run: npm run lint
+  #     - run: npm run pack
+  #     - run: npm run gendocs
+  #     - name: Verify no unstaged changes
+  #       run: __test__/verify-no-unstaged-changes.sh
 
-  test:
-    strategy:
-      matrix:
-        runs-on: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.runs-on }}
+  # test:
+  #   strategy:
+  #     matrix:
+  #       runs-on: [ubuntu-latest, macos-latest, windows-latest]
+  #   runs-on: ${{ matrix.runs-on }}
 
-    steps:
-      # Clone this repo
-      - name: Checkout
-        uses: actions/checkout@v1 # todo: switch to V2
+  #   steps:
+  #     # Clone this repo
+  #     - name: Checkout
+  #       uses: actions/checkout@v1 # todo: switch to V2
 
       # Basic checkout
       - name: Basic checkout
