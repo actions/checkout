@@ -8093,15 +8093,18 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = new github.GitHub(accessToken);
         const params = {
-            archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
+            archive_format: IS_WINDOWS ? 'zipball' : 'tarballl',
             owner: owner,
             repo: repo,
             ref: ref
         };
         const response = yield octokit.repos.getArchiveLink(params);
+        if (response.status != 200) {
+            throw new Error(`GitHub API call failed with response status '${response.status}': ${response.data}`);
+        }
         console.log(`status=${response.status}`);
         console.log(`headers=${JSON.stringify(response.headers)}`);
-        console.log(`data=${JSON.stringify(typeof (response.data))}`);
+        console.log(`data=${JSON.stringify(typeof response.data)}`);
     });
 }
 exports.downloadRepository = downloadRepository;
