@@ -13,7 +13,7 @@ Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) 
 # What's new
 
 - Improved fetch performance
-  - The default behavior now fetches only the SHA being checked-out
+  - The default behavior now fetches only the commit being checked-out
 - Script authenticated git commands
   - Persists `with.token` in the local git config
   - Enables your scripts to run authenticated git commands
@@ -25,6 +25,8 @@ Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) 
 - Improved layout
   - `with.path` is always relative to `github.workspace`
   - Aligns better with container actions, where `github.workspace` gets mapped in
+- Fallback to REST API download
+  - When Git 2.18 or higher is not in the PATH, the REST API will be used to download the files
 - Removed input `submodules`
 
 Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
