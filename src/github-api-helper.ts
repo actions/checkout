@@ -142,15 +142,16 @@ function downloadFile(url: string, fileStream: WriteStream): Promise<void> {
           return
         }
 
-        response.on('data', chunk => {
-          fileStream.write(chunk)
-        })
+        // response.on('data', chunk => {
+        //   fileStream.write(chunk)
+        // })
         response.on('end', () => {
           resolve()
         })
         response.on('error', err => {
           reject(err)
         })
+        response.pipe(fileStream)
       })
     } catch (err) {
       reject(err)

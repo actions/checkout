@@ -8464,15 +8464,16 @@ function downloadFile(url, fileStream) {
                     response.resume(); // Consume response data to free up memory
                     return;
                 }
-                response.on('data', chunk => {
-                    fileStream.write(chunk);
-                });
+                // response.on('data', chunk => {
+                //   fileStream.write(chunk)
+                // })
                 response.on('end', () => {
                     resolve();
                 });
                 response.on('error', err => {
                     reject(err);
                 });
+                response.pipe(fileStream);
             });
         }
         catch (err) {
