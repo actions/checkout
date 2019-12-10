@@ -8111,6 +8111,7 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         console.log(`status=${response.status}`);
         console.log(`headers=${JSON.stringify(response.headers)}`);
         console.log(`data=${JSON.stringify(typeof response.data)}`);
+        console.log(`data.length=${response.data.length}`);
         const runnerTemp = process.env['RUNNER_TEMP'];
         assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
         const archiveFile = path.join(runnerTemp, 'checkout.tar.gz');
