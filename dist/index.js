@@ -4843,7 +4843,7 @@ function getSource(settings) {
             yield prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
         }
         if (!git || `${1}` == '1') {
-            core.info(`Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`);
+            core.info(`Add git Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`);
             core.info(`Instead downloading the repository files using the GitHub REST API.`);
             yield githubApiHelper.downloadRepository(settings.accessToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.repositoryPath);
         }
@@ -8115,6 +8115,9 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
         const archiveFile = path.join(runnerTemp, 'checkout.tar.gz');
         yield fs.promises.writeFile(archiveFile, response.data);
+        yield exec.exec(`ls -la "${archiveFile}"`, [], {
+            cwd: repositoryPath
+        });
         yield exec.exec(`tar -xzf "${archiveFile}"`, [], {
             cwd: repositoryPath
         });

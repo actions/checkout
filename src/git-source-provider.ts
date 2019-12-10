@@ -80,7 +80,7 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
 
   if (!git || `${1}` == '1') {
     core.info(
-      `Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`
+      `Add git Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`
     )
     core.info(
       `Instead downloading the repository files using the GitHub REST API.`
