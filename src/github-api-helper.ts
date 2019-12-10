@@ -52,7 +52,8 @@ export async function downloadRepository(
       }
       const response = await octokit.repos.getArchiveLink(params)
       console.log('GOT THE RESPONSE')
-      console.log(response.status)
+      console.log(`status=${response.status}`)
+      console.log(`headers=${JSON.stringify(response.headers)}`)
       if (response.status != 200) {
         throw new Error(
           `Unexpected response from GitHub API. Status: '${response.status}'`
