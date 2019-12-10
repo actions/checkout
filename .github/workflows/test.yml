@@ -2,7 +2,6 @@ name: Build and Test
 
 on:
   pull_request:
-  push:
     branches:
       - master
       - releases/*
@@ -12,17 +11,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2-beta
-
-      # Basic checkout
-      - name: Basic checkout
-        id: foo
-        uses: ./
         with:
-          repository: actions/checkout
-          ref: test-data/v2/basic
-          path: basic
-
-      - run: |
-          echo bar is "${{ steps.foo.outputs.bar }}"
-        env:
-          bar: ${{ toJson(github.event) }}
+          ref: ${{ github.event.pull_request.head.sha }}
