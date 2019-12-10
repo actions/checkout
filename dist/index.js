@@ -8373,7 +8373,7 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
         const archivePath = path.join(runnerTemp, 'checkout.tar.gz');
         // await fs.promises.writeFile(archivePath, raw)
         // Get the archive URL using the REST API
-        let archiveUrl = retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+        yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             // Prepare the archive stream
             core.debug(`Preparing the archive stream: ${archivePath}`);
             yield io.rmRF(archivePath);
@@ -8464,16 +8464,16 @@ function downloadFile(url, fileStream) {
                     response.resume(); // Consume response data to free up memory
                     return;
                 }
-                // response.on('data', chunk => {
-                //   fileStream.write(chunk)
-                // })
+                response.on('data', chunk => {
+                    fileStream.write(chunk);
+                });
                 response.on('end', () => {
                     resolve();
                 });
                 response.on('error', err => {
                     reject(err);
                 });
-                response.pipe(fileStream);
+                // response.pipe(fileStream)
             });
         }
         catch (err) {

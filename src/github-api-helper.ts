@@ -32,7 +32,7 @@ export async function downloadRepository(
   // await fs.promises.writeFile(archivePath, raw)
 
   // Get the archive URL using the REST API
-  let archiveUrl = retryHelper.execute(async () => {
+  await retryHelper.execute(async () => {
     // Prepare the archive stream
     core.debug(`Preparing the archive stream: ${archivePath}`)
     await io.rmRF(archivePath)
@@ -142,16 +142,16 @@ function downloadFile(url: string, fileStream: WriteStream): Promise<void> {
           return
         }
 
-        // response.on('data', chunk => {
-        //   fileStream.write(chunk)
-        // })
+        response.on('data', chunk => {
+          fileStream.write(chunk)
+        })
         response.on('end', () => {
           resolve()
         })
         response.on('error', err => {
           reject(err)
         })
-        response.pipe(fileStream)
+        // response.pipe(fileStream)
       })
     } catch (err) {
       reject(err)
