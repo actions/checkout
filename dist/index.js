@@ -8392,6 +8392,7 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
                 };
                 const response = yield octokit.repos.getArchiveLink(params);
                 console.log('GOT THE RESPONSE');
+                console.log(response.status);
                 if (response.status != 302) {
                     throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'`);
                 }
