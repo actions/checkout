@@ -8358,7 +8358,6 @@ const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const fs = __importStar(__webpack_require__(747));
 const github = __importStar(__webpack_require__(469));
-const https = __importStar(__webpack_require__(211));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const refHelper = __importStar(__webpack_require__(227));
@@ -8371,28 +8370,44 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
         const runnerTemp = process.env['RUNNER_TEMP'];
         assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
         const archivePath = path.join(runnerTemp, 'checkout.tar.gz');
-        // await fs.promises.writeFile(archivePath, raw)
-        // Get the archive URL using the REST API
-        yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-            // Prepare the archive stream
-            core.debug(`Preparing the archive stream: ${archivePath}`);
-            yield io.rmRF(archivePath);
-            const fileStream = fs.createWriteStream(archivePath);
-            const fileStreamClosed = getFileClosedPromise(fileStream);
-            try {
-                // Get the archive URL
-                core.info('Getting archive URL');
-                const archiveUrl = yield getArchiveUrl(accessToken, owner, repo, ref, commit);
-                // Download the archive
-                core.info('Downloading the archive'); // Do not print the archive URL because it has an embedded token
-                yield downloadFile(archiveUrl, fileStream);
-            }
-            finally {
-                fileStream.end();
-                yield fileStreamClosed;
-            }
-            // return Buffer.from(response.data) // response.data is ArrayBuffer
+        // Ensure file does not exist
+        core.debug(`Ensuring archive file does not exist: ${archivePath}`);
+        yield io.rmRF(archivePath);
+        // Download the archive
+        let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+            core.info('Downloading the archive using the REST API');
+            yield yield downloadArchive(accessToken, owner, repo, ref, commit);
         }));
+        // Write archive to disk
+        core.info('Writing archive to disk');
+        yield fs.promises.writeFile(archivePath, archiveData);
+        archiveData = undefined;
+        // // Get the archive URL using the REST API
+        // await retryHelper.execute(async () => {
+        //   // Prepare the archive stream
+        //   core.debug(`Preparing the archive stream: ${archivePath}`)
+        //   await io.rmRF(archivePath)
+        //   const fileStream = fs.createWriteStream(archivePath)
+        //   const fileStreamClosed = getFileClosedPromise(fileStream)
+        //   try {
+        //     // Get the archive URL
+        //     core.info('Getting archive URL')
+        //     const archiveUrl = await getArchiveUrl(
+        //       accessToken,
+        //       owner,
+        //       repo,
+        //       ref,
+        //       commit
+        //     )
+        //     // Download the archive
+        //     core.info('Downloading the archive') // Do not print the archive URL because it has an embedded token
+        //     await downloadFile(archiveUrl, fileStream)
+        //   } finally {
+        //     fileStream.end()
+        //     await fileStreamClosed
+        //   }
+        // })
+        // return Buffer.from(response.data) // response.data is ArrayBuffer
         // // Download the archive
         // core.info('Downloading the archive') // Do not print the URL since it contains a token to download the archive
         // await downloadFile(archiveUrl, archivePath)
@@ -8443,11 +8458,10 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
     });
 }
 exports.downloadRepository = downloadRepository;
-function getArchiveUrl(accessToken, owner, repo, ref, commit) {
+function downloadArchive(accessToken, owner, repo, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = new github.GitHub(accessToken);
         const params = {
-            method: 'HEAD',
             owner: owner,
             repo: repo,
             archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
@@ -8457,51 +8471,87 @@ function getArchiveUrl(accessToken, owner, repo, ref, commit) {
         console.log('GOT THE RESPONSE');
         console.log(`status=${response.status}`);
         console.log(`headers=${JSON.stringify(response.headers)}`);
-        console.log(`headers=${JSON.stringify(response.data)}`);
+        console.log(`data=${JSON.stringify(response.data)}`);
         if (response.status != 200) {
             throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'`);
         }
-        console.log('GETTING THE LOCATION');
-        const archiveUrl = response.headers['Location']; // Do not print the archive URL because it has an embedded token
-        assert.ok(archiveUrl, `Expected GitHub API response to contain 'Location' header`);
-        return archiveUrl;
+        return Buffer.from(response.data); // response.data is ArrayBuffer
+        // console.log('GETTING THE LOCATION')
+        // const archiveUrl = response.headers['Location'] // Do not print the archive URL because it has an embedded token
+        // assert.ok(
+        //   archiveUrl,
+        //   `Expected GitHub API response to contain 'Location' header`
+        // )
+        // return archiveUrl
     });
 }
-function downloadFile(url, fileStream) {
-    return new Promise((resolve, reject) => {
-        try {
-            https.get(url, (response) => {
-                if (response.statusCode != 200) {
-                    reject(`Request failed with status '${response.statusCode}'`);
-                    response.resume(); // Consume response data to free up memory
-                    return;
-                }
-                response.on('data', chunk => {
-                    fileStream.write(chunk);
-                });
-                response.on('end', () => {
-                    resolve();
-                });
-                response.on('error', err => {
-                    reject(err);
-                });
-            });
-        }
-        catch (err) {
-            reject(err);
-        }
-    });
-}
-function getFileClosedPromise(stream) {
-    return new Promise((resolve, reject) => {
-        stream.on('error', err => {
-            reject(err);
-        });
-        stream.on('finish', () => {
-            resolve();
-        });
-    });
-}
+// async function getArchiveUrl(
+//   accessToken: string,
+//   owner: string,
+//   repo: string,
+//   ref: string,
+//   commit: string
+// ): Promise<string> {
+//   const octokit = new github.GitHub(accessToken)
+//   const params: RequestOptions & ReposGetArchiveLinkParams = {
+//     method: 'HEAD',
+//     owner: owner,
+//     repo: repo,
+//     archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
+//     ref: refHelper.getDownloadRef(ref, commit)
+//   }
+//   const response = await octokit.repos.getArchiveLink(params)
+//   console.log('GOT THE RESPONSE')
+//   console.log(`status=${response.status}`)
+//   console.log(`headers=${JSON.stringify(response.headers)}`)
+//   console.log(`data=${JSON.stringify(response.data)}`)
+//   if (response.status != 200) {
+//     throw new Error(
+//       `Unexpected response from GitHub API. Status: '${response.status}'`
+//     )
+//   }
+//   console.log('GETTING THE LOCATION')
+//   const archiveUrl = response.headers['Location'] // Do not print the archive URL because it has an embedded token
+//   assert.ok(
+//     archiveUrl,
+//     `Expected GitHub API response to contain 'Location' header`
+//   )
+//   return archiveUrl
+// }
+// function downloadFile(url: string, fileStream: WriteStream): Promise<void> {
+//   return new Promise((resolve, reject) => {
+//     try {
+//       https.get(url, (response: IncomingMessage) => {
+//         if (response.statusCode != 200) {
+//           reject(`Request failed with status '${response.statusCode}'`)
+//           response.resume() // Consume response data to free up memory
+//           return
+//         }
+//         response.on('data', chunk => {
+//           fileStream.write(chunk)
+//         })
+//         response.on('end', () => {
+//           resolve()
+//         })
+//         response.on('error', err => {
+//           reject(err)
+//         })
+//       })
+//     } catch (err) {
+//       reject(err)
+//     }
+//   })
+// }
+// function getFileClosedPromise(stream: WriteStream): Promise<void> {
+//   return new Promise((resolve, reject) => {
+//     stream.on('error', err => {
+//       reject(err)
+//     })
+//     stream.on('finish', () => {
+//       resolve()
+//     })
+//   })
+// }
 
 
 /***/ }),
