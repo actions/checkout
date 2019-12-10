@@ -41,14 +41,36 @@ export async function downloadRepository(
   // }
   const runnerTemp = process.env['RUNNER_TEMP'] as string
   assert.ok(runnerTemp, 'RUNNER_TEMP not defined')
-  const archiveFile = path.join(runnerTemp, 'checkout.tar.gz')
+  const archiveFile = path.join(runnerTemp, 'checkout-archive.tar.gz')
+  await io.rmRF(archiveFile)
   await fs.promises.writeFile(archiveFile, new Buffer(response.data))
   await exec.exec(`ls -la "${archiveFile}"`, [], {
     cwd: repositoryPath
   } as ExecOptions)
+
+  const extractPath = path.join(runnerTemp, 'checkout-archive')
+  await io.rmRF(extractPath)
+  await io.mkdirP(extractPath)
   await exec.exec(`tar -xzf "${archiveFile}"`, [], {
-    cwd: repositoryPath
+    cwd: extractPath
   } as ExecOptions)
+
+  // Determine the real directory to copy (ignore extra dir at root of the archive)
+  const archiveFileNames = await fs.promises.readdir(extractPath)
+  assert.ok(
+    archiveFileNames.length == 1,
+    'Expected exactly one directory inside archive'
+  )
+  const extraDirectoryName = archiveFileNames[0]
+  core.info(`Resolved ${extraDirectoryName}`) // contains the short SHA
+  const tempRepositoryPath = path.join(extractPath, extraDirectoryName)
+
+  for (const fileName of tempRepositoryPath) {
+    const sourcePath = path.join(tempRepositoryPath, fileName)
+    const targetPath = path.join(repositoryPath, fileName)
+    await io.mv(sourcePath, targetPath)
+  }
+
   await exec.exec(`find .`, [], {
     cwd: repositoryPath
   } as ExecOptions)

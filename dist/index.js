@@ -8089,9 +8089,11 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert = __importStar(__webpack_require__(357));
+const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const fs = __importStar(__webpack_require__(747));
 const github = __importStar(__webpack_require__(469));
+const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
@@ -8117,14 +8119,29 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         // }
         const runnerTemp = process.env['RUNNER_TEMP'];
         assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
-        const archiveFile = path.join(runnerTemp, 'checkout.tar.gz');
+        const archiveFile = path.join(runnerTemp, 'checkout-archive.tar.gz');
+        yield io.rmRF(archiveFile);
         yield fs.promises.writeFile(archiveFile, new Buffer(response.data));
         yield exec.exec(`ls -la "${archiveFile}"`, [], {
             cwd: repositoryPath
         });
+        const extractPath = path.join(runnerTemp, 'checkout-archive');
+        yield io.rmRF(extractPath);
+        yield io.mkdirP(extractPath);
         yield exec.exec(`tar -xzf "${archiveFile}"`, [], {
-            cwd: repositoryPath
+            cwd: extractPath
         });
+        // Determine the real directory to copy (ignore extra dir at root of the archive)
+        const archiveFileNames = yield fs.promises.readdir(extractPath);
+        assert.ok(archiveFileNames.length == 1, 'Expected exactly one directory inside archive');
+        const extraDirectoryName = archiveFileNames[0];
+        core.info(`Resolved ${extraDirectoryName}`); // contains the short SHA
+        const tempRepositoryPath = path.join(extractPath, extraDirectoryName);
+        for (const fileName of tempRepositoryPath) {
+            const sourcePath = path.join(tempRepositoryPath, fileName);
+            const targetPath = path.join(repositoryPath, fileName);
+            yield io.mv(sourcePath, targetPath);
+        }
         yield exec.exec(`find .`, [], {
             cwd: repositoryPath
         });
