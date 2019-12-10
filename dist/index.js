@@ -8115,7 +8115,9 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
         const archiveFile = path.join(runnerTemp, 'checkout.tar.gz');
         yield fs.promises.writeFile(archiveFile, response.data);
-        yield exec.exec(`tar -xzf "${archiveFile}"`, [], { cwd: repositoryPath });
+        yield exec.exec(`tar -xzf "${archiveFile}"`, [], {
+            cwd: repositoryPath
+        });
     });
 }
 exports.downloadRepository = downloadRepository;
