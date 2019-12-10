@@ -89,7 +89,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```yaml
 - uses: actions/checkout@v2-beta
   with:
-    ref: ${{ github.event.after }}
+    ref: ${{ github.event.pull_request.head.sha }}
 ```
 
 # License
