@@ -40,30 +40,14 @@ export async function downloadRepository(
     const fileStreamClosed = getFileClosedPromise(fileStream)
 
     try {
-      // Get the archive URL using the GitHub REST API
-      core.info('Getting archive URL from GitHub REST API')
-      const octokit = new github.GitHub(accessToken)
-      const params: RequestOptions & ReposGetArchiveLinkParams = {
-        method: 'HEAD',
-        archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
-        owner: owner,
-        repo: repo,
-        ref: refHelper.getDownloadRef(ref, commit)
-      }
-      const response = await octokit.repos.getArchiveLink(params)
-      console.log('GOT THE RESPONSE')
-      console.log(`status=${response.status}`)
-      console.log(`headers=${JSON.stringify(response.headers)}`)
-      if (response.status != 200) {
-        throw new Error(
-          `Unexpected response from GitHub API. Status: '${response.status}'`
-        )
-      }
-      console.log('GETTING THE LOCATION')
-      const archiveUrl = response.headers['Location'] // Do not print the archive URL because it has an embedded token
-      assert.ok(
-        archiveUrl,
-        `Expected GitHub API response to contain 'Location' header`
+      // Get the archive URL
+      core.info('Getting archive URL')
+      const archiveUrl = await getArchiveUrl(
+        accessToken,
+        owner,
+        repo,
+        ref,
+        commit
       )
 
       // Download the archive
@@ -135,6 +119,40 @@ export async function downloadRepository(
   await exec.exec(`find .`, [], {
     cwd: repositoryPath
   } as ExecOptions)
+}
+
+async function getArchiveUrl(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  ref: string,
+  commit: string
+): Promise<string> {
+  const octokit = new github.GitHub(accessToken)
+  const params: RequestOptions & ReposGetArchiveLinkParams = {
+    method: 'HEAD',
+    owner: owner,
+    repo: repo,
+    archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
+    ref: refHelper.getDownloadRef(ref, commit)
+  }
+  const response = await octokit.repos.getArchiveLink(params)
+  console.log('GOT THE RESPONSE')
+  console.log(`status=${response.status}`)
+  console.log(`headers=${JSON.stringify(response.headers)}`)
+  console.log(`headers=${JSON.stringify(response.data)}`)
+  if (response.status != 200) {
+    throw new Error(
+      `Unexpected response from GitHub API. Status: '${response.status}'`
+    )
+  }
+  console.log('GETTING THE LOCATION')
+  const archiveUrl = response.headers['Location'] // Do not print the archive URL because it has an embedded token
+  assert.ok(
+    archiveUrl,
+    `Expected GitHub API response to contain 'Location' header`
+  )
+  return archiveUrl
 }
 
 function downloadFile(url: string, fileStream: WriteStream): Promise<void> {

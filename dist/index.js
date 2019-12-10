@@ -8380,26 +8380,9 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
             const fileStream = fs.createWriteStream(archivePath);
             const fileStreamClosed = getFileClosedPromise(fileStream);
             try {
-                // Get the archive URL using the GitHub REST API
-                core.info('Getting archive URL from GitHub REST API');
-                const octokit = new github.GitHub(accessToken);
-                const params = {
-                    method: 'HEAD',
-                    archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
-                    owner: owner,
-                    repo: repo,
-                    ref: refHelper.getDownloadRef(ref, commit)
-                };
-                const response = yield octokit.repos.getArchiveLink(params);
-                console.log('GOT THE RESPONSE');
-                console.log(`status=${response.status}`);
-                console.log(`headers=${JSON.stringify(response.headers)}`);
-                if (response.status != 200) {
-                    throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'`);
-                }
-                console.log('GETTING THE LOCATION');
-                const archiveUrl = response.headers['Location']; // Do not print the archive URL because it has an embedded token
-                assert.ok(archiveUrl, `Expected GitHub API response to contain 'Location' header`);
+                // Get the archive URL
+                core.info('Getting archive URL');
+                const archiveUrl = yield getArchiveUrl(accessToken, owner, repo, ref, commit);
                 // Download the archive
                 core.info('Downloading the archive'); // Do not print the archive URL because it has an embedded token
                 yield downloadFile(archiveUrl, fileStream);
@@ -8460,6 +8443,30 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
     });
 }
 exports.downloadRepository = downloadRepository;
+function getArchiveUrl(accessToken, owner, repo, ref, commit) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = new github.GitHub(accessToken);
+        const params = {
+            method: 'HEAD',
+            owner: owner,
+            repo: repo,
+            archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
+            ref: refHelper.getDownloadRef(ref, commit)
+        };
+        const response = yield octokit.repos.getArchiveLink(params);
+        console.log('GOT THE RESPONSE');
+        console.log(`status=${response.status}`);
+        console.log(`headers=${JSON.stringify(response.headers)}`);
+        console.log(`headers=${JSON.stringify(response.data)}`);
+        if (response.status != 200) {
+            throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'`);
+        }
+        console.log('GETTING THE LOCATION');
+        const archiveUrl = response.headers['Location']; // Do not print the archive URL because it has an embedded token
+        assert.ok(archiveUrl, `Expected GitHub API response to contain 'Location' header`);
+        return archiveUrl;
+    });
+}
 function downloadFile(url, fileStream) {
     return new Promise((resolve, reject) => {
         try {
