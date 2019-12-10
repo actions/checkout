@@ -5,6 +5,15 @@ export interface ICheckoutInfo {
   startPoint: string
 }
 
+export function getDownloadRef(ref: string, commit: string): string {
+  if (commit) {
+    return commit
+  }
+
+  // todo fix this to work with refs/pull etc
+  return ref
+}
+
 export async function getCheckoutInfo(
   git: IGitCommandManager,
   ref: string,

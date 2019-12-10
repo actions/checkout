@@ -3,6 +3,7 @@ import * as exec from '@actions/exec'
 import * as fshelper from './fs-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
+import * as retryHelper from './retry-helper'
 import {GitVersion} from './git-version'
 
 // Auth header not supported before 2.9
@@ -154,22 +155,10 @@ class GitCommandManager {
       args.push(arg)
     }
 
-    let attempt = 1
-    const maxAttempts = 3
-    while (attempt <= maxAttempts) {
-      const allowAllExitCodes = attempt < maxAttempts
-      const output = await this.execGit(args, allowAllExitCodes)
-      if (output.exitCode === 0) {
-        break
-      }
-
-      const seconds = this.getRandomIntInclusive(1, 10)
-      core.warning(
-        `Git fetch failed with exit code ${output.exitCode}. Waiting ${seconds} seconds before trying again.`
-      )
-      await this.sleep(seconds * 1000)
-      attempt++
-    }
+    const that = this
+    await retryHelper.execute(async () => {
+      await that.execGit(args)
+    })
   }
 
   getWorkingDirectory(): string {
@@ -192,22 +181,10 @@ class GitCommandManager {
   async lfsFetch(ref: string): Promise<void> {
     const args = ['lfs', 'fetch', 'origin', ref]
 
-    let attempt = 1
-    const maxAttempts = 3
-    while (attempt <= maxAttempts) {
-      const allowAllExitCodes = attempt < maxAttempts
-      const output = await this.execGit(args, allowAllExitCodes)
-      if (output.exitCode === 0) {
-        break
-      }
-
-      const seconds = this.getRandomIntInclusive(1, 10)
-      core.warning(
-        `Git lfs fetch failed with exit code ${output.exitCode}. Waiting ${seconds} seconds before trying again.`
-      )
-      await this.sleep(seconds * 1000)
-      attempt++
-    }
+    const that = this
+    await retryHelper.execute(async () => {
+      await that.execGit(args)
+    })
   }
 
   async lfsInstall(): Promise<void> {
@@ -380,16 +357,6 @@ class GitCommandManager {
     const gitHttpUserAgent = `git/${gitVersion} (github-actions-checkout)`
     core.debug(`Set git useragent to: ${gitHttpUserAgent}`)
     this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent
-  }
-
-  private getRandomIntInclusive(minimum: number, maximum: number): number {
-    minimum = Math.floor(minimum)
-    maximum = Math.floor(maximum)
-    return Math.floor(Math.random() * (maximum - minimum + 1)) + minimum
-  }
-
-  private async sleep(milliseconds): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
   }
 }
 

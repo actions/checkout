@@ -90,6 +90,7 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
       settings.repositoryOwner,
       settings.repositoryName,
       settings.ref,
+      settings.commit,
       settings.repositoryPath
     )
   } else {
