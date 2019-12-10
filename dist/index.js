@@ -8398,7 +8398,7 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
                 assert.ok(archiveUrl, `Expected GitHub API response to contain 'Location' header`);
                 // Download the archive
                 core.info('Downloading the archive'); // Do not print the archive URL because it has an embedded token
-                downloadFile(archiveUrl, fileStream);
+                yield downloadFile(archiveUrl, fileStream);
             }
             finally {
                 yield fileStreamClosed;
