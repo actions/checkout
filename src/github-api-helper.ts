@@ -36,6 +36,9 @@ export async function downloadRepository(
   console.log(`headers=${JSON.stringify(response.headers)}`)
   console.log(`data=${response.data}`)
   console.log(`data=${JSON.stringify(response.data)}`)
+  for (const key of Object.keys(response.data)) {
+    console.log(`data['${key}']=${response.data[key]}`)
+  }
   const runnerTemp = process.env['RUNNER_TEMP'] as string
   assert.ok(runnerTemp, 'RUNNER_TEMP not defined')
   const archiveFile = path.join(runnerTemp, 'checkout.tar.gz')
