@@ -3,8 +3,7 @@ import * as coreCommand from '@actions/core/lib/command'
 import * as gitSourceProvider from './git-source-provider'
 import * as inputHelper from './input-helper'
 import * as path from 'path'
-
-const cleanupRepositoryPath = process.env['STATE_repositoryPath'] as string
+import * as stateHelper from './state-helper'
 
 async function run(): Promise<void> {
   try {
@@ -31,14 +30,14 @@ async function run(): Promise<void> {
 
 async function cleanup(): Promise<void> {
   try {
-    await gitSourceProvider.cleanup(cleanupRepositoryPath)
+    await gitSourceProvider.cleanup(stateHelper.RepositoryPath)
   } catch (error) {
     core.warning(error.message)
   }
 }
 
 // Main
-if (!cleanupRepositoryPath) {
+if (!stateHelper.IsPost) {
   run()
 }
 // Post

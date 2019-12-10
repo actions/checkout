@@ -2599,6 +2599,44 @@ function paginatePlugin(octokit) {
 
 /***/ }),
 
+/***/ 153:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const coreCommand = __importStar(__webpack_require__(431));
+/**
+ * Indicates whether the POST action is running
+ */
+exports.IsPost = !!process.env['STATE_isPost'];
+/**
+ * The repository path for the POST action. The value is empty during the MAIN action.
+ */
+exports.RepositoryPath = process.env['STATE_repositoryPath'];
+/**
+ * Save the repository path so the POST action can retrieve the value.
+ */
+function setRepositoryPath(repositoryPath) {
+    coreCommand.issueCommand('save-state', { name: 'repositoryPath' }, repositoryPath);
+}
+exports.setRepositoryPath = setRepositoryPath;
+// Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
+// This is necessary since we don't have a separate entry point.
+if (!exports.IsPost) {
+    coreCommand.issueCommand('save-state', { name: 'isPost' }, 'true');
+}
+
+
+/***/ }),
+
 /***/ 168:
 /***/ (function(module) {
 
@@ -2751,7 +2789,7 @@ const coreCommand = __importStar(__webpack_require__(431));
 const gitSourceProvider = __importStar(__webpack_require__(293));
 const inputHelper = __importStar(__webpack_require__(821));
 const path = __importStar(__webpack_require__(622));
-const cleanupRepositoryPath = process.env['STATE_repositoryPath'];
+const stateHelper = __importStar(__webpack_require__(153));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -2775,7 +2813,7 @@ function run() {
 function cleanup() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            yield gitSourceProvider.cleanup(cleanupRepositoryPath);
+            yield gitSourceProvider.cleanup(stateHelper.RepositoryPath);
         }
         catch (error) {
             core.warning(error.message);
@@ -2783,7 +2821,7 @@ function cleanup() {
     });
 }
 // Main
-if (!cleanupRepositoryPath) {
+if (!stateHelper.IsPost) {
     run();
 }
 // Post
@@ -5049,22 +5087,20 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
-const coreCommand = __importStar(__webpack_require__(431));
 const fs = __importStar(__webpack_require__(747));
 const fsHelper = __importStar(__webpack_require__(618));
 const gitCommandManager = __importStar(__webpack_require__(289));
+const githubApiHelper = __importStar(__webpack_require__(464));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const refHelper = __importStar(__webpack_require__(227));
-const githubApiHelper = __importStar(__webpack_require__(464));
+const stateHelper = __importStar(__webpack_require__(153));
 const authConfigKey = `http.https://github.com/.extraheader`;
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
         const repositoryUrl = `https://github.com/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
-        // Set intra-task state for cleanup
-        coreCommand.issueCommand('save-state', { name: 'repositoryPath' }, settings.repositoryPath);
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -5088,6 +5124,8 @@ function getSource(settings) {
             yield githubApiHelper.downloadRepository(settings.accessToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
         }
         else {
+            // Save state for POST action
+            stateHelper.setRepositoryPath(settings.repositoryPath);
             // Initialize the repository
             if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
                 yield git.init();

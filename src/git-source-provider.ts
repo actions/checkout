@@ -3,10 +3,11 @@ import * as coreCommand from '@actions/core/lib/command'
 import * as fs from 'fs'
 import * as fsHelper from './fs-helper'
 import * as gitCommandManager from './git-command-manager'
+import * as githubApiHelper from './github-api-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
 import * as refHelper from './ref-helper'
-import * as githubApiHelper from './github-api-helper'
+import * as stateHelper from './state-helper'
 import {IGitCommandManager} from './git-command-manager'
 
 const authConfigKey = `http.https://github.com/.extraheader`
@@ -31,13 +32,6 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
   const repositoryUrl = `https://github.com/${encodeURIComponent(
     settings.repositoryOwner
   )}/${encodeURIComponent(settings.repositoryName)}`
-
-  // Set intra-task state for cleanup
-  coreCommand.issueCommand(
-    'save-state',
-    {name: 'repositoryPath'},
-    settings.repositoryPath
-  )
 
   // Remove conflicting file path
   if (fsHelper.fileExistsSync(settings.repositoryPath)) {
@@ -79,6 +73,9 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
       settings.repositoryPath
     )
   } else {
+    // Save state for POST action
+    stateHelper.setRepositoryPath(settings.repositoryPath)
+
     // Initialize the repository
     if (
       !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
