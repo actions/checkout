@@ -79,11 +79,9 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
   }
 
   if (!git || `${1}` == '1') {
+    core.info(`Downloading the repository files using the GitHub REST API`)
     core.info(
-      `Add git Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`
-    )
-    core.info(
-      `Instead downloading the repository files using the GitHub REST API.`
+      `To create a local repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`
     )
     await githubApiHelper.downloadRepository(
       settings.accessToken,

@@ -5101,8 +5101,8 @@ function getSource(settings) {
             yield prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
         }
         if (!git || `${1}` == '1') {
-            core.info(`Add git Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`);
-            core.info(`Instead downloading the repository files using the GitHub REST API.`);
+            core.info(`Downloading the repository files using the GitHub REST API`);
+            core.info(`To create a local repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
             yield githubApiHelper.downloadRepository(settings.accessToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
         }
         else {
