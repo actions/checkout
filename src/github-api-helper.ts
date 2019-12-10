@@ -155,7 +155,6 @@ function downloadFile(url: string, fileStream: WriteStream): Promise<void> {
         response.on('error', err => {
           reject(err)
         })
-        // response.pipe(fileStream)
       })
     } catch (err) {
       reject(err)

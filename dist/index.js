@@ -8477,7 +8477,6 @@ function downloadFile(url, fileStream) {
                 response.on('error', err => {
                     reject(err);
                 });
-                // response.pipe(fileStream)
             });
         }
         catch (err) {
