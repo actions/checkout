@@ -51,11 +51,13 @@ export async function downloadRepository(
         ref: refHelper.getDownloadRef(ref, commit)
       }
       const response = await octokit.repos.getArchiveLink(params)
+      console.log('GOT THE RESPONSE')
       if (response.status != 302) {
         throw new Error(
           `Unexpected response from GitHub API. Status: '${response.status}'`
         )
       }
+      console.log('GETTING THE LOCATION')
       const archiveUrl = response.headers['Location'] // Do not print the archive URL because it has an embedded token
       assert.ok(
         archiveUrl,
