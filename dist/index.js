@@ -8098,7 +8098,7 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = new github.GitHub(accessToken);
         const params = {
-            archive_format: IS_WINDOWS ? 'zipball' : 'tarballl',
+            archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
             owner: owner,
             repo: repo,
             ref: ref

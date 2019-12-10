@@ -20,7 +20,7 @@ export async function downloadRepository(
 ): Promise<void> {
   const octokit = new github.GitHub(accessToken)
   const params: ReposGetArchiveLinkParams = {
-    archive_format: IS_WINDOWS ? 'zipball' : 'tarballl',
+    archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
     owner: owner,
     repo: repo,
     ref: ref
