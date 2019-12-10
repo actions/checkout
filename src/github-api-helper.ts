@@ -72,11 +72,6 @@ export async function downloadRepository(
   //   }
   // })
 
-  // await fs.promises.writeFile(archivePath, raw)
-  // // await exec.exec(`ls -la "${archiveFile}"`, [], {
-  // //   cwd: repositoryPath
-  // // } as ExecOptions)
-
   // Extract archive
   const extractPath = path.join(runnerTemp, `checkout`)
   await io.rmRF(extractPath)
@@ -86,9 +81,6 @@ export async function downloadRepository(
   } else {
     await toolCache.extractTar(archivePath, extractPath)
   }
-  // await exec.exec(`tar -xzf "${archiveFile}"`, [], {
-  //   cwd: extractPath
-  // } as ExecOptions)
 
   // Determine the real directory to copy (ignore extra dir at root of the archive)
   const archiveFileNames = await fs.promises.readdir(extractPath)
