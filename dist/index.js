@@ -8121,7 +8121,7 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
         const archiveFile = path.join(runnerTemp, 'checkout-archive.tar.gz');
         yield io.rmRF(archiveFile);
-        yield fs.promises.writeFile(archiveFile, new Buffer(response.data));
+        yield fs.promises.writeFile(archiveFile, Buffer.from(response.data));
         yield exec.exec(`ls -la "${archiveFile}"`, [], {
             cwd: repositoryPath
         });
@@ -8138,7 +8138,7 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         core.info(`Resolved ${extraDirectoryName}`); // contains the short SHA
         const tempRepositoryPath = path.join(extractPath, extraDirectoryName);
         // Move the files
-        for (const fileName of (yield fs.promises.readdir(tempRepositoryPath))) {
+        for (const fileName of yield fs.promises.readdir(tempRepositoryPath)) {
             const sourcePath = path.join(tempRepositoryPath, fileName);
             const targetPath = path.join(repositoryPath, fileName);
             yield io.mv(sourcePath, targetPath);

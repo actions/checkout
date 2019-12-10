@@ -43,7 +43,7 @@ export async function downloadRepository(
   assert.ok(runnerTemp, 'RUNNER_TEMP not defined')
   const archiveFile = path.join(runnerTemp, 'checkout-archive.tar.gz')
   await io.rmRF(archiveFile)
-  await fs.promises.writeFile(archiveFile, new Buffer(response.data))
+  await fs.promises.writeFile(archiveFile, Buffer.from(response.data))
   await exec.exec(`ls -la "${archiveFile}"`, [], {
     cwd: repositoryPath
   } as ExecOptions)
