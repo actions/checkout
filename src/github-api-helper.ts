@@ -49,4 +49,7 @@ export async function downloadRepository(
   await exec.exec(`tar -xzf "${archiveFile}"`, [], {
     cwd: repositoryPath
   } as ExecOptions)
+  await exec.exec(`find .`, [], {
+    cwd: repositoryPath
+  } as ExecOptions)
 }

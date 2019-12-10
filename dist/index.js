@@ -8125,6 +8125,9 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
         yield exec.exec(`tar -xzf "${archiveFile}"`, [], {
             cwd: repositoryPath
         });
+        yield exec.exec(`find .`, [], {
+            cwd: repositoryPath
+        });
     });
 }
 exports.downloadRepository = downloadRepository;
