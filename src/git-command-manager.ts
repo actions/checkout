@@ -5,6 +5,10 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import {GitVersion} from './git-version'
 
+// Auth header not supported before 2.9
+// Wire protocol v2 not supported before 2.18
+export const MinimumGitVersion = new GitVersion('2.18')
+
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
@@ -338,13 +342,9 @@ class GitCommandManager {
     }
 
     // Minimum git version
-    // Note:
-    // - Auth header not supported before 2.9
-    // - Wire protocol v2 not supported before 2.18
-    const minimumGitVersion = new GitVersion('2.18')
-    if (!gitVersion.checkMinimum(minimumGitVersion)) {
+    if (!gitVersion.checkMinimum(MinimumGitVersion)) {
       throw new Error(
-        `Minimum required git version is ${minimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`
+        `Minimum required git version is ${MinimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`
       )
     }
 

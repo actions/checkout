@@ -4439,6 +4439,9 @@ const fshelper = __importStar(__webpack_require__(618));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const git_version_1 = __webpack_require__(559);
+// Auth header not supported before 2.9
+// Wire protocol v2 not supported before 2.18
+exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
 function CreateCommandManager(workingDirectory, lfs) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs);
@@ -4719,12 +4722,8 @@ class GitCommandManager {
                 throw new Error('Unable to determine git version');
             }
             // Minimum git version
-            // Note:
-            // - Auth header not supported before 2.9
-            // - Wire protocol v2 not supported before 2.18
-            const minimumGitVersion = new git_version_1.GitVersion('2.18');
-            if (!gitVersion.checkMinimum(minimumGitVersion)) {
-                throw new Error(`Minimum required git version is ${minimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
+            if (!gitVersion.checkMinimum(exports.MinimumGitVersion)) {
+                throw new Error(`Minimum required git version is ${exports.MinimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
             }
             if (this.lfs) {
                 // Git-lfs version
@@ -4844,6 +4843,8 @@ function getSource(settings) {
             yield prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
         }
         if (!git || `${1}` == '1') {
+            core.info(`Git version ${gitCommandManager.MinimumGitVersion} was not found in the PATH.`);
+            core.info(`Instead downloading the repository files using the GitHub REST API.`);
             yield githubApiHelper.downloadRepository(settings.accessToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.repositoryPath);
         }
         else {
@@ -8087,7 +8088,11 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const assert = __importStar(__webpack_require__(357));
+const exec = __importStar(__webpack_require__(986));
+const fs = __importStar(__webpack_require__(747));
 const github = __importStar(__webpack_require__(469));
+const path = __importStar(__webpack_require__(622));
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -8098,13 +8103,19 @@ function downloadRepository(accessToken, owner, repo, ref, repositoryPath) {
             repo: repo,
             ref: ref
         };
+        // todo: retry
         const response = yield octokit.repos.getArchiveLink(params);
         if (response.status != 200) {
-            throw new Error(`GitHub API call failed with response status '${response.status}': ${response.data}`);
+            throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'; Data: '${response.data}'`);
         }
         console.log(`status=${response.status}`);
         console.log(`headers=${JSON.stringify(response.headers)}`);
         console.log(`data=${JSON.stringify(typeof response.data)}`);
+        const runnerTemp = process.env['RUNNER_TEMP'];
+        assert.ok(runnerTemp, 'RUNNER_TEMP not defined');
+        const archiveFile = path.join(runnerTemp, 'checkout.tar.gz');
+        yield fs.promises.writeFile(archiveFile, response.data);
+        yield exec.exec(`tar -xzf "${archiveFile}"`, [], { cwd: repositoryPath });
     });
 }
 exports.downloadRepository = downloadRepository;
