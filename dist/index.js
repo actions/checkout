@@ -8376,12 +8376,12 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
         // Download the archive
         let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Downloading the archive using the REST API');
-            yield yield downloadArchive(accessToken, owner, repo, ref, commit);
+            return yield downloadArchive(accessToken, owner, repo, ref, commit);
         }));
         // Write archive to disk
         core.info('Writing archive to disk');
         yield fs.promises.writeFile(archivePath, archiveData);
-        archiveData = undefined;
+        archiveData = Buffer.from(''); // Free memory
         // // Get the archive URL using the REST API
         // await retryHelper.execute(async () => {
         //   // Prepare the archive stream
@@ -8407,28 +8407,12 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
         //     await fileStreamClosed
         //   }
         // })
-        // return Buffer.from(response.data) // response.data is ArrayBuffer
-        // // Download the archive
-        // core.info('Downloading the archive') // Do not print the URL since it contains a token to download the archive
-        // await downloadFile(archiveUrl, archivePath)
-        // // console.log(`status=${response.status}`)
-        // // console.log(`headers=${JSON.stringify(response.headers)}`)
-        // // console.log(`data=${response.data}`)
-        // // console.log(`data=${JSON.stringify(response.data)}`)
-        // // for (const key of Object.keys(response.data)) {
-        // //   console.log(`data['${key}']=${response.data[key]}`)
-        // // }
-        // // Write archive to file
-        // const runnerTemp = process.env['RUNNER_TEMP'] as string
-        // assert.ok(runnerTemp, 'RUNNER_TEMP not defined')
-        // const archivePath = path.join(runnerTemp, 'checkout.tar.gz')
-        // await io.rmRF(archivePath)
         // await fs.promises.writeFile(archivePath, raw)
         // // await exec.exec(`ls -la "${archiveFile}"`, [], {
         // //   cwd: repositoryPath
         // // } as ExecOptions)
         // Extract archive
-        const extractPath = path.join(runnerTemp, `checkout-archive${IS_WINDOWS ? '.zip' : '.tar.gz'}`);
+        const extractPath = path.join(runnerTemp, `checkout`);
         yield io.rmRF(extractPath);
         yield io.mkdirP(extractPath);
         if (IS_WINDOWS) {
@@ -8476,13 +8460,6 @@ function downloadArchive(accessToken, owner, repo, ref, commit) {
             throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'`);
         }
         return Buffer.from(response.data); // response.data is ArrayBuffer
-        // console.log('GETTING THE LOCATION')
-        // const archiveUrl = response.headers['Location'] // Do not print the archive URL because it has an embedded token
-        // assert.ok(
-        //   archiveUrl,
-        //   `Expected GitHub API response to contain 'Location' header`
-        // )
-        // return archiveUrl
     });
 }
 // async function getArchiveUrl(
