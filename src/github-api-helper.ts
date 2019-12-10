@@ -65,7 +65,8 @@ export async function downloadRepository(
   core.info(`Resolved ${extraDirectoryName}`) // contains the short SHA
   const tempRepositoryPath = path.join(extractPath, extraDirectoryName)
 
-  for (const fileName of tempRepositoryPath) {
+  // Move the files
+  for (const fileName of await fs.promises.readdir(tempRepositoryPath)) {
     const sourcePath = path.join(tempRepositoryPath, fileName)
     const targetPath = path.join(repositoryPath, fileName)
     await io.mv(sourcePath, targetPath)
