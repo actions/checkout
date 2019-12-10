@@ -8404,6 +8404,7 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
                 yield downloadFile(archiveUrl, fileStream);
             }
             finally {
+                fileStream.end();
                 yield fileStreamClosed;
             }
             // return Buffer.from(response.data) // response.data is ArrayBuffer

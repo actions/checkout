@@ -69,6 +69,7 @@ export async function downloadRepository(
       core.info('Downloading the archive') // Do not print the archive URL because it has an embedded token
       await downloadFile(archiveUrl, fileStream)
     } finally {
+      fileStream.end()
       await fileStreamClosed
     }
 
