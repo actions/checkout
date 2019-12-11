@@ -15,6 +15,11 @@ jobs:
           mv */* ./
 
       # Basic checkout
+      - shell: cmd
+        run: |
+          echo echo hello > git.cmd
+          echo ::add-path::%CD%
+
       - name: Basic checkout
         uses: ./
         with:
