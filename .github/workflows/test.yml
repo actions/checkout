@@ -1,12 +1,6 @@
 name: Build and Test
 
-on:
-  pull_request:
-  push:
-    branches:
-      - master
-      - releases/*
-      - users/*
+on: push
 
 jobs:
   test-archive:
@@ -30,4 +24,3 @@ jobs:
         shell: bash
         run: __test__/verify-basic.sh container
 
-        
