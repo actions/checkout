@@ -17,6 +17,9 @@ export class RetryHelper {
     this.maxAttempts = maxAttempts
     this.minSeconds = Math.floor(minSeconds)
     this.maxSeconds = Math.floor(maxSeconds)
+    if (this.minSeconds > this.maxAttempts) {
+      throw new Error('min seconds should be less than or equal to max seconds')
+    }
   }
 
   async execute<T>(action: () => Promise<T>): Promise<T> {

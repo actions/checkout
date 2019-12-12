@@ -58,7 +58,11 @@ export async function downloadRepository(
   for (const fileName of await fs.promises.readdir(tempRepositoryPath)) {
     const sourcePath = path.join(tempRepositoryPath, fileName)
     const targetPath = path.join(repositoryPath, fileName)
-    await io.mv(sourcePath, targetPath)
+    if (IS_WINDOWS) {
+      await io.cp(sourcePath, targetPath) // Copy on Windows in case Windows Defender has a lock on the files
+    } else {
+      await io.mv(sourcePath, targetPath)
+    }
   }
   io.rmRF(extractPath)
 }
@@ -80,7 +84,7 @@ async function downloadArchive(
   const response = await octokit.repos.getArchiveLink(params)
   if (response.status != 200) {
     throw new Error(
-      `Unexpected response from GitHub API. Status: '${response.status}'`
+      `Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`
     )
   }
 

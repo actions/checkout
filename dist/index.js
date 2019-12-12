@@ -8438,7 +8438,12 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
         for (const fileName of yield fs.promises.readdir(tempRepositoryPath)) {
             const sourcePath = path.join(tempRepositoryPath, fileName);
             const targetPath = path.join(repositoryPath, fileName);
-            yield io.mv(sourcePath, targetPath);
+            if (IS_WINDOWS) {
+                yield io.cp(sourcePath, targetPath); // Copy on Windows in case Windows Defender has a lock on the files
+            }
+            else {
+                yield io.mv(sourcePath, targetPath);
+            }
         }
         io.rmRF(extractPath);
     });
@@ -8455,7 +8460,7 @@ function downloadArchive(accessToken, owner, repo, ref, commit) {
         };
         const response = yield octokit.repos.getArchiveLink(params);
         if (response.status != 200) {
-            throw new Error(`Unexpected response from GitHub API. Status: '${response.status}'`);
+            throw new Error(`Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`);
         }
         return Buffer.from(response.data); // response.data is ArrayBuffer
     });
@@ -9802,6 +9807,9 @@ class RetryHelper {
         this.maxAttempts = maxAttempts;
         this.minSeconds = Math.floor(minSeconds);
         this.maxSeconds = Math.floor(maxSeconds);
+        if (this.minSeconds > this.maxAttempts) {
+            throw new Error('min seconds should be less than or equal to max seconds');
+        }
     }
     execute(action) {
         return __awaiter(this, void 0, void 0, function* () {
