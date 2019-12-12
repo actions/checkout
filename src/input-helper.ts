@@ -97,8 +97,12 @@ export function getInputs(): ISourceSettings {
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
 
-  // Access token
-  result.accessToken = core.getInput('token')
+  // Auth token
+  result.authToken = core.getInput('token')
+
+  // Persist credentials
+  result.persistCredentials =
+    (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
   return result
 }

@@ -12,7 +12,7 @@ import {ReposGetArchiveLinkParams} from '@octokit/rest'
 const IS_WINDOWS = process.platform === 'win32'
 
 export async function downloadRepository(
-  accessToken: string,
+  authToken: string,
   owner: string,
   repo: string,
   ref: string,
@@ -22,7 +22,7 @@ export async function downloadRepository(
   // Download the archive
   let archiveData = await retryHelper.execute(async () => {
     core.info('Downloading the archive')
-    return await downloadArchive(accessToken, owner, repo, ref, commit)
+    return await downloadArchive(authToken, owner, repo, ref, commit)
   })
 
   // Write archive to disk
@@ -68,13 +68,13 @@ export async function downloadRepository(
 }
 
 async function downloadArchive(
-  accessToken: string,
+  authToken: string,
   owner: string,
   repo: string,
   ref: string,
   commit: string
 ): Promise<Buffer> {
-  const octokit = new github.GitHub(accessToken)
+  const octokit = new github.GitHub(authToken)
   const params: ReposGetArchiveLinkParams = {
     owner: owner,
     repo: repo,

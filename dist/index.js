@@ -4838,7 +4838,7 @@ class GitCommandManager {
     }
     config(configKey, configValue) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['config', configKey, configValue]);
+            yield this.execGit(['config', '--local', configKey, configValue]);
         });
     }
     configExists(configKey) {
@@ -4846,7 +4846,7 @@ class GitCommandManager {
             const pattern = configKey.replace(/[^a-zA-Z0-9_]/g, x => {
                 return `\\${x}`;
             });
-            const output = yield this.execGit(['config', '--name-only', '--get-regexp', pattern], true);
+            const output = yield this.execGit(['config', '--local', '--name-only', '--get-regexp', pattern], true);
             return output.exitCode === 0;
         });
     }
@@ -4932,19 +4932,19 @@ class GitCommandManager {
     }
     tryConfigUnset(configKey) {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--unset-all', configKey], true);
+            const output = yield this.execGit(['config', '--local', '--unset-all', configKey], true);
             return output.exitCode === 0;
         });
     }
     tryDisableAutomaticGarbageCollection() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', 'gc.auto', '0'], true);
+            const output = yield this.execGit(['config', '--local', 'gc.auto', '0'], true);
             return output.exitCode === 0;
         });
     }
     tryGetFetchUrl() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--get', 'remote.origin.url'], true);
+            const output = yield this.execGit(['config', '--local', '--get', 'remote.origin.url'], true);
             if (output.exitCode !== 0) {
                 return '';
             }
@@ -5121,7 +5121,7 @@ function getSource(settings) {
             // Downloading using REST API
             core.info(`The repository will be downloaded using the GitHub REST API`);
             core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
-            yield githubApiHelper.downloadRepository(settings.accessToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
+            yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
         }
         else {
             // Save state for POST action
@@ -5137,30 +5137,34 @@ function getSource(settings) {
             }
             // Remove possible previous extraheader
             yield removeGitConfig(git, authConfigKey);
-            // Add extraheader (auth)
-            const base64Credentials = Buffer.from(`x-access-token:${settings.accessToken}`, 'utf8').toString('base64');
-            core.setSecret(base64Credentials);
-            const authConfigValue = `AUTHORIZATION: basic ${base64Credentials}`;
-            yield git.config(authConfigKey, authConfigValue);
-            // LFS install
-            if (settings.lfs) {
-                yield git.lfsInstall();
+            try {
+                // Config auth token
+                yield configureAuthToken(git, settings.authToken);
+                // LFS install
+                if (settings.lfs) {
+                    yield git.lfsInstall();
+                }
+                // Fetch
+                const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
+                yield git.fetch(settings.fetchDepth, refSpec);
+                // Checkout info
+                const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+                // LFS fetch
+                // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
+                // Explicit lfs fetch will fetch lfs objects in parallel.
+                if (settings.lfs) {
+                    yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+                }
+                // Checkout
+                yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+                // Dump some info about the checked out commit
+                yield git.log1();
             }
-            // Fetch
-            const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-            yield git.fetch(settings.fetchDepth, refSpec);
-            // Checkout info
-            const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
-            // LFS fetch
-            // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
-            // Explicit lfs fetch will fetch lfs objects in parallel.
-            if (settings.lfs) {
-                yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+            finally {
+                if (!settings.persistCredentials) {
+                    yield removeGitConfig(git, authConfigKey);
+                }
             }
-            // Checkout
-            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
-            // Dump some info about the checked out commit
-            yield git.log1();
         }
     });
 }
@@ -5265,23 +5269,21 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
         }
     });
 }
+function configureAuthToken(git, authToken) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Add extraheader (auth)
+        const base64Credentials = Buffer.from(`x-access-token:${authToken}`, 'utf8').toString('base64');
+        core.setSecret(base64Credentials);
+        const authConfigValue = `AUTHORIZATION: basic ${base64Credentials}`;
+        yield git.config(authConfigKey, authConfigValue);
+    });
+}
 function removeGitConfig(git, configKey) {
     return __awaiter(this, void 0, void 0, function* () {
         if ((yield git.configExists(configKey)) &&
             !(yield git.tryConfigUnset(configKey))) {
             // Load the config contents
-            core.warning(`Failed to remove '${configKey}' from the git config. Attempting to remove the config value by editing the file directly.`);
-            const configPath = path.join(git.getWorkingDirectory(), '.git', 'config');
-            fsHelper.fileExistsSync(configPath);
-            let contents = fs.readFileSync(configPath).toString() || '';
-            // Filter - only includes lines that do not contain the config key
-            const upperConfigKey = configKey.toUpperCase();
-            const split = contents
-                .split('\n')
-                .filter(x => !x.toUpperCase().includes(upperConfigKey));
-            contents = split.join('\n');
-            // Rewrite the config file
-            fs.writeFileSync(configPath, contents);
+            core.warning(`Failed to remove '${configKey}' from the git config`);
         }
     });
 }
@@ -8403,12 +8405,12 @@ const retryHelper = __importStar(__webpack_require__(587));
 const toolCache = __importStar(__webpack_require__(533));
 const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
-function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPath) {
+function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         // Download the archive
         let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Downloading the archive');
-            return yield downloadArchive(accessToken, owner, repo, ref, commit);
+            return yield downloadArchive(authToken, owner, repo, ref, commit);
         }));
         // Write archive to disk
         core.info('Writing archive to disk');
@@ -8449,9 +8451,9 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
     });
 }
 exports.downloadRepository = downloadRepository;
-function downloadArchive(accessToken, owner, repo, ref, commit) {
+function downloadArchive(authToken, owner, repo, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = new github.GitHub(accessToken);
+        const octokit = new github.GitHub(authToken);
         const params = {
             owner: owner,
             repo: repo,
@@ -12764,8 +12766,11 @@ function getInputs() {
     // LFS
     result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
     core.debug(`lfs = ${result.lfs}`);
-    // Access token
-    result.accessToken = core.getInput('token');
+    // Auth token
+    result.authToken = core.getInput('token');
+    // Persist credentials
+    result.persistCredentials =
+        (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
     return result;
 }
 exports.getInputs = getInputs;

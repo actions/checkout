@@ -15,16 +15,16 @@ Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) 
 - Improved fetch performance
   - The default behavior now fetches only the commit being checked-out
 - Script authenticated git commands
-  - Persists `with.token` in the local git config
+  - Persists the input `token` in the local git config
   - Enables your scripts to run authenticated git commands
   - Post-job cleanup removes the token
-  - Coming soon: Opt out by setting `with.persist-credentials` to `false`
+  - Opt out by setting the input `persist-credentials: false`
 - Creates a local branch
   - No longer detached HEAD when checking out a branch
   - A local branch is created with the corresponding upstream branch set
 - Improved layout
-  - `with.path` is always relative to `github.workspace`
-  - Aligns better with container actions, where `github.workspace` gets mapped in
+  - The input `path` is always relative to $GITHUB_WORKSPACE
+  - Aligns better with container actions, where $GITHUB_WORKSPACE gets mapped in
 - Fallback to REST API download
   - When Git 2.18 or higher is not in the PATH, the REST API will be used to download the files
 - Removed input `submodules`
@@ -41,14 +41,20 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: ${{ github.repository }}
     repository: ''
 
-    # The branch, tag or SHA to checkout.  When checking out the repository that
+    # The branch, tag or SHA to checkout. When checking out the repository that
     # triggered a workflow, this defaults to the reference or SHA for that event.
     # Otherwise, defaults to `master`.
     ref: ''
 
-    # Access token for clone repository
+    # Auth token used to fetch the repository. The token is stored in the local git
+    # config, which enables your scripts to run authenticated git commands. The
+    # post-job step removes the token from the git config.
     # Default: ${{ github.token }}
     token: ''
+
+    # Whether to persist the token in the git config
+    # Default: true
+    persist-credentials: ''
 
     # Relative path under $GITHUB_WORKSPACE to place the repository
     path: ''

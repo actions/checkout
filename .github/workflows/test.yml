@@ -18,6 +18,7 @@ jobs:
       - run: npm run lint
       - run: npm run pack
       - run: npm run gendocs
+      - run: npm test
       - name: Verify no unstaged changes
         run: __test__/verify-no-unstaged-changes.sh
 
@@ -84,15 +85,12 @@ jobs:
 
   test-job-container:
     runs-on: ubuntu-latest
-    container: pstauffer/curl:latest
+    container: alpine:latest
     steps:
       # Clone this repo
-      # todo: after v2-beta contains the latest changes, switch this to "uses: actions/checkout@v2-beta". Also switch to "alpine:latest"
+      # todo: after v2-beta contains the latest changes, switch this to "uses: actions/checkout@v2-beta"
       - name: Checkout
-        run: |
-          curl --location --user token:${{ github.token }} --output checkout.tar.gz https://api.github.com/repos/actions/checkout/tarball/${{ github.sha }}
-          tar -xzf checkout.tar.gz
-          mv */* ./
+        uses: actions/checkout@a572f640b07e96fc5837b3adfa0e5a2ddd8dae21
 
       # Basic checkout
       - name: Basic checkout

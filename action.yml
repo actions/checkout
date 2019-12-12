@@ -6,12 +6,18 @@ inputs:
     default: ${{ github.repository }}
   ref:
     description: >
-      The branch, tag or SHA to checkout.  When checking out the repository
-      that triggered a workflow, this defaults to the reference or SHA for
-      that event.  Otherwise, defaults to `master`.
+      The branch, tag or SHA to checkout. When checking out the repository that
+      triggered a workflow, this defaults to the reference or SHA for that
+      event.  Otherwise, defaults to `master`.
   token:
-    description: 'Access token for clone repository'
+    description: >
+      Auth token used to fetch the repository. The token is stored in the local
+      git config, which enables your scripts to run authenticated git commands.
+      The post-job step removes the token from the git config.
     default: ${{ github.token }}
+  persist-credentials:
+    description: 'Whether to persist the token in the git config'
+    default: true
   path:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
   clean:
