@@ -88,9 +88,8 @@ jobs:
     container: alpine:latest
     steps:
       # Clone this repo
-      # todo: after v2-beta contains the latest changes, switch this to "uses: actions/checkout@v2-beta"
       - name: Checkout
-        uses: actions/checkout@a572f640b07e96fc5837b3adfa0e5a2ddd8dae21
+        uses: actions/checkout@v2-beta
 
       # Basic checkout
       - name: Basic checkout
