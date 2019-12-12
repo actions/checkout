@@ -5271,11 +5271,24 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
 }
 function configureAuthToken(git, authToken) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Add extraheader (auth)
-        const base64Credentials = Buffer.from(`x-access-token:${authToken}`, 'utf8').toString('base64');
-        core.setSecret(base64Credentials);
-        const authConfigValue = `AUTHORIZATION: basic ${base64Credentials}`;
-        yield git.config(authConfigKey, authConfigValue);
+        // Configure a placeholder value. This approach avoids the credential being captured
+        // by process creation audit events, which are commonly logged. For more information,
+        // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
+        const placeholder = `AUTHORIZATION: basic ***`;
+        yield git.config(authConfigKey, placeholder);
+        // Determine the basic credential value
+        const basicCredential = Buffer.from(`x-access-token:${authToken}`, 'utf8').toString('base64');
+        core.setSecret(basicCredential);
+        // Replace the value in the config file
+        const configPath = path.join(git.getWorkingDirectory(), '.git', 'config');
+        let content = (yield fs.promises.readFile(configPath)).toString();
+        const placeholderIndex = content.indexOf(placeholder);
+        if (placeholderIndex < 0 ||
+            placeholderIndex != content.lastIndexOf(placeholder)) {
+            throw new Error('Unable to replace auth placeholder in .git/config');
+        }
+        content = content.replace(placeholder, `AUTHORIZATION: basic ${basicCredential}`);
+        yield fs.promises.writeFile(configPath, content);
     });
 }
 function removeGitConfig(git, configKey) {
