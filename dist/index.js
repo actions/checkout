@@ -8405,12 +8405,12 @@ const retryHelper = __importStar(__webpack_require__(587));
 const toolCache = __importStar(__webpack_require__(533));
 const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
-function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPath) {
+function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         // Download the archive
         let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Downloading the archive');
-            return yield downloadArchive(accessToken, owner, repo, ref, commit);
+            return yield downloadArchive(authToken, owner, repo, ref, commit);
         }));
         // Write archive to disk
         core.info('Writing archive to disk');
@@ -8451,9 +8451,9 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
     });
 }
 exports.downloadRepository = downloadRepository;
-function downloadArchive(accessToken, owner, repo, ref, commit) {
+function downloadArchive(authToken, owner, repo, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = new github.GitHub(accessToken);
+        const octokit = new github.GitHub(authToken);
         const params = {
             owner: owner,
             repo: repo,

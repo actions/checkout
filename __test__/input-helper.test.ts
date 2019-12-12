@@ -63,7 +63,7 @@ describe('input-helper tests', () => {
   it('sets defaults', () => {
     const settings: ISourceSettings = inputHelper.getInputs()
     expect(settings).toBeTruthy()
-    expect(settings.accessToken).toBeFalsy()
+    expect(settings.authToken).toBeFalsy()
     expect(settings.clean).toBe(true)
     expect(settings.commit).toBeTruthy()
     expect(settings.commit).toBe('1234567890123456789012345678901234567890')
