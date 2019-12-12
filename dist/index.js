@@ -8439,7 +8439,7 @@ function downloadRepository(accessToken, owner, repo, ref, commit, repositoryPat
             const sourcePath = path.join(tempRepositoryPath, fileName);
             const targetPath = path.join(repositoryPath, fileName);
             if (IS_WINDOWS) {
-                yield io.cp(sourcePath, targetPath); // Copy on Windows in case Windows Defender has a lock on the files
+                yield io.cp(sourcePath, targetPath, { recursive: true }); // Copy on Windows (Windows Defender may have a lock)
             }
             else {
                 yield io.mv(sourcePath, targetPath);
