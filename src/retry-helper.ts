@@ -17,7 +17,7 @@ export class RetryHelper {
     this.maxAttempts = maxAttempts
     this.minSeconds = Math.floor(minSeconds)
     this.maxSeconds = Math.floor(maxSeconds)
-    if (this.minSeconds > this.maxAttempts) {
+    if (this.minSeconds > this.maxSeconds) {
       throw new Error('min seconds should be less than or equal to max seconds')
     }
   }
