@@ -30,7 +30,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v1 # todo: switch to V2
+        uses: actions/checkout@v2-beta
 
       # Basic checkout
       - name: Basic checkout
@@ -81,3 +81,24 @@ jobs:
       - name: Verify LFS
         shell: bash
         run: __test__/verify-lfs.sh
+
+  test-job-container:
+    runs-on: ubuntu-latest
+    container: pstauffer/curl:latest
+    steps:
+      # Clone this repo
+      # todo: after v2-beta contains the latest changes, switch this to "uses: actions/checkout@v2-beta". Also switch to "alpine:latest"
+      - name: Checkout
+        run: |
+          curl --location --user token:${{ github.token }} --output checkout.tar.gz https://api.github.com/repos/actions/checkout/tarball/${{ github.sha }}
+          tar -xzf checkout.tar.gz
+          mv */* ./
+
+      # Basic checkout
+      - name: Basic checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh --archive
