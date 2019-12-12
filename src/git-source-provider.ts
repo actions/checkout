@@ -20,6 +20,7 @@ export interface ISourceSettings {
   fetchDepth: number
   lfs: boolean
   accessToken: string
+  silentFailure: boolean
 }
 
 export async function getSource(settings: ISourceSettings): Promise<void> {
