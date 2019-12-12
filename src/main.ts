@@ -19,7 +19,16 @@ async function run(): Promise<void> {
       )
 
       // Get sources
-      await gitSourceProvider.getSource(sourceSettings)
+      try {
+        await gitSourceProvider.getSource(sourceSettings)
+      } catch (error) {
+        core.setOutput('failure', 'true')
+        if (sourceSettings.silentFailure) {
+          core.info(`Silent Failure: ${error.message}`)
+        } else {
+          throw error
+        }
+      }
     } finally {
       // Unregister problem matcher
       coreCommand.issueCommand('remove-matcher', {owner: 'checkout-git'}, '')

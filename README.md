@@ -62,6 +62,10 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Whether to download Git-LFS files
     # Default: false
     lfs: ''
+
+    # Whether to silent failure
+    # Default: false
+    silentFailure: ''
 ```
 <!-- end usage -->
 

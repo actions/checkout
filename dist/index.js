@@ -2611,7 +2611,18 @@ function run() {
                 // Register problem matcher
                 coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
                 // Get sources
-                yield gitSourceProvider.getSource(sourceSettings);
+                try {
+                    yield gitSourceProvider.getSource(sourceSettings);
+                }
+                catch (error) {
+                    core.setOutput('failure', 'true');
+                    if (sourceSettings.silentFailure) {
+                        core.info(`Silent Failure: ${error.message}`);
+                    }
+                    else {
+                        throw error;
+                    }
+                }
             }
             finally {
                 // Unregister problem matcher
@@ -10405,6 +10416,9 @@ function getInputs() {
     core.debug(`lfs = ${result.lfs}`);
     // Access token
     result.accessToken = core.getInput('token');
+    // Silent Failure
+    result.silentFailure =
+        (core.getInput('silentFailure') || 'false').toUpperCase() === 'TRUE';
     return result;
 }
 exports.getInputs = getInputs;

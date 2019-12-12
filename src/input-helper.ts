@@ -100,5 +100,9 @@ export function getInputs(): ISourceSettings {
   // Access token
   result.accessToken = core.getInput('token')
 
+  // Silent Failure
+  result.silentFailure =
+    (core.getInput('silentFailure') || 'false').toUpperCase() === 'TRUE'
+
   return result
 }

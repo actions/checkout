@@ -1,6 +1,6 @@
 name: 'Checkout'
 description: 'Checkout a Git repository at a particular version'
-inputs: 
+inputs:
   repository:
     description: 'Repository name with owner. For example, actions/checkout'
     default: ${{ github.repository }}
@@ -23,6 +23,12 @@ inputs:
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
+  silentFailure:
+    description: 'Whether to silent failure'
+    default: false
+outputs:
+  failure:
+    description: 'A boolean value to indicate if the checkout failed'
 runs:
   using: node12
   main: dist/index.js
