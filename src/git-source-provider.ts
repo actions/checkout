@@ -1,5 +1,4 @@
 import * as core from '@actions/core'
-import * as coreCommand from '@actions/core/lib/command'
 import * as fs from 'fs'
 import * as fsHelper from './fs-helper'
 import * as gitCommandManager from './git-command-manager'
@@ -21,7 +20,8 @@ export interface ISourceSettings {
   clean: boolean
   fetchDepth: number
   lfs: boolean
-  accessToken: string
+  authToken: string
+  persistCredentials: boolean
 }
 
 export async function getSource(settings: ISourceSettings): Promise<void> {
@@ -65,7 +65,7 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
       `To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`
     )
     await githubApiHelper.downloadRepository(
-      settings.accessToken,
+      settings.authToken,
       settings.repositoryOwner,
       settings.repositoryName,
       settings.ref,
@@ -94,43 +94,43 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
     // Remove possible previous extraheader
     await removeGitConfig(git, authConfigKey)
 
-    // Add extraheader (auth)
-    const base64Credentials = Buffer.from(
-      `x-access-token:${settings.accessToken}`,
-      'utf8'
-    ).toString('base64')
-    core.setSecret(base64Credentials)
-    const authConfigValue = `AUTHORIZATION: basic ${base64Credentials}`
-    await git.config(authConfigKey, authConfigValue)
+    try {
+      // Config auth token
+      await configureAuthToken(git, settings.authToken)
 
-    // LFS install
-    if (settings.lfs) {
-      await git.lfsInstall()
+      // LFS install
+      if (settings.lfs) {
+        await git.lfsInstall()
+      }
+
+      // Fetch
+      const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
+      await git.fetch(settings.fetchDepth, refSpec)
+
+      // Checkout info
+      const checkoutInfo = await refHelper.getCheckoutInfo(
+        git,
+        settings.ref,
+        settings.commit
+      )
+
+      // LFS fetch
+      // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
+      // Explicit lfs fetch will fetch lfs objects in parallel.
+      if (settings.lfs) {
+        await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
+      }
+
+      // Checkout
+      await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+
+      // Dump some info about the checked out commit
+      await git.log1()
+    } finally {
+      if (!settings.persistCredentials) {
+        await removeGitConfig(git, authConfigKey)
+      }
     }
-
-    // Fetch
-    const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-    await git.fetch(settings.fetchDepth, refSpec)
-
-    // Checkout info
-    const checkoutInfo = await refHelper.getCheckoutInfo(
-      git,
-      settings.ref,
-      settings.commit
-    )
-
-    // LFS fetch
-    // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
-    // Explicit lfs fetch will fetch lfs objects in parallel.
-    if (settings.lfs) {
-      await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
-    }
-
-    // Checkout
-    await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
-
-    // Dump some info about the checked out commit
-    await git.log1()
   }
 }
 
@@ -255,6 +255,20 @@ async function prepareExistingDirectory(
   }
 }
 
+async function configureAuthToken(
+  git: IGitCommandManager,
+  authToken: string
+): Promise<void> {
+  // Add extraheader (auth)
+  const base64Credentials = Buffer.from(
+    `x-access-token:${authToken}`,
+    'utf8'
+  ).toString('base64')
+  core.setSecret(base64Credentials)
+  const authConfigValue = `AUTHORIZATION: basic ${base64Credentials}`
+  await git.config(authConfigKey, authConfigValue)
+}
+
 async function removeGitConfig(
   git: IGitCommandManager,
   configKey: string
@@ -264,21 +278,6 @@ async function removeGitConfig(
     !(await git.tryConfigUnset(configKey))
   ) {
     // Load the config contents
-    core.warning(
-      `Failed to remove '${configKey}' from the git config. Attempting to remove the config value by editing the file directly.`
-    )
-    const configPath = path.join(git.getWorkingDirectory(), '.git', 'config')
-    fsHelper.fileExistsSync(configPath)
-    let contents = fs.readFileSync(configPath).toString() || ''
-
-    // Filter - only includes lines that do not contain the config key
-    const upperConfigKey = configKey.toUpperCase()
-    const split = contents
-      .split('\n')
-      .filter(x => !x.toUpperCase().includes(upperConfigKey))
-    contents = split.join('\n')
-
-    // Rewrite the config file
-    fs.writeFileSync(configPath, contents)
+    core.warning(`Failed to remove '${configKey}' from the git config`)
   }
 }

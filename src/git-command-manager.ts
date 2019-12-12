@@ -116,7 +116,7 @@ class GitCommandManager {
   }
 
   async config(configKey: string, configValue: string): Promise<void> {
-    await this.execGit(['config', configKey, configValue])
+    await this.execGit(['config', '--local', configKey, configValue])
   }
 
   async configExists(configKey: string): Promise<boolean> {
@@ -124,7 +124,7 @@ class GitCommandManager {
       return `\\${x}`
     })
     const output = await this.execGit(
-      ['config', '--name-only', '--get-regexp', pattern],
+      ['config', '--local', '--name-only', '--get-regexp', pattern],
       true
     )
     return output.exitCode === 0
@@ -211,20 +211,23 @@ class GitCommandManager {
 
   async tryConfigUnset(configKey: string): Promise<boolean> {
     const output = await this.execGit(
-      ['config', '--unset-all', configKey],
+      ['config', '--local', '--unset-all', configKey],
       true
     )
     return output.exitCode === 0
   }
 
   async tryDisableAutomaticGarbageCollection(): Promise<boolean> {
-    const output = await this.execGit(['config', 'gc.auto', '0'], true)
+    const output = await this.execGit(
+      ['config', '--local', 'gc.auto', '0'],
+      true
+    )
     return output.exitCode === 0
   }
 
   async tryGetFetchUrl(): Promise<string> {
     const output = await this.execGit(
-      ['config', '--get', 'remote.origin.url'],
+      ['config', '--local', '--get', 'remote.origin.url'],
       true
     )
 
