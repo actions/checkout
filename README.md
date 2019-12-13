@@ -2,7 +2,7 @@
   <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
 </p>
 
-# Checkout V2 beta
+# Checkout V2
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -35,7 +35,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v2-beta
+- uses: actions/checkout@v2
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -76,7 +76,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v2-beta
+- uses: actions/checkout@v2
   with:
     ref: some-branch
 ```
@@ -84,7 +84,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different, private repository
 
 ```yaml
-- uses: actions/checkout@v2-beta
+- uses: actions/checkout@v2
   with:
     repository: myAccount/myRepository
     ref: refs/heads/master
@@ -95,7 +95,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout the HEAD commit of a PR, rather than the merge commit
 
 ```yaml
-- uses: actions/checkout@v2-beta
+- uses: actions/checkout@v2
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
