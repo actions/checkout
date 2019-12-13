@@ -15,3 +15,4 @@ jobs:
           GITHUB_JSON: ${{ toJson(github) }}
         run: |
           echo "$GITHUB_JSON"
+
