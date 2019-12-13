@@ -73,31 +73,130 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```
 <!-- end usage -->
 
+# Scenarios
+
+- [Checkout a different branch](#Checkout-a-different-branch)
+- [Checkout HEAD^](#Checkout-HEAD)
+- [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
+- [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
+- [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+- [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
+- [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Checkout submodules](#Checkout-submodules)
+- [Fetch all tags](#Fetch-all-tags)
+- [Fetch all branches](#Fetch-all-branches)
+
 ## Checkout a different branch
 
 ```yaml
 - uses: actions/checkout@v2
   with:
-    ref: some-branch
+    ref: my-branch
 ```
 
-## Checkout a different, private repository
+## Checkout HEAD^
 
 ```yaml
 - uses: actions/checkout@v2
   with:
-    repository: myAccount/myRepository
-    ref: refs/heads/master
-    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
+    fetch-depth: 2
+- run: git checkout HEAD^
 ```
-> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout another repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
-## Checkout the HEAD commit of a PR, rather than the merge commit
+## Checkout multiple repos (side by side)
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v2
+  with:
+    path: main
+
+- name: Checkout tools repo
+  uses: actions/checkout@v2
+  with:
+    repository: my-org/my-tools
+    path: my-tools
+```
+
+## Checkout multiple repos (nested)
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v2
+
+- name: Checkout tools repo
+  uses: actions/checkout@v2
+  with:
+    repository: my-org/my-tools
+    path: my-tools
+```
+
+## Checkout multiple repos (private)
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v2
+  with:
+    path: main
+
+- name: Checkout private tools
+  uses: actions/checkout@v2
+  with:
+    repository: my-org/my-private-tools
+    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
+    path: my-tools
+```
+
+> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
+
+
+## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
 - uses: actions/checkout@v2
   with:
     ref: ${{ github.event.pull_request.head.sha }}
+```
+
+## Checkout pull request on closed event
+
+```yaml
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, closed]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+```
+
+## Checkout submodules
+
+```yaml
+- uses: actions/checkout@v2
+- name: Checkout submodules
+  shell: bash
+  run: |
+    auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+    git submodule sync --recursive
+    git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+```
+
+## Fetch all tags
+
+```yaml
+- uses: actions/checkout@v2
+- run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+```
+
+## Fetch all branches
+
+```yaml
+- uses: actions/checkout@v2
+- run: |
+    git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
 ```
 
 # License
