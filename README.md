@@ -136,12 +136,15 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```yaml
 - name: Checkout
   uses: actions/checkout@v2
+  with:
+    path: main
 
 - name: Checkout private tools
   uses: actions/checkout@v2
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
+    path: my-tools
 ```
 
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
@@ -160,8 +163,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```yaml
 on:
   pull_request:
-    branches:
-    - master
+    branches: [master]
     types: [opened, synchronize, closed]
 jobs:
   build:
@@ -174,7 +176,8 @@ jobs:
 
 ```yaml
 - uses: actions/checkout@v2
-- shell: bash
+- name: Checkout submodules
+  shell: bash
   run: |
     auth_header="$(git config --local --get http.https://github.com/.extraheader)"
     git submodule sync --recursive
