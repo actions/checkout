@@ -85,6 +85,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout submodules](#Checkout-submodules)
 - [Fetch all tags](#Fetch-all-tags)
 - [Fetch all branches](#Fetch-all-branches)
+- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
 
 ## Checkout a different branch
 
@@ -197,6 +198,14 @@ jobs:
 - uses: actions/checkout@v2
 - run: |
     git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
+```
+
+## Fetch all history for all tags and branches
+
+```yaml
+- uses: actions/checkout@v2
+- run: |
+    git fetch --prune --unshallow
 ```
 
 # License
