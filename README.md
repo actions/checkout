@@ -6,7 +6,7 @@
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`.
 
-Only a single commit is fetched, for the ref/SHA that triggered the workflow. Use the input `fetch-depth` for more control. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth` to fetch more history. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Use the input `persist-credentials` to opt-out.
 
@@ -25,7 +25,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
   - Aligns better with container actions, where $GITHUB_WORKSPACE gets mapped in
 - Fallback to REST API download
   - When Git 2.18 or higher is not in the PATH, the REST API will be used to download the files
-  - Note, when using a job container the action now runs in your container and not on the host
+  - When using a job container, the container's PATH is used
 - Removed input `submodules`
 
 Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
