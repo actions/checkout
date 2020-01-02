@@ -4888,7 +4888,7 @@ class GitCommandManager {
     isDetached() {
         return __awaiter(this, void 0, void 0, function* () {
             // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
-            const output = yield this.execGit(['rev-parse', '--symbolic-full-name', 'HEAD'], true);
+            const output = yield this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], true);
             return !output.stdout.trim().startsWith('refs/heads/');
         });
     }
