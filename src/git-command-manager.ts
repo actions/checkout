@@ -172,7 +172,7 @@ class GitCommandManager {
   async isDetached(): Promise<boolean> {
     // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
     const output = await this.execGit(
-      ['rev-parse', '--symbolic-full-nane', 'HEAD'],
+      ['rev-parse', '--symbolic-full-name', 'HEAD'],
       true
     )
     return !output.stdout.trim().startsWith('refs/heads/')
