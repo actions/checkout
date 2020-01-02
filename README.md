@@ -4,7 +4,7 @@
 
 # Checkout V2
 
-This action checks-out your repository under `$GITHUB_WORKSPACE`.
+This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
 Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth` to fetch more history. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
