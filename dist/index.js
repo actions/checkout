@@ -4887,11 +4887,9 @@ class GitCommandManager {
     }
     isDetached() {
         return __awaiter(this, void 0, void 0, function* () {
-            // Note, this implementation uses "branch --show-current" because
-            // "rev-parse --symbolic-full-name HEAD" can fail on a new repo
-            // with nothing checked out.
-            const output = yield this.execGit(['branch', '--show-current']);
-            return output.stdout.trim() === '';
+            // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
+            const output = yield this.execGit(['rev-parse', '--symbolic-full-nane', 'HEAD'], true);
+            return !output.stdout.trim().startsWith('refs/heads/');
         });
     }
     lfsFetch(ref) {

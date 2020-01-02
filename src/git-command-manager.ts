@@ -170,12 +170,12 @@ class GitCommandManager {
   }
 
   async isDetached(): Promise<boolean> {
-    // Note, this implementation uses "branch --show-current" because
-    // "rev-parse --symbolic-full-name HEAD" can fail on a new repo
-    // with nothing checked out.
-
-    const output = await this.execGit(['branch', '--show-current'])
-    return output.stdout.trim() === ''
+    // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
+    const output = await this.execGit(
+      ['rev-parse', '--symbolic-full-nane', 'HEAD'],
+      true
+    )
+    return !output.stdout.trim().startsWith('refs/heads/')
   }
 
   async lfsFetch(ref: string): Promise<void> {
