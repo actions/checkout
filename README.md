@@ -6,27 +6,26 @@
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-By default, the repository that triggered the workflow is checked-out, for the ref/SHA that triggered the event.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth` to fetch more history. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
-Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
+
+When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
 # What's new
 
-- Improved fetch performance
-  - The default behavior now fetches only the commit being checked-out
+- Improved performance
+  - Fetches only a single commit by default
 - Script authenticated git commands
-  - Persists the input `token` in the local git config
-  - Enables your scripts to run authenticated git commands
-  - Post-job cleanup removes the token
-  - Opt out by setting the input `persist-credentials: false`
+  - Auth token persisted in the local git config
 - Creates a local branch
   - No longer detached HEAD when checking out a branch
-  - A local branch is created with the corresponding upstream branch set
 - Improved layout
   - The input `path` is always relative to $GITHUB_WORKSPACE
   - Aligns better with container actions, where $GITHUB_WORKSPACE gets mapped in
 - Fallback to REST API download
   - When Git 2.18 or higher is not in the PATH, the REST API will be used to download the files
+  - When using a job container, the container's PATH is used
 - Removed input `submodules`
 
 Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
