@@ -77,10 +77,12 @@ class GitCommandManager {
   async branchList(remote: boolean): Promise<string[]> {
     const result: string[] = []
 
-    // Note, this implementation uses "rev-parse --symbolic" because the output from
+    // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
     // "branch --list" is more difficult when in a detached HEAD state.
+    // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
+    // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names.
 
-    const args = ['rev-parse', '--symbolic']
+    const args = ['rev-parse', '--symbolic-full-name']
     if (remote) {
       args.push('--remotes=origin')
     } else {
@@ -92,6 +94,12 @@ class GitCommandManager {
     for (let branch of output.stdout.trim().split('\n')) {
       branch = branch.trim()
       if (branch) {
+        if (branch.startsWith('refs/heads/')) {
+          branch = branch.substr('refs/heads/'.length)
+        } else if (branch.startsWith('refs/remotes/')) {
+          branch = branch.substr('refs/remotes/'.length)
+        }
+
         result.push(branch)
       }
     }
@@ -170,12 +178,12 @@ class GitCommandManager {
   }
 
   async isDetached(): Promise<boolean> {
-    // Note, this implementation uses "branch --show-current" because
-    // "rev-parse --symbolic-full-name HEAD" can fail on a new repo
-    // with nothing checked out.
-
-    const output = await this.execGit(['branch', '--show-current'])
-    return output.stdout.trim() === ''
+    // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
+    const output = await this.execGit(
+      ['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'],
+      true
+    )
+    return !output.stdout.trim().startsWith('refs/heads/')
   }
 
   async lfsFetch(ref: string): Promise<void> {

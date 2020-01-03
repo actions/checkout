@@ -4799,9 +4799,11 @@ class GitCommandManager {
     branchList(remote) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = [];
-            // Note, this implementation uses "rev-parse --symbolic" because the output from
+            // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
             // "branch --list" is more difficult when in a detached HEAD state.
-            const args = ['rev-parse', '--symbolic'];
+            // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
+            // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names.
+            const args = ['rev-parse', '--symbolic-full-name'];
             if (remote) {
                 args.push('--remotes=origin');
             }
@@ -4812,6 +4814,12 @@ class GitCommandManager {
             for (let branch of output.stdout.trim().split('\n')) {
                 branch = branch.trim();
                 if (branch) {
+                    if (branch.startsWith('refs/heads/')) {
+                        branch = branch.substr('refs/heads/'.length);
+                    }
+                    else if (branch.startsWith('refs/remotes/')) {
+                        branch = branch.substr('refs/remotes/'.length);
+                    }
                     result.push(branch);
                 }
             }
@@ -4887,11 +4895,9 @@ class GitCommandManager {
     }
     isDetached() {
         return __awaiter(this, void 0, void 0, function* () {
-            // Note, this implementation uses "branch --show-current" because
-            // "rev-parse --symbolic-full-name HEAD" can fail on a new repo
-            // with nothing checked out.
-            const output = yield this.execGit(['branch', '--show-current']);
-            return output.stdout.trim() === '';
+            // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
+            const output = yield this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], true);
+            return !output.stdout.trim().startsWith('refs/heads/');
         });
     }
     lfsFetch(ref) {
