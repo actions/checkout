@@ -47,7 +47,8 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
     # Auth token used to fetch the repository. The token is stored in the local git
     # config, which enables your scripts to run authenticated git commands. The
-    # post-job step removes the token from the git config.
+    # post-job step removes the token from the git config. [Learn more about creating
+    # and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     # Default: ${{ github.token }}
     token: ''
 

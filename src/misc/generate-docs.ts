@@ -65,8 +65,13 @@ function updateUsage(
       let segment: string = description
       if (description.length > width) {
         segment = description.substr(0, width + 1)
-        while (!segment.endsWith(' ')) {
+        while (!segment.endsWith(' ') && segment) {
           segment = segment.substr(0, segment.length - 1)
+        }
+
+        // Trimmed too much?
+        if (segment.length < width * 0.67) {
+          segment = description
         }
       } else {
         segment = description
