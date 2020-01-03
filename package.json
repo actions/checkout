@@ -1,6 +1,6 @@
 {
   "name": "checkout",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "checkout action",
   "main": "lib/main.js",
   "scripts": {
