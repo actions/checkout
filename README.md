@@ -83,6 +83,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
 - [Checkout submodules](#Checkout-submodules)
+- [Checkout private submodules](#Checkout-private-submodules)
 - [Fetch all tags](#Fetch-all-tags)
 - [Fetch all branches](#Fetch-all-branches)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
@@ -177,6 +178,20 @@ jobs:
 
 ```yaml
 - uses: actions/checkout@v2
+- name: Checkout submodules
+  shell: bash
+  run: |
+    auth_header="$(git config --local --get http.https://github.com/.extraheader)"
+    git submodule sync --recursive
+    git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+```
+
+## Checkout private submodules
+
+```yaml
+- uses: actions/checkout@v2
+  with:
+    token: ${{ secrets.MY_GITHUB_PAT }}
 - name: Checkout submodules
   shell: bash
   run: |
