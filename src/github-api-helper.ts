@@ -8,6 +8,7 @@ import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
 import {default as uuid} from 'uuid/v4'
 import {ReposGetArchiveLinkParams} from '@octokit/rest'
+import HttpsProxyAgent from 'https-proxy-agent'
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -74,7 +75,7 @@ async function downloadArchive(
   ref: string,
   commit: string
 ): Promise<Buffer> {
-  const octokit = new github.GitHub(authToken)
+  const octokit = createOctokit(authToken)
   const params: ReposGetArchiveLinkParams = {
     owner: owner,
     repo: repo,
@@ -89,4 +90,39 @@ async function downloadArchive(
   }
 
   return Buffer.from(response.data) // response.data is ArrayBuffer
+}
+
+function createOctokit(authToken: string): github.GitHub {
+  let proxyVar: string =
+    process.env['https_proxy'] || process.env['HTTPS_PROXY'] || ''
+
+  if (!proxyVar) {
+    return new github.GitHub(authToken)
+  }
+
+  let noProxy: string = process.env['no_proxy'] || process.env['NO_PROXY'] || ''
+
+  let bypass: boolean = false
+  if (noProxy) {
+    let bypassList = noProxy.split(',')
+    for (let i = 0; i < bypassList.length; i++) {
+      let item = bypassList[i]
+      if (
+        item &&
+        typeof item === 'string' &&
+        item.trim().toLocaleLowerCase() === 'github.com'
+      ) {
+        bypass = true
+        break
+      }
+    }
+  }
+
+  if (bypass) {
+    return new github.GitHub(authToken)
+  } else {
+    return new github.GitHub(authToken, {
+      request: {agent: new HttpsProxyAgent(proxyVar)}
+    })
+  }
 }
