@@ -12757,6 +12757,11 @@ function getInputs() {
         if (isWorkflowRepository) {
             result.ref = github.context.ref;
             result.commit = github.context.sha;
+            // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
+            // the ref is unqualifed like "master" instead of "refs/heads/master".
+            if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
+                result.ref = `refs/heads/${result.ref}`;
+            }
         }
         if (!result.ref && !result.commit) {
             result.ref = 'refs/heads/master';
