@@ -75,6 +75,20 @@ describe('input-helper tests', () => {
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
   })
 
+  it('qualifies ref', () => {
+    let originalContext = mockGitHub.context
+    try {
+      mockGitHub.context = {...originalContext} // Shallow clone
+      mockGitHub.context.ref = 'some-unqualified-ref'
+      const settings: ISourceSettings = inputHelper.getInputs()
+      expect(settings).toBeTruthy()
+      expect(settings.commit).toBe('1234567890123456789012345678901234567890')
+      expect(settings.ref).toBe('refs/heads/some-unqualified-ref')
+    } finally {
+      mockGitHub.context = originalContext
+    }
+  })
+
   it('requires qualified repo', () => {
     inputs.repository = 'some-unqualified-repo'
     assert.throws(() => {
