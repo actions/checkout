@@ -3,13 +3,17 @@ import * as fs from 'fs'
 import * as fsHelper from './fs-helper'
 import * as gitCommandManager from './git-command-manager'
 import * as githubApiHelper from './github-api-helper'
+import * as httpClient from '@actions/http-client'
 import * as io from '@actions/io'
 import * as path from 'path'
 import * as refHelper from './ref-helper'
 import * as stateHelper from './state-helper'
+import * as url from 'url'
 import {IGitCommandManager} from './git-command-manager'
 
-const authConfigKey = `http.https://github.com/.extraheader`
+const serverUrl = 'https://github.com/'
+const authConfigKey = `http.${serverUrl}.extraheader`
+const proxyConfigKey = `http.${serverUrl}.proxy`
 
 export interface ISourceSettings {
   repositoryPath: string
@@ -91,11 +95,13 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
       )
     }
 
-    // Remove possible previous extraheader
+    // Remove possible previous proxy and extraheader
+    await removeGitConfig(git, proxyConfigKey)
     await removeGitConfig(git, authConfigKey)
 
     try {
-      // Config auth token
+      // Config proxy and extraheader
+      await configureProxy(git)
       await configureAuthToken(git, settings.authToken)
 
       // LFS install
@@ -128,6 +134,7 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
       await git.log1()
     } finally {
       if (!settings.persistCredentials) {
+        await removeGitConfig(git, proxyConfigKey)
         await removeGitConfig(git, authConfigKey)
       }
     }
@@ -136,16 +143,22 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
 
 export async function cleanup(repositoryPath: string): Promise<void> {
   // Repo exists?
-  if (!fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))) {
+  if (
+    !repositoryPath ||
+    !fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))
+  ) {
     return
   }
-  fsHelper.directoryExistsSync(repositoryPath, true)
 
-  // Remove the config key
-  const git = await gitCommandManager.CreateCommandManager(
-    repositoryPath,
-    false
-  )
+  // Remove proxy and extraheader
+  let git: IGitCommandManager
+  try {
+    git = await gitCommandManager.CreateCommandManager(repositoryPath, false)
+  } catch {
+    return
+  }
+
+  await removeGitConfig(git, proxyConfigKey)
   await removeGitConfig(git, authConfigKey)
 }
 
@@ -252,6 +265,34 @@ async function prepareExistingDirectory(
     for (const file of await fs.promises.readdir(repositoryPath)) {
       await io.rmRF(path.join(repositoryPath, file))
     }
+  }
+}
+
+async function configureProxy(git: IGitCommandManager): Promise<void> {
+  const proxyUrl = httpClient.getProxyUrl(serverUrl)
+  const parsedUrl = url.parse(proxyUrl)
+  const placeholder = parsedUrl.auth
+    ? proxyUrl.replace(parsedUrl.auth, '***')
+    : ''
+
+  // Configure a placeholder value. This approach avoids the credential being captured
+  // by process creation audit events, which are commonly logged. For more information,
+  // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
+  await git.config(proxyConfigKey, placeholder || proxyUrl)
+
+  if (placeholder) {
+    // Replace the value in the config file
+    const configPath = path.join(git.getWorkingDirectory(), '.git', 'config')
+    let content = (await fs.promises.readFile(configPath)).toString()
+    const placeholderIndex = content.indexOf(placeholder)
+    if (
+      placeholderIndex < 0 ||
+      placeholderIndex != content.lastIndexOf(placeholder)
+    ) {
+      throw new Error('Unable to replace auth placeholder in .git/config')
+    }
+    content = content.replace(placeholder, proxyUrl)
+    await fs.promises.writeFile(configPath, content)
   }
 }
 

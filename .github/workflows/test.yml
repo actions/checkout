@@ -83,7 +83,7 @@ jobs:
         shell: bash
         run: __test__/verify-lfs.sh
 
-  test-job-container:
+  test-rest-api:
     runs-on: ubuntu-latest
     container: alpine:latest
     steps:
@@ -93,6 +93,45 @@ jobs:
 
       # Basic checkout
       - name: Basic checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh --archive
+
+  test-proxy:
+    runs-on: ubuntu-latest
+    container:
+      image: alpine/git:latest
+      options: --dns 127.0.0.1
+    services:
+      squid-proxy:
+        image: datadog/squid:latest
+        ports:
+          - 3128:3128
+    env:
+      https_proxy: http://squid-proxy:3128
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@users/ericsciple/m165proxy # todo: switch to v2
+
+      # Basic checkout using git
+      - name: Basic checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh
+      - name: Remove basic
+        run: rm -rf basic
+
+      # Basic checkout using REST API
+      - name: Override git version
+        run: __test__/override-git-version.sh
+      - name: Basic checkout using REST API
         uses: ./
         with:
           ref: test-data/v2/basic
