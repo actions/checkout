@@ -11,6 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
       - uses: actions/checkout@v2
       - run: npm ci
       - run: npm run build
@@ -141,7 +144,6 @@ jobs:
 
   test-bypass-proxy:
     runs-on: ubuntu-latest
-    container: alpine/git:latest
     env:
       https_proxy: http://no-such-proxy:3128
       no_proxy: api.github.com,github.com
