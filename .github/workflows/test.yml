@@ -87,7 +87,11 @@ jobs:
       - name: Remove basic
         run: rm -rf basic
       - name: Override git version
+        if: runner.os != 'windows'
         run: __test__/override-git-version.sh
+      - name: Override git version (Windows)
+        if: runner.os == 'windows'
+        run: __test__\\override-git-version.cmd
       - name: Basic checkout using REST API
         uses: ./
         with:
