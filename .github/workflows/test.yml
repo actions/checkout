@@ -83,16 +83,12 @@ jobs:
         shell: bash
         run: __test__/verify-lfs.sh
 
-  test-rest-api:
-    runs-on: ubuntu-latest
-    container: alpine:latest
-    steps:
-      # Clone this repo
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      # Basic checkout
-      - name: Basic checkout
+      # Basic checkout using REST API
+      - name: Remove basic
+        run: rm -rf basic
+      - name: Override git version
+        run: __test__/override-git-version.sh
+      - name: Basic checkout using REST API
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -116,6 +112,39 @@ jobs:
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@users/ericsciple/m165proxy # todo: switch to v2
+
+      # Basic checkout using git
+      - name: Basic checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh
+
+      # Basic checkout using REST API
+      - name: Remove basic
+        run: rm -rf basic
+      - name: Override git version
+        run: __test__/override-git-version.sh
+      - name: Basic checkout using REST API
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh --archive
+
+  test-bypass-proxy:
+    runs-on: ubuntu-latest
+    container: alpine/git:latest
+    env:
+      https_proxy: http://no-such-proxy:3128
+      no_proxy: api.github.com,github.com
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v2
 
       # Basic checkout using git
       - name: Basic checkout
