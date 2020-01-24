@@ -5469,12 +5469,10 @@ function getSource(settings) {
             if (!(yield git.tryDisableAutomaticGarbageCollection())) {
                 core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
             }
-            // Remove possible previous proxy and extraheader
-            // await removeGitConfig(git, proxyConfigKey)
+            // Remove possible previous extraheader
             yield removeGitConfig(git, authConfigKey);
             try {
-                // Config proxy and extraheader
-                // await configureProxy(git)
+                // Config extraheader
                 yield configureAuthToken(git, settings.authToken);
                 // LFS install
                 if (settings.lfs) {
@@ -5498,7 +5496,6 @@ function getSource(settings) {
             }
             finally {
                 if (!settings.persistCredentials) {
-                    // await removeGitConfig(git, proxyConfigKey)
                     yield removeGitConfig(git, authConfigKey);
                 }
             }
@@ -5513,7 +5510,6 @@ function cleanup(repositoryPath) {
             !fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))) {
             return;
         }
-        // Remove proxy and extraheader
         let git;
         try {
             git = yield gitCommandManager.CreateCommandManager(repositoryPath, false);
@@ -5521,7 +5517,7 @@ function cleanup(repositoryPath) {
         catch (_a) {
             return;
         }
-        // await removeGitConfig(git, proxyConfigKey)
+        // Remove extraheader
         yield removeGitConfig(git, authConfigKey);
     });
 }
@@ -5613,31 +5609,6 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
         }
     });
 }
-// async function configureProxy(git: IGitCommandManager): Promise<void> {
-//   const proxyUrl = httpClient.getProxyUrl(serverUrl)
-//   const parsedUrl = url.parse(proxyUrl)
-//   const placeholder = parsedUrl.auth
-//     ? proxyUrl.replace(parsedUrl.auth, '***')
-//     : ''
-//   // Configure a placeholder value. This approach avoids the credential being captured
-//   // by process creation audit events, which are commonly logged. For more information,
-//   // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-//   await git.config(proxyConfigKey, placeholder || proxyUrl)
-//   if (placeholder) {
-//     // Replace the value in the config file
-//     const configPath = path.join(git.getWorkingDirectory(), '.git', 'config')
-//     let content = (await fs.promises.readFile(configPath)).toString()
-//     const placeholderIndex = content.indexOf(placeholder)
-//     if (
-//       placeholderIndex < 0 ||
-//       placeholderIndex != content.lastIndexOf(placeholder)
-//     ) {
-//       throw new Error('Unable to replace auth placeholder in .git/config')
-//     }
-//     content = content.replace(placeholder, proxyUrl)
-//     await fs.promises.writeFile(configPath, content)
-//   }
-// }
 function configureAuthToken(git, authToken) {
     return __awaiter(this, void 0, void 0, function* () {
         // Configure a placeholder value. This approach avoids the credential being captured
