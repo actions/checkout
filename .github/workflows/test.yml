@@ -123,7 +123,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@users/ericsciple/m165proxy # todo: switch to v2
+        uses: actions/checkout@v2
 
       # Basic checkout using git
       - name: Basic checkout
