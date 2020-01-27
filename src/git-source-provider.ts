@@ -9,7 +9,8 @@ import * as refHelper from './ref-helper'
 import * as stateHelper from './state-helper'
 import {IGitCommandManager} from './git-command-manager'
 
-const authConfigKey = `http.https://github.com/.extraheader`
+const serverUrl = 'https://github.com/'
+const authConfigKey = `http.${serverUrl}.extraheader`
 
 export interface ISourceSettings {
   repositoryPath: string
@@ -95,7 +96,7 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
     await removeGitConfig(git, authConfigKey)
 
     try {
-      // Config auth token
+      // Config extraheader
       await configureAuthToken(git, settings.authToken)
 
       // LFS install
@@ -136,16 +137,21 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
 
 export async function cleanup(repositoryPath: string): Promise<void> {
   // Repo exists?
-  if (!fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))) {
+  if (
+    !repositoryPath ||
+    !fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))
+  ) {
     return
   }
-  fsHelper.directoryExistsSync(repositoryPath, true)
 
-  // Remove the config key
-  const git = await gitCommandManager.CreateCommandManager(
-    repositoryPath,
-    false
-  )
+  let git: IGitCommandManager
+  try {
+    git = await gitCommandManager.CreateCommandManager(repositoryPath, false)
+  } catch {
+    return
+  }
+
+  // Remove extraheader
   await removeGitConfig(git, authConfigKey)
 }
 
