@@ -1,47 +1,44 @@
 import * as assert from 'assert'
+import * as core from '@actions/core'
+import * as fsHelper from '../lib/fs-helper'
+import * as github from '@actions/github'
+import * as inputHelper from '../lib/input-helper'
 import * as path from 'path'
 import {ISourceSettings} from '../lib/git-source-provider'
 
 const originalGitHubWorkspace = process.env['GITHUB_WORKSPACE']
 const gitHubWorkspace = path.resolve('/checkout-tests/workspace')
 
-// Late bind
-let inputHelper: any
-
-// Mock @actions/core
+// Inputs for mock @actions/core
 let inputs = {} as any
-const mockCore = jest.genMockFromModule('@actions/core') as any
-mockCore.getInput = (name: string) => {
-  return inputs[name]
-}
 
-// Mock @actions/github
-const mockGitHub = jest.genMockFromModule('@actions/github') as any
-mockGitHub.context = {
-  repo: {
-    owner: 'some-owner',
-    repo: 'some-repo'
-  },
-  ref: 'refs/heads/some-ref',
-  sha: '1234567890123456789012345678901234567890'
-}
-
-// Mock ./fs-helper
-const mockFSHelper = jest.genMockFromModule('../lib/fs-helper') as any
-mockFSHelper.directoryExistsSync = (path: string) => path == gitHubWorkspace
+// Shallow clone original @actions/github context
+let originalContext = {...github.context}
 
 describe('input-helper tests', () => {
   beforeAll(() => {
+    // Mock @actions/core getInput()
+    jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
+      return inputs[name]
+    })
+
+    // Mock @actions/github context
+    jest.spyOn(github.context, 'repo', 'get').mockImplementation(() => {
+      return {
+        owner: 'some-owner',
+        repo: 'some-repo'
+      }
+    })
+    github.context.ref = 'refs/heads/some-ref'
+    github.context.sha = '1234567890123456789012345678901234567890'
+
+    // Mock ./fs-helper directoryExistsSync()
+    jest
+      .spyOn(fsHelper, 'directoryExistsSync')
+      .mockImplementation((path: string) => path == gitHubWorkspace)
+
     // GitHub workspace
     process.env['GITHUB_WORKSPACE'] = gitHubWorkspace
-
-    // Mocks
-    jest.setMock('@actions/core', mockCore)
-    jest.setMock('@actions/github', mockGitHub)
-    jest.setMock('../lib/fs-helper', mockFSHelper)
-
-    // Now import
-    inputHelper = require('../lib/input-helper')
   })
 
   beforeEach(() => {
@@ -50,14 +47,18 @@ describe('input-helper tests', () => {
   })
 
   afterAll(() => {
-    // Reset GitHub workspace
+    // Restore GitHub workspace
     delete process.env['GITHUB_WORKSPACE']
     if (originalGitHubWorkspace) {
       process.env['GITHUB_WORKSPACE'] = originalGitHubWorkspace
     }
 
-    // Reset modules
-    jest.resetModules()
+    // Restore @actions/github context
+    github.context.ref = originalContext.ref
+    github.context.sha = originalContext.sha
+
+    // Restore
+    jest.restoreAllMocks()
   })
 
   it('sets defaults', () => {
@@ -76,16 +77,15 @@ describe('input-helper tests', () => {
   })
 
   it('qualifies ref', () => {
-    let originalContext = mockGitHub.context
+    let originalRef = github.context.ref
     try {
-      mockGitHub.context = {...originalContext} // Shallow clone
-      mockGitHub.context.ref = 'some-unqualified-ref'
+      github.context.ref = 'some-unqualified-ref'
       const settings: ISourceSettings = inputHelper.getInputs()
       expect(settings).toBeTruthy()
       expect(settings.commit).toBe('1234567890123456789012345678901234567890')
       expect(settings.ref).toBe('refs/heads/some-unqualified-ref')
     } finally {
-      mockGitHub.context = originalContext
+      github.context.ref = originalRef
     }
   })
 

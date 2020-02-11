@@ -1,18 +1,17 @@
-const mockCore = jest.genMockFromModule('@actions/core') as any
-mockCore.info = (message: string) => {
-  info.push(message)
-}
+import * as core from '@actions/core'
+import {RetryHelper} from '../lib/retry-helper'
+
 let info: string[]
 let retryHelper: any
 
 describe('retry-helper tests', () => {
   beforeAll(() => {
-    // Mocks
-    jest.setMock('@actions/core', mockCore)
+    // Mock @actions/core info()
+    jest.spyOn(core, 'info').mockImplementation((message: string) => {
+      info.push(message)
+    })
 
-    // Now import
-    const retryHelperModule = require('../lib/retry-helper')
-    retryHelper = new retryHelperModule.RetryHelper(3, 0, 0)
+    retryHelper = new RetryHelper(3, 0, 0)
   })
 
   beforeEach(() => {
@@ -21,8 +20,8 @@ describe('retry-helper tests', () => {
   })
 
   afterAll(() => {
-    // Reset modules
-    jest.resetModules()
+    // Restore
+    jest.restoreAllMocks()
   })
 
   it('first attempt succeeds', async () => {
