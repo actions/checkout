@@ -16,31 +16,40 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
 
 ### Inputs
 
-- `repository`
-  - The qualified repository name (owner/repo)
-  - Defaults to the workflow repo
-- `ref`
-  - The ref to checkout
-  - For the workflow repo, defaults to the branch and sha from the workflow event payload
-  - Otherwise defaults to `master`
-- `token`
-  - Defaults to the job token
-- `persist-credentials`
-  - Indicates whether to embed the auth token into the git config. Allows users to script authenticated git commands.
-  - Defaults to `true`
-- `clean`
-  - Indicates whether to run `git clean -ffdx && git reset --hard`
-  - Defaults to `true`
-- `lfs`
-  - Indicates whether to download Git-LFS files
-  - Defaults to `false`
-- `path`
-  - Relative path under the `github.workspace` where the repository should be created
-  - Defaults to the `github.workspace`
+```yaml
+  repository:
+    description: 'Repository name with owner. For example, actions/checkout'
+    default: ${{ github.repository }}
+  ref:
+    description: >
+      The branch, tag or SHA to checkout. When checking out the repository that
+      triggered a workflow, this defaults to the reference or SHA for that
+      event.  Otherwise, defaults to `master`.
+  token:
+    description: >
+      Auth token used to fetch the repository. The token is stored in the local
+      git config, which enables your scripts to run authenticated git commands.
+      The post-job step removes the token from the git config. [Learn more about
+      creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    default: ${{ github.token }}
+  persist-credentials:
+    description: 'Whether to persist the token in the git config'
+    default: true
+  path:
+    description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+  clean:
+    description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
+    default: true
+  fetch-depth:
+    description: 'Number of commits to fetch. 0 indicates all history.'
+    default: 1
+  lfs:
+    description: 'Whether to download Git-LFS files'
+    default: false
+```
 
 Note:
 - `persist-credentials` is new
-- `fetch-depth` was removed (refer [below](#fetch) for details)
 - `path` behavior is different (refer [below](#path) for details)
 - `submodules` was removed (error if specified; add later if needed)
 
@@ -68,20 +77,19 @@ Note:
   - Lines up if we add submodule support in the future. Don't need to worry about calculating relative URLs. Just works, although needs to be persisted in each submodule git config.
   - Users opt out of persisted credentials (`persist-credentials: false`), or can script the removal themselves (`git config --unset-all http.https://github.com/.extraheader`).
 
-### Fetch
+### Fetch behavior
 
 Fetch only the SHA being built and set depth=1. This significantly reduces the fetch time for large repos.
 
 If a SHA isn't available (e.g. multi repo), then fetch only the specified ref with depth=1.
 
-Customers can run `git fetch --unshallow` to fetch all refs/commits. We will document this guidance.
+The input `fetch-depth` can be used to control the depth.
 
 Note:
-- The v1 input `fetch-depth` no longer exists. We can add this back in the future if needed.
 - Fetching a single commit is supported by Git wire protocol version 2. The git client uses protocol version 0 by default. The desired protocol version can be overridden in the git config or on the fetch command line invocation (`-c protocol.version=2`). We will override on the fetch command line, for transparency.
 - Git client version 2.18+ (released June 2018) is required for wire protocol version 2.
 
-### Checkout
+### Checkout behavior
 
 For CI, checkout will create a local ref with the upstream set. This allows users to script git as they normally would.
 
