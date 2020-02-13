@@ -43,12 +43,18 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history.'
     default: 1
+  fetch-refs:
+    description: >
+      Additional refs to fetch: `branches`, `tags`, `pr-base`, or `all`.
+      Combinations are also accepted. For example: `branches, tags`
+    default: ''
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
 ```
 
 Note:
+- `fetch-refs` is new
 - `persist-credentials` is new
 - `path` behavior is different (refer [below](#path) for details)
 - `submodules` was removed (error if specified; add later if needed)
@@ -84,6 +90,8 @@ Fetch only the SHA being built and set depth=1. This significantly reduces the f
 If a SHA isn't available (e.g. multi repo), then fetch only the specified ref with depth=1.
 
 The input `fetch-depth` can be used to control the depth.
+
+The input `fetch-refs` can be used to fetch additional refs.
 
 Note:
 - Fetching a single commit is supported by Git wire protocol version 2. The git client uses protocol version 0 by default. The desired protocol version can be overridden in the git config or on the fetch command line invocation (`-c protocol.version=2`). We will override on the fetch command line, for transparency.
