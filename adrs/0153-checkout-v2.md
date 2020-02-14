@@ -60,13 +60,17 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
+  submodules:
+    description: >
+      Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+      recursively checkout submodules.
+    default: 'false'
 ```
 
 Note:
 - SSH support is new
 - `persist-credentials` is new
 - `path` behavior is different (refer [below](#path) for details)
-- `submodules` was removed (error if specified; add later if needed)
 
 ### Fallback to GitHub API
 
@@ -74,7 +78,7 @@ When a sufficient version of git is not in the PATH, fallback to the [web API](h
 
 Note:
 - LFS files are not included in the archive. Therefore fail if LFS is set to true.
-- Submodules are also not included in the archive. However submodules are not supported by checkout v2 anyway.
+- Submodules are also not included in the archive.
 
 ### Persist credentials
 
@@ -95,7 +99,6 @@ Note:
 - The auth header is scoped to all of github `http.https://github.com/.extraheader`
   - Additional public remotes also just work.
   - If users want to authenticate to an additional private remote, they should provide the `token` input.
-  - Lines up if we add submodule support in the future. Don't need to worry about calculating relative URLs. Just works, although needs to be persisted in each submodule git config.
 
 #### SSH key
 
@@ -228,6 +231,15 @@ Multi-checkout complicates the matter. However even today submodules may cause t
 A better solution is:
 
 Given a source file path, walk up the directories until the first `.git/config` is found. Check if it matches the self repo (`url = https://github.com/OWNER/REPO`). If not, drop the source file path.
+
+### Submodules
+
+With both PAT and SSH key support, we should be able to provide frictionless support for
+submodules scenarios: recursive, non-recursive, relative submodule paths.
+
+When fetching submodules, follow the `fetch-depth` settings.
+
+Credentials will be persisted in the submodules local git config too.
 
 ### Port to typescript
 
