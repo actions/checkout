@@ -46,12 +46,17 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
+  user-name:
+    description: 'User name to set in the local git config'
+  user-email:
+    description: 'User email to set in the local git config'
 ```
 
 Note:
 - `persist-credentials` is new
 - `path` behavior is different (refer [below](#path) for details)
 - `submodules` was removed (error if specified; add later if needed)
+- `user-name` and `user-email` are new
 
 ### Fallback to GitHub API
 
@@ -70,7 +75,6 @@ A post script will remove the credentials from the git config (cleanup for self-
 Users may opt-out by specifying `persist-credentials: false`
 
 Note:
-- Users scripting `git commit` may need to set the username and email. The service does not provide any reasonable default value. Users can add `git config user.name <NAME>` and `git config user.email <EMAIL>`. We will document this guidance.
 - The auth header (stored in the repo's git config), is scoped to all of github `http.https://github.com/.extraheader`
   - Additional public remotes also just work.
   - If users want to authenticate to an additional private remote, they should provide the `token` input.
@@ -178,6 +182,33 @@ Multi-checkout complicates the matter. However even today submodules may cause t
 A better solution is:
 
 Given a source file path, walk up the directories until the first `.git/config` is found. Check if it matches the self repo (`url = https://github.com/OWNER/REPO`). If not, drop the source file path.
+
+
+### User name and email
+
+The `user-name` and `user-email` can be used to set the user name and email in the local git config.
+
+This is useful for the command `git commit`, which requires a user name and email to be configured.
+
+The example uses the GITHUB_TOKEN to push a commit to the server:
+
+```yaml
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          user-name: github-actions
+          user-email: github-actions-bot@users.noreply.github.com
+      - run: |
+          if [ ! -e generated.txt ]; then
+            echo hello > generated.txt
+            git add generated.txt
+            git commit -m "generated file"
+            git push
+          fi
+```
 
 ### Port to typescript
 
