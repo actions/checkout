@@ -59,13 +59,17 @@ function updateUsage(
 
     // Constrain the width of the description
     const width = 80
-    let description = input.description as string
+    let description = (input.description as string)
+      .trimRight()
+      .replace(/\r\n/g, '\n') // Convert CR to LF
+      .replace(/ +/g, ' ') //    Squash consecutive spaces
+      .replace(/ \n/g, '\n') //  Squash space followed by newline
     while (description) {
       // Longer than width? Find a space to break apart
       let segment: string = description
       if (description.length > width) {
         segment = description.substr(0, width + 1)
-        while (!segment.endsWith(' ') && segment) {
+        while (!segment.endsWith(' ') && !segment.endsWith('\n') && segment) {
           segment = segment.substr(0, segment.length - 1)
         }
 
@@ -77,15 +81,30 @@ function updateUsage(
         segment = description
       }
 
-      description = description.substr(segment.length) // Remaining
-      segment = segment.trimRight() // Trim the trailing space
-      newReadme.push(`    # ${segment}`)
+      // Check for newline
+      const newlineIndex = segment.indexOf('\n')
+      if (newlineIndex >= 0) {
+        segment = segment.substr(0, newlineIndex + 1)
+      }
+
+      // Append segment
+      newReadme.push(`    # ${segment}`.trimRight())
+
+      // Remaining
+      description = description.substr(segment.length)
     }
 
-    // Input and default
     if (input.default !== undefined) {
+      // Append blank line if description had paragraphs
+      if ((input.description as string).trimRight().match(/\n[ ]*\r?\n/)) {
+        newReadme.push(`    #`)
+      }
+
+      // Default
       newReadme.push(`    # Default: ${input.default}`)
     }
+
+    // Input name
     newReadme.push(`    ${key}: ''`)
 
     firstInput = false

@@ -18,9 +18,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   core.info(
     `Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`
   )
-  const repositoryUrl = `https://${hostname}/${encodeURIComponent(
-    settings.repositoryOwner
-  )}/${encodeURIComponent(settings.repositoryName)}`
+  const repositoryUrl = settings.sshKey
+    ? `git@${hostname}:${encodeURIComponent(
+        settings.repositoryOwner
+      )}/${encodeURIComponent(settings.repositoryName)}.git`
+    : `https://${hostname}/${encodeURIComponent(
+        settings.repositoryOwner
+      )}/${encodeURIComponent(settings.repositoryName)}`
 
   // Remove conflicting file path
   if (fsHelper.fileExistsSync(settings.repositoryPath)) {

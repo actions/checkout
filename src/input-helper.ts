@@ -112,6 +112,12 @@ export function getInputs(): IGitSourceSettings {
   // Auth token
   result.authToken = core.getInput('token')
 
+  // SSH
+  result.sshKey = core.getInput('ssh-key')
+  result.sshKnownHosts = core.getInput('ssh-known-hosts')
+  result.sshStrict =
+    (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE'
+
   // Persist credentials
   result.persistCredentials =
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'

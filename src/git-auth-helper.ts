@@ -13,6 +13,7 @@ import {IGitSourceSettings} from './git-source-settings'
 
 const IS_WINDOWS = process.platform === 'win32'
 const HOSTNAME = 'github.com'
+const SSH_COMMAND_KEY = 'core.sshCommand'
 
 export interface IGitAuthHelper {
   configureAuth(): Promise<void>
@@ -36,6 +37,8 @@ class GitAuthHelper {
   private readonly tokenPlaceholderConfigValue: string
   private readonly insteadOfKey: string = `url.https://${HOSTNAME}/.insteadOf`
   private readonly insteadOfValue: string = `git@${HOSTNAME}:`
+  private sshKeyPath = ''
+  private sshKnownHostsPath = ''
   private temporaryHomePath = ''
   private tokenConfigValue: string
 
@@ -61,6 +64,7 @@ class GitAuthHelper {
     await this.removeAuth()
 
     // Configure new values
+    await this.configureSsh()
     await this.configureToken()
   }
 
@@ -106,7 +110,9 @@ class GitAuthHelper {
 
       // Configure HTTPS instead of SSH
       await this.git.tryConfigUnset(this.insteadOfKey, true)
-      await this.git.config(this.insteadOfKey, this.insteadOfValue, true)
+      if (!this.settings.sshKey) {
+        await this.git.config(this.insteadOfKey, this.insteadOfValue, true)
+      }
     } catch (err) {
       // Unset in case somehow written to the real global config
       core.info(
@@ -118,17 +124,15 @@ class GitAuthHelper {
   }
 
   async configureSubmoduleAuth(): Promise<void> {
+    // Remove possible previous HTTPS instead of SSH
+    await this.removeGitConfig(this.insteadOfKey, true)
+
     if (this.settings.persistCredentials) {
       // Configure a placeholder value. This approach avoids the credential being captured
       // by process creation audit events, which are commonly logged. For more information,
       // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-      const commands = [
-        `git config --local "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}"`,
-        `git config --local "${this.insteadOfKey}" "${this.insteadOfValue}"`,
-        `git config --local --show-origin --name-only --get-regexp remote.origin.url`
-      ]
       const output = await this.git.submoduleForeach(
-        commands.join(' && '),
+        `git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url`,
         this.settings.nestedSubmodules
       )
 
@@ -139,10 +143,19 @@ class GitAuthHelper {
         core.debug(`Replacing token placeholder in '${configPath}'`)
         this.replaceTokenPlaceholder(configPath)
       }
+
+      // Configure HTTPS instead of SSH
+      if (!this.settings.sshKey) {
+        await this.git.submoduleForeach(
+          `git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`,
+          this.settings.nestedSubmodules
+        )
+      }
     }
   }
 
   async removeAuth(): Promise<void> {
+    await this.removeSsh()
     await this.removeToken()
   }
 
@@ -150,6 +163,77 @@ class GitAuthHelper {
     core.info(`Unsetting HOME override`)
     this.git.removeEnvironmentVariable('HOME')
     await io.rmRF(this.temporaryHomePath)
+  }
+
+  private async configureSsh(): Promise<void> {
+    if (!this.settings.sshKey) {
+      return
+    }
+
+    // Write key
+    const runnerTemp = process.env['RUNNER_TEMP'] || ''
+    assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
+    const uniqueId = uuid()
+    this.sshKeyPath = path.join(runnerTemp, uniqueId)
+    stateHelper.setSshKeyPath(this.sshKeyPath)
+    await fs.promises.mkdir(runnerTemp, {recursive: true})
+    await fs.promises.writeFile(
+      this.sshKeyPath,
+      this.settings.sshKey.trim() + '\n',
+      {mode: 0o600}
+    )
+
+    // Remove inherited permissions on Windows
+    if (IS_WINDOWS) {
+      const icacls = await io.which('icacls.exe')
+      await exec.exec(
+        `"${icacls}" "${this.sshKeyPath}" /grant:r "${process.env['USERDOMAIN']}\\${process.env['USERNAME']}:F"`
+      )
+      await exec.exec(`"${icacls}" "${this.sshKeyPath}" /inheritance:r`)
+    }
+
+    // Write known hosts
+    const userKnownHostsPath = path.join(os.homedir(), '.ssh', 'known_hosts')
+    let userKnownHosts = ''
+    try {
+      userKnownHosts = (
+        await fs.promises.readFile(userKnownHostsPath)
+      ).toString()
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err
+      }
+    }
+    let knownHosts = ''
+    if (userKnownHosts) {
+      knownHosts += `# Begin from ${userKnownHostsPath}\n${userKnownHosts}\n# End from ${userKnownHostsPath}\n`
+    }
+    if (this.settings.sshKnownHosts) {
+      knownHosts += `# Begin from input known hosts\n${this.settings.sshKnownHosts}\n# end from input known hosts\n`
+    }
+    knownHosts += `# Begin implicitly added github.com\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==\n# End implicitly added github.com\n`
+    this.sshKnownHostsPath = path.join(runnerTemp, `${uniqueId}_known_hosts`)
+    stateHelper.setSshKnownHostsPath(this.sshKnownHostsPath)
+    await fs.promises.writeFile(this.sshKnownHostsPath, knownHosts)
+
+    // Configure GIT_SSH_COMMAND
+    const sshPath = await io.which('ssh', true)
+    let sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
+      this.sshKeyPath
+    )}"`
+    if (this.settings.sshStrict) {
+      sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no'
+    }
+    sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(
+      this.sshKnownHostsPath
+    )}"`
+    core.info(`Temporarily overriding GIT_SSH_COMMAND=${sshCommand}`)
+    this.git.setEnvironmentVariable('GIT_SSH_COMMAND', sshCommand)
+
+    // Configure core.sshCommand
+    if (this.settings.persistCredentials) {
+      await this.git.config(SSH_COMMAND_KEY, sshCommand)
+    }
   }
 
   private async configureToken(
@@ -198,23 +282,55 @@ class GitAuthHelper {
     await fs.promises.writeFile(configPath, content)
   }
 
+  private async removeSsh(): Promise<void> {
+    // SSH key
+    const keyPath = this.sshKeyPath || stateHelper.SshKeyPath
+    if (keyPath) {
+      try {
+        await io.rmRF(keyPath)
+      } catch (err) {
+        core.debug(err.message)
+        core.warning(`Failed to remove SSH key '${keyPath}'`)
+      }
+    }
+
+    // SSH known hosts
+    const knownHostsPath =
+      this.sshKnownHostsPath || stateHelper.SshKnownHostsPath
+    if (knownHostsPath) {
+      try {
+        await io.rmRF(knownHostsPath)
+      } catch {
+        // Intentionally empty
+      }
+    }
+
+    // SSH command
+    await this.removeGitConfig(SSH_COMMAND_KEY)
+  }
+
   private async removeToken(): Promise<void> {
     // HTTP extra header
     await this.removeGitConfig(this.tokenConfigKey)
   }
 
-  private async removeGitConfig(configKey: string): Promise<void> {
-    if (
-      (await this.git.configExists(configKey)) &&
-      !(await this.git.tryConfigUnset(configKey))
-    ) {
-      // Load the config contents
-      core.warning(`Failed to remove '${configKey}' from the git config`)
+  private async removeGitConfig(
+    configKey: string,
+    submoduleOnly: boolean = false
+  ): Promise<void> {
+    if (!submoduleOnly) {
+      if (
+        (await this.git.configExists(configKey)) &&
+        !(await this.git.tryConfigUnset(configKey))
+      ) {
+        // Load the config contents
+        core.warning(`Failed to remove '${configKey}' from the git config`)
+      }
     }
 
     const pattern = regexpHelper.escape(configKey)
     await this.git.submoduleForeach(
-      `git config --local --name-only --get-regexp ${pattern} && git config --local --unset-all ${configKey} || :`,
+      `git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`,
       true
     )
   }
