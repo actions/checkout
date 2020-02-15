@@ -2,10 +2,10 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
-import {ISourceSettings} from './git-source-provider'
+import {IGitSourceSettings} from './git-source-settings'
 
-export function getInputs(): ISourceSettings {
-  const result = ({} as unknown) as ISourceSettings
+export function getInputs(): IGitSourceSettings {
+  const result = ({} as unknown) as IGitSourceSettings
 
   // GitHub workspace
   let githubWorkspacePath = process.env['GITHUB_WORKSPACE']

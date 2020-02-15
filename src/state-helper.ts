@@ -1,4 +1,3 @@
-import * as core from '@actions/core'
 import * as coreCommand from '@actions/core/lib/command'
 
 /**

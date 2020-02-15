@@ -19,8 +19,6 @@ jobs:
       - run: npm run build
       - run: npm run format-check
       - run: npm run lint
-      - run: npm run pack
-      - run: npm run gendocs
       - run: npm test
       - name: Verify no unstaged changes
         run: __test__/verify-no-unstaged-changes.sh

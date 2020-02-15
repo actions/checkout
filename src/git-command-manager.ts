@@ -26,6 +26,7 @@ export interface IGitCommandManager {
   lfsInstall(): Promise<void>
   log1(): Promise<void>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
+  setEnvironmentVariable(name: string, value: string): void
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string): Promise<boolean>
@@ -34,7 +35,7 @@ export interface IGitCommandManager {
   tryReset(): Promise<boolean>
 }
 
-export async function CreateCommandManager(
+export async function createCommandManager(
   workingDirectory: string,
   lfs: boolean
 ): Promise<IGitCommandManager> {
@@ -205,6 +206,10 @@ class GitCommandManager {
 
   async remoteAdd(remoteName: string, remoteUrl: string): Promise<void> {
     await this.execGit(['remote', 'add', remoteName, remoteUrl])
+  }
+
+  setEnvironmentVariable(name: string, value: string): void {
+    this.gitEnv[name] = value
   }
 
   async tagExists(pattern: string): Promise<boolean> {
