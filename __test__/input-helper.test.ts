@@ -130,11 +130,4 @@ describe('input-helper tests', () => {
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
   })
-
-  it('gives good error message for submodules input', () => {
-    inputs.submodules = 'true'
-    assert.throws(() => {
-      inputHelper.getInputs()
-    }, /The input 'submodules' is not supported/)
-  })
 })

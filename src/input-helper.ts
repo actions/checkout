@@ -85,13 +85,6 @@ export function getInputs(): IGitSourceSettings {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
-  // Submodules
-  if (core.getInput('submodules')) {
-    throw new Error(
-      "The input 'submodules' is not supported in actions/checkout@v2"
-    )
-  }
-
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
@@ -102,6 +95,19 @@ export function getInputs(): IGitSourceSettings {
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
+
+  // Submodules
+  result.submodules = false
+  result.nestedSubmodules = false
+  const submodulesString = (core.getInput('submodules') || '').toUpperCase()
+  if (submodulesString == 'RECURSIVE') {
+    result.submodules = true
+    result.nestedSubmodules = true
+  } else if (submodulesString == 'TRUE') {
+    result.submodules = true
+  }
+  core.debug(`submodules = ${result.submodules}`)
+  core.debug(`recursive submodules = ${result.nestedSubmodules}`)
 
   // Auth token
   result.authToken = core.getInput('token')

@@ -70,6 +70,11 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Whether to download Git-LFS files
     # Default: false
     lfs: ''
+
+    # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+    # recursively checkout submodules.
+    # Default: false
+    submodules: ''
 ```
 <!-- end usage -->
 

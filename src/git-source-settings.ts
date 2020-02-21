@@ -7,6 +7,8 @@ export interface IGitSourceSettings {
   clean: boolean
   fetchDepth: number
   lfs: boolean
+  submodules: boolean
+  nestedSubmodules: boolean
   authToken: string
   persistCredentials: boolean
 }
