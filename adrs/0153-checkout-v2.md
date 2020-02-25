@@ -27,13 +27,27 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
       event.  Otherwise, defaults to `master`.
   token:
     description: >
-      Auth token used to fetch the repository. The token is stored in the local
-      git config, which enables your scripts to run authenticated git commands.
-      The post-job step removes the token from the git config. [Learn more about
-      creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+      Personal access token (PAT) used to fetch the repository. The PAT is configured
+      with the local git config, which enables your scripts to run authenticated git
+      commands. The post-job step removes the PAT. [Learn more about creating and using
+      encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     default: ${{ github.token }}
+  ssh-key:
+    description: >
+      SSH key used to fetch the repository. SSH key is configured with the local
+      git config, which enables your scripts to run authenticated git commands.
+      The post-job step removes the SSH key. [Learn more about creating and using
+      encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+  ssh-known-hosts:
+    description: >
+      Known hosts in addition to the user and global host key database. The public
+      SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
+      `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
+  ssh-strict:
+    description: 'Whether to perform strict host key checking'
+    default: true
   persist-credentials:
-    description: 'Whether to persist the token in the git config'
+    description: 'Whether to configure the token or SSH key with the local git config'
     default: true
   path:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
@@ -49,6 +63,7 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
 ```
 
 Note:
+- SSH support is new
 - `persist-credentials` is new
 - `path` behavior is different (refer [below](#path) for details)
 - `submodules` was removed (error if specified; add later if needed)
@@ -63,19 +78,54 @@ Note:
 
 ### Persist credentials
 
-Persist the token in the git config (http.extraheader). This will allow users to script authenticated git commands, like `git fetch`.
+The credentials will be persisted on disk. This will allow users to script authenticated git commands, like `git fetch`.
 
-A post script will remove the credentials from the git config (cleanup for self-hosted).
+A post script will remove the credentials (cleanup for self-hosted).
 
 Users may opt-out by specifying `persist-credentials: false`
 
 Note:
 - Users scripting `git commit` may need to set the username and email. The service does not provide any reasonable default value. Users can add `git config user.name <NAME>` and `git config user.email <EMAIL>`. We will document this guidance.
-- The auth header (stored in the repo's git config), is scoped to all of github `http.https://github.com/.extraheader`
+
+#### PAT
+
+When using the `${{github.token}}` or a PAT, the token will be persisted in the local git config. The config key `http.https://github.com/.extraheader` enables an auth header to be specified on all authenticated commands `AUTHORIZATION: basic <BASE64_U:P>`.
+
+Note:
+- The auth header is scoped to all of github `http.https://github.com/.extraheader`
   - Additional public remotes also just work.
   - If users want to authenticate to an additional private remote, they should provide the `token` input.
   - Lines up if we add submodule support in the future. Don't need to worry about calculating relative URLs. Just works, although needs to be persisted in each submodule git config.
-  - Users opt out of persisted credentials (`persist-credentials: false`), or can script the removal themselves (`git config --unset-all http.https://github.com/.extraheader`).
+
+#### SSH key
+
+The SSH key will be written to disk under the `$RUNNER_TEMP` directory. The SSH key will
+be removed by the action's post-job hook. Additionally, RUNNER_TEMP is cleared by the
+runner between jobs.
+
+The SSH key must be written with strict file permissions. The SSH client requires the file
+to be read/write for the user, and not accessible by others.
+
+The user host key database (`~/.ssh/known_hosts`) will be copied to a unique file under
+`$RUNNER_TEMP`. And values from the input `ssh-known-hosts` will be added to the file.
+
+The SSH command will be overridden for the local git config:
+
+```sh
+git config core.sshCommand 'ssh -i "$RUNNER_TEMP/path-to-ssh-key" -o StrictHostKeyChecking=yes -o CheckHostIP=no -o "UserKnownHostsFile=$RUNNER_TEMP/path-to-known-hosts"'
+```
+
+When the input `ssh-strict` is set to `false`, the options `CheckHostIP` and `StrictHostKeyChecking` will not be overridden.
+
+Note:
+- When `ssh-strict` is set to `true` (default), the SSH option `CheckHostIP` can safely be disabled.
+  Strict host checking verifies the server's public key. Therefore, IP verification is unnecessary
+  and noisy. For example:
+  > Warning: Permanently added the RSA host key for IP address '140.82.113.4' to the list of known hosts.
+- Since GIT_SSH_COMMAND overrides core.sshCommand, temporarily set the env var when fetching the repo. When creds
+  are persisted, core.sshCommand is leveraged to avoid multiple checkout steps stomping over each other.
+- Modify actions/runner to mount RUNNER_TEMP to enable scripting authenticated git commands from a container action.
+- Refer [here](https://linux.die.net/man/5/ssh_config) for SSH config details.
 
 ### Fetch behavior
 
