@@ -164,7 +164,7 @@ async function getGitCommandManager(
   settings: ISourceSettings
 ): Promise<IGitCommandManager> {
   core.info(`Working directory is '${settings.repositoryPath}'`)
-  // const git = (null as unknown) as IGitCommandManager
+
   try {
     return await gitCommandManager.CreateCommandManager(
       settings.repositoryPath,

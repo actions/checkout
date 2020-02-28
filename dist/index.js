@@ -5536,7 +5536,6 @@ exports.cleanup = cleanup;
 function getGitCommandManager(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`Working directory is '${settings.repositoryPath}'`);
-        // const git = (null as unknown) as IGitCommandManager
         try {
             return yield gitCommandManager.CreateCommandManager(settings.repositoryPath, settings.lfs);
         }
