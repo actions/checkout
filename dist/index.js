@@ -5631,7 +5631,9 @@ function configureAuthToken(git, authToken, global) {
         const basicCredential = Buffer.from(`x-access-token:${authToken}`, 'utf8').toString('base64');
         core.setSecret(basicCredential);
         // Replace the value in the config file
-        const configPath = path.join(git.getWorkingDirectory(), '.git', 'config');
+        const configPath = global
+            ? path.join(process.env.HOME, '.gitconfig')
+            : path.join(git.getWorkingDirectory(), '.git', 'config');
         let content = (yield fs.promises.readFile(configPath)).toString();
         const placeholderIndex = content.indexOf(placeholder);
         if (placeholderIndex < 0 ||

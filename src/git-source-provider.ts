@@ -285,7 +285,9 @@ async function configureAuthToken(
   core.setSecret(basicCredential)
 
   // Replace the value in the config file
-  const configPath = path.join(git.getWorkingDirectory(), '.git', 'config')
+  const configPath = global
+    ? path.join(process.env.HOME as string, '.gitconfig')
+    : path.join(git.getWorkingDirectory(), '.git', 'config')
   let content = (await fs.promises.readFile(configPath)).toString()
   const placeholderIndex = content.indexOf(placeholder)
   if (
