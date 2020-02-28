@@ -19,6 +19,9 @@ inputs:
   persist-credentials:
     description: 'Whether to persist the token in the git config'
     default: true
+  global-credentials:
+    description: 'Whether to use --local or --global scope when persisting the token.'
+    default: false
   path:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
   clean:

@@ -56,6 +56,10 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     persist-credentials: ''
 
+    # Whether to use --local or --global scope when persisting the token.
+    # Default: false
+    global-credentials: ''
+
     # Relative path under $GITHUB_WORKSPACE to place the repository
     path: ''
 

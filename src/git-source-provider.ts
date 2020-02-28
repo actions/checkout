@@ -23,6 +23,7 @@ export interface ISourceSettings {
   lfs: boolean
   authToken: string
   persistCredentials: boolean
+  globalCredentials: boolean
 }
 
 export async function getSource(settings: ISourceSettings): Promise<void> {
@@ -97,7 +98,11 @@ export async function getSource(settings: ISourceSettings): Promise<void> {
 
     try {
       // Config extraheader
-      await configureAuthToken(git, settings.authToken)
+      await configureAuthToken(
+        git,
+        settings.authToken,
+        settings.globalCredentials
+      )
 
       // LFS install
       if (settings.lfs) {
@@ -159,7 +164,7 @@ async function getGitCommandManager(
   settings: ISourceSettings
 ): Promise<IGitCommandManager> {
   core.info(`Working directory is '${settings.repositoryPath}'`)
-  let git = (null as unknown) as IGitCommandManager
+  // const git = (null as unknown) as IGitCommandManager
   try {
     return await gitCommandManager.CreateCommandManager(
       settings.repositoryPath,
@@ -263,13 +268,14 @@ async function prepareExistingDirectory(
 
 async function configureAuthToken(
   git: IGitCommandManager,
-  authToken: string
+  authToken: string,
+  global: boolean
 ): Promise<void> {
   // Configure a placeholder value. This approach avoids the credential being captured
   // by process creation audit events, which are commonly logged. For more information,
   // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
   const placeholder = `AUTHORIZATION: basic ***`
-  await git.config(authConfigKey, placeholder)
+  await git.config(authConfigKey, placeholder, global)
 
   // Determine the basic credential value
   const basicCredential = Buffer.from(
@@ -284,7 +290,7 @@ async function configureAuthToken(
   const placeholderIndex = content.indexOf(placeholder)
   if (
     placeholderIndex < 0 ||
-    placeholderIndex != content.lastIndexOf(placeholder)
+    placeholderIndex !== content.lastIndexOf(placeholder)
   ) {
     throw new Error('Unable to replace auth placeholder in .git/config')
   }
@@ -299,11 +305,16 @@ async function removeGitConfig(
   git: IGitCommandManager,
   configKey: string
 ): Promise<void> {
-  if (
-    (await git.configExists(configKey)) &&
-    !(await git.tryConfigUnset(configKey))
-  ) {
-    // Load the config contents
-    core.warning(`Failed to remove '${configKey}' from the git config`)
+  const LOCAL = false
+  const GLOBAL = true
+
+  for (const scope of [LOCAL, GLOBAL]) {
+    if (
+      (await git.configExists(configKey, scope)) &&
+      !(await git.tryConfigUnset(configKey, scope))
+    ) {
+      // Load the config contents
+      core.warning(`Failed to remove '${configKey}' from the git config`)
+    }
   }
 }

@@ -110,5 +110,8 @@ export function getInputs(): ISourceSettings {
   result.persistCredentials =
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
+  result.globalCredentials =
+    (core.getInput('global-credentials') || 'false').toUpperCase() === 'TRUE'
+
   return result
 }

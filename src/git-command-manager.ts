@@ -16,8 +16,8 @@ export interface IGitCommandManager {
   branchList(remote: boolean): Promise<string[]>
   checkout(ref: string, startPoint: string): Promise<void>
   checkoutDetach(): Promise<void>
-  config(configKey: string, configValue: string): Promise<void>
-  configExists(configKey: string): Promise<boolean>
+  config(configKey: string, configValue: string, global: boolean): Promise<void>
+  configExists(configKey: string, global: boolean): Promise<boolean>
   fetch(fetchDepth: number, refSpec: string[]): Promise<void>
   getWorkingDirectory(): string
   init(): Promise<void>
@@ -28,7 +28,7 @@ export interface IGitCommandManager {
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
-  tryConfigUnset(configKey: string): Promise<boolean>
+  tryConfigUnset(configKey: string, global: boolean): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
@@ -123,16 +123,31 @@ class GitCommandManager {
     await this.execGit(args)
   }
 
-  async config(configKey: string, configValue: string): Promise<void> {
-    await this.execGit(['config', '--local', configKey, configValue])
+  async config(
+    configKey: string,
+    configValue: string,
+    global: boolean
+  ): Promise<void> {
+    await this.execGit([
+      'config',
+      global ? '--global' : '--local',
+      configKey,
+      configValue
+    ])
   }
 
-  async configExists(configKey: string): Promise<boolean> {
+  async configExists(configKey: string, global: boolean): Promise<boolean> {
     const pattern = configKey.replace(/[^a-zA-Z0-9_]/g, x => {
       return `\\${x}`
     })
     const output = await this.execGit(
-      ['config', '--local', '--name-only', '--get-regexp', pattern],
+      [
+        'config',
+        global ? '--global' : '--local',
+        '--name-only',
+        '--get-regexp',
+        pattern
+      ],
       true
     )
     return output.exitCode === 0
@@ -217,9 +232,9 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
-  async tryConfigUnset(configKey: string): Promise<boolean> {
+  async tryConfigUnset(configKey: string, global: boolean): Promise<boolean> {
     const output = await this.execGit(
-      ['config', '--local', '--unset-all', configKey],
+      ['config', global ? '--global' : '--local', '--unset-all', configKey],
       true
     )
     return output.exitCode === 0
