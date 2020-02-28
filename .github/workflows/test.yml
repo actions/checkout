@@ -31,5 +31,6 @@ jobs:
       - name: Verify LFS
         shell: bash
         run: __test__/verify-lfs.sh
-      - run: ls -la .git
-      - run: ls -la .git/objects
+      - run: ls -la lfs/.git
+      - run: ls -la lfs/.git/lfs
+      - run: ls -la lfs/.git/lfs/objects
