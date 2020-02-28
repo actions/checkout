@@ -8,71 +8,17 @@ on:
       - releases/*
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - uses: actions/checkout@v2
-      - run: npm ci
-      - run: npm run build
-      - run: npm run format-check
-      - run: npm run lint
-      - run: npm run pack
-      - run: npm run gendocs
-      - run: npm test
-      - name: Verify no unstaged changes
-        run: __test__/verify-no-unstaged-changes.sh
 
   test:
     strategy:
       matrix:
-        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+        runs-on: [ubuntu-latest]
     runs-on: ${{ matrix.runs-on }}
 
     steps:
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@v2
-
-      # Basic checkout
-      - name: Basic checkout
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify basic
-        shell: bash
-        run: __test__/verify-basic.sh
-
-      # Clean
-      - name: Modify work tree
-        shell: bash
-        run: __test__/modify-work-tree.sh
-      - name: Clean checkout
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify clean
-        shell: bash
-        run: __test__/verify-clean.sh
-
-      # Side by side
-      - name: Side by side checkout 1
-        uses: ./
-        with:
-          ref: test-data/v2/side-by-side-1
-          path: side-by-side-1
-      - name: Side by side checkout 2
-        uses: ./
-        with:
-          ref: test-data/v2/side-by-side-2
-          path: side-by-side-2
-      - name: Verify side by side
-        shell: bash
-        run: __test__/verify-side-by-side.sh
 
       # LFS
       - name: LFS checkout
@@ -85,96 +31,4 @@ jobs:
       - name: Verify LFS
         shell: bash
         run: __test__/verify-lfs.sh
-
-      # Basic checkout using REST API
-      - name: Remove basic
-        if: runner.os != 'windows'
-        run: rm -rf basic
-      - name: Remove basic (Windows)
-        if: runner.os == 'windows'
-        shell: cmd
-        run: rmdir /s /q basic
-      - name: Override git version
-        if: runner.os != 'windows'
-        run: __test__/override-git-version.sh
-      - name: Override git version (Windows)
-        if: runner.os == 'windows'
-        run: __test__\\override-git-version.cmd
-      - name: Basic checkout using REST API
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify basic
-        run: __test__/verify-basic.sh --archive
-
-  test-proxy:
-    runs-on: ubuntu-latest
-    container:
-      image: alpine/git:latest
-      options: --dns 127.0.0.1
-    services:
-      squid-proxy:
-        image: datadog/squid:latest
-        ports:
-          - 3128:3128
-    env:
-      https_proxy: http://squid-proxy:3128
-    steps:
-      # Clone this repo
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      # Basic checkout using git
-      - name: Basic checkout
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify basic
-        run: __test__/verify-basic.sh
-
-      # Basic checkout using REST API
-      - name: Remove basic
-        run: rm -rf basic
-      - name: Override git version
-        run: __test__/override-git-version.sh
-      - name: Basic checkout using REST API
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify basic
-        run: __test__/verify-basic.sh --archive
-
-  test-bypass-proxy:
-    runs-on: ubuntu-latest
-    env:
-      https_proxy: http://no-such-proxy:3128
-      no_proxy: api.github.com,github.com
-    steps:
-      # Clone this repo
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      # Basic checkout using git
-      - name: Basic checkout
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify basic
-        run: __test__/verify-basic.sh
-      - name: Remove basic
-        run: rm -rf basic
-
-      # Basic checkout using REST API
-      - name: Override git version
-        run: __test__/override-git-version.sh
-      - name: Basic checkout using REST API
-        uses: ./
-        with:
-          ref: test-data/v2/basic
-          path: basic
-      - name: Verify basic
-        run: __test__/verify-basic.sh --archive
+      - run: ls -la .git
