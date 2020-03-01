@@ -210,6 +210,24 @@ jobs:
     git fetch --prune --unshallow
 ```
 
+## Lines of code added or modified vs. master
+```yaml
+# FAILS!!!
+- run: git diff --diff-filter=am master HEAD > git_diff.txt || true
+  # fatal: ambiguous argument 'master': unknown revision or path not in the working tree.
+- run: git diff --diff-filter=am origin/master HEAD > git_diff.txt || true
+  # fatal: ambiguous argument 'origin/master': unknown revision or path not in the working tree.
+```
+
+## File paths of files added or modified vs. master
+```yaml
+# FAILS!!!
+- run: git diff --diff-filter=am --name-only master HEAD > git_diff.txt || true
+  # fatal: ambiguous argument 'master': unknown revision or path not in the working tree.
+- run: git diff --diff-filter=am --name-only origin/master HEAD > git_diff.txt || true
+  # fatal: ambiguous argument 'origin/master': unknown revision or path not in the working tree.
+```
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
