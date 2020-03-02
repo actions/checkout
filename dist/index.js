@@ -5053,6 +5053,98 @@ function coerce (version) {
 
 /***/ }),
 
+/***/ 287:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const core = __importStar(__webpack_require__(470));
+const fs = __importStar(__webpack_require__(747));
+const path = __importStar(__webpack_require__(622));
+const IS_WINDOWS = process.platform === 'win32';
+const HOSTNAME = 'github.com';
+const EXTRA_HEADER_KEY = `http.https://${HOSTNAME}/.extraheader`;
+function createAuthHelper(git, settings) {
+    return new GitAuthHelper(git, settings);
+}
+exports.createAuthHelper = createAuthHelper;
+class GitAuthHelper {
+    constructor(gitCommandManager, gitSourceSettings) {
+        this.git = gitCommandManager;
+        this.settings = gitSourceSettings || {};
+    }
+    configureAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Remove possible previous values
+            yield this.removeAuth();
+            // Configure new values
+            yield this.configureToken();
+        });
+    }
+    removeAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.removeToken();
+        });
+    }
+    configureToken() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Configure a placeholder value. This approach avoids the credential being captured
+            // by process creation audit events, which are commonly logged. For more information,
+            // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
+            const placeholder = `AUTHORIZATION: basic ***`;
+            yield this.git.config(EXTRA_HEADER_KEY, placeholder);
+            // Determine the basic credential value
+            const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
+            core.setSecret(basicCredential);
+            // Replace the value in the config file
+            const configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
+            let content = (yield fs.promises.readFile(configPath)).toString();
+            const placeholderIndex = content.indexOf(placeholder);
+            if (placeholderIndex < 0 ||
+                placeholderIndex != content.lastIndexOf(placeholder)) {
+                throw new Error('Unable to replace auth placeholder in .git/config');
+            }
+            content = content.replace(placeholder, `AUTHORIZATION: basic ${basicCredential}`);
+            yield fs.promises.writeFile(configPath, content);
+        });
+    }
+    removeToken() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // HTTP extra header
+            yield this.removeGitConfig(EXTRA_HEADER_KEY);
+        });
+    }
+    removeGitConfig(configKey) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if ((yield this.git.configExists(configKey)) &&
+                !(yield this.git.tryConfigUnset(configKey))) {
+                // Load the config contents
+                core.warning(`Failed to remove '${configKey}' from the git config`);
+            }
+        });
+    }
+}
+
+
+/***/ }),
+
 /***/ 289:
 /***/ (function(__unusedmodule, exports, __webpack_require__) {
 
@@ -5085,12 +5177,12 @@ const git_version_1 = __webpack_require__(559);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
-function CreateCommandManager(workingDirectory, lfs) {
+function createCommandManager(workingDirectory, lfs) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs);
     });
 }
-exports.CreateCommandManager = CreateCommandManager;
+exports.createCommandManager = createCommandManager;
 class GitCommandManager {
     // Private constructor; use createCommandManager()
     constructor() {
@@ -5250,6 +5342,9 @@ class GitCommandManager {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.execGit(['remote', 'add', remoteName, remoteUrl]);
         });
+    }
+    setEnvironmentVariable(name, value) {
+        this.gitEnv[name] = value;
     }
     tagExists(pattern) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -5420,21 +5515,21 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(470));
-const fs = __importStar(__webpack_require__(747));
 const fsHelper = __importStar(__webpack_require__(618));
+const gitAuthHelper = __importStar(__webpack_require__(287));
 const gitCommandManager = __importStar(__webpack_require__(289));
+const gitDirectoryHelper = __importStar(__webpack_require__(438));
 const githubApiHelper = __importStar(__webpack_require__(464));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const refHelper = __importStar(__webpack_require__(227));
 const stateHelper = __importStar(__webpack_require__(153));
-const serverUrl = 'https://github.com/';
-const authConfigKey = `http.${serverUrl}.extraheader`;
+const hostname = 'github.com';
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
-        const repositoryUrl = `https://github.com/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
+        const repositoryUrl = `https://${hostname}/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -5449,7 +5544,7 @@ function getSource(settings) {
         const git = yield getGitCommandManager(settings);
         // Prepare existing directory, otherwise recreate
         if (isExisting) {
-            yield prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
+            yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
         }
         if (!git) {
             // Downloading using REST API
@@ -5469,11 +5564,10 @@ function getSource(settings) {
             if (!(yield git.tryDisableAutomaticGarbageCollection())) {
                 core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
             }
-            // Remove possible previous extraheader
-            yield removeGitConfig(git, authConfigKey);
+            const authHelper = gitAuthHelper.createAuthHelper(git, settings);
             try {
-                // Config extraheader
-                yield configureAuthToken(git, settings.authToken);
+                // Configure auth
+                yield authHelper.configureAuth();
                 // LFS install
                 if (settings.lfs) {
                     yield git.lfsInstall();
@@ -5495,8 +5589,9 @@ function getSource(settings) {
                 yield git.log1();
             }
             finally {
+                // Remove auth
                 if (!settings.persistCredentials) {
-                    yield removeGitConfig(git, authConfigKey);
+                    yield authHelper.removeAuth();
                 }
             }
         }
@@ -5512,22 +5607,22 @@ function cleanup(repositoryPath) {
         }
         let git;
         try {
-            git = yield gitCommandManager.CreateCommandManager(repositoryPath, false);
+            git = yield gitCommandManager.createCommandManager(repositoryPath, false);
         }
         catch (_a) {
             return;
         }
-        // Remove extraheader
-        yield removeGitConfig(git, authConfigKey);
+        // Remove auth
+        const authHelper = gitAuthHelper.createAuthHelper(git);
+        yield authHelper.removeAuth();
     });
 }
 exports.cleanup = cleanup;
 function getGitCommandManager(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`Working directory is '${settings.repositoryPath}'`);
-        let git = null;
         try {
-            return yield gitCommandManager.CreateCommandManager(settings.repositoryPath, settings.lfs);
+            return yield gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs);
         }
         catch (err) {
             // Git is required for LFS
@@ -5535,108 +5630,7 @@ function getGitCommandManager(settings) {
                 throw err;
             }
             // Otherwise fallback to REST API
-            return null;
-        }
-    });
-}
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let remove = false;
-        // Check whether using git or REST API
-        if (!git) {
-            remove = true;
-        }
-        // Fetch URL does not match
-        else if (!fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
-            repositoryUrl !== (yield git.tryGetFetchUrl())) {
-            remove = true;
-        }
-        else {
-            // Delete any index.lock and shallow.lock left by a previously canceled run or crashed git process
-            const lockPaths = [
-                path.join(repositoryPath, '.git', 'index.lock'),
-                path.join(repositoryPath, '.git', 'shallow.lock')
-            ];
-            for (const lockPath of lockPaths) {
-                try {
-                    yield io.rmRF(lockPath);
-                }
-                catch (error) {
-                    core.debug(`Unable to delete '${lockPath}'. ${error.message}`);
-                }
-            }
-            try {
-                // Checkout detached HEAD
-                if (!(yield git.isDetached())) {
-                    yield git.checkoutDetach();
-                }
-                // Remove all refs/heads/*
-                let branches = yield git.branchList(false);
-                for (const branch of branches) {
-                    yield git.branchDelete(false, branch);
-                }
-                // Remove all refs/remotes/origin/* to avoid conflicts
-                branches = yield git.branchList(true);
-                for (const branch of branches) {
-                    yield git.branchDelete(true, branch);
-                }
-                // Clean
-                if (clean) {
-                    if (!(yield git.tryClean())) {
-                        core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
-                        remove = true;
-                    }
-                    else if (!(yield git.tryReset())) {
-                        remove = true;
-                    }
-                    if (remove) {
-                        core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
-                    }
-                }
-            }
-            catch (error) {
-                core.warning(`Unable to prepare the existing repository. The repository will be recreated instead.`);
-                remove = true;
-            }
-        }
-        if (remove) {
-            // Delete the contents of the directory. Don't delete the directory itself
-            // since it might be the current working directory.
-            core.info(`Deleting the contents of '${repositoryPath}'`);
-            for (const file of yield fs.promises.readdir(repositoryPath)) {
-                yield io.rmRF(path.join(repositoryPath, file));
-            }
-        }
-    });
-}
-function configureAuthToken(git, authToken) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Configure a placeholder value. This approach avoids the credential being captured
-        // by process creation audit events, which are commonly logged. For more information,
-        // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-        const placeholder = `AUTHORIZATION: basic ***`;
-        yield git.config(authConfigKey, placeholder);
-        // Determine the basic credential value
-        const basicCredential = Buffer.from(`x-access-token:${authToken}`, 'utf8').toString('base64');
-        core.setSecret(basicCredential);
-        // Replace the value in the config file
-        const configPath = path.join(git.getWorkingDirectory(), '.git', 'config');
-        let content = (yield fs.promises.readFile(configPath)).toString();
-        const placeholderIndex = content.indexOf(placeholder);
-        if (placeholderIndex < 0 ||
-            placeholderIndex != content.lastIndexOf(placeholder)) {
-            throw new Error('Unable to replace auth placeholder in .git/config');
-        }
-        content = content.replace(placeholder, `AUTHORIZATION: basic ${basicCredential}`);
-        yield fs.promises.writeFile(configPath, content);
-    });
-}
-function removeGitConfig(git, configKey) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if ((yield git.configExists(configKey)) &&
-            !(yield git.tryConfigUnset(configKey))) {
-            // Load the config contents
-            core.warning(`Failed to remove '${configKey}' from the git config`);
+            return undefined;
         }
     });
 }
@@ -6873,6 +6867,108 @@ function escape(s) {
         .replace(/;/g, '%3B');
 }
 //# sourceMappingURL=command.js.map
+
+/***/ }),
+
+/***/ 438:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const core = __importStar(__webpack_require__(470));
+const fs = __importStar(__webpack_require__(747));
+const fsHelper = __importStar(__webpack_require__(618));
+const io = __importStar(__webpack_require__(1));
+const path = __importStar(__webpack_require__(622));
+function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let remove = false;
+        // Check whether using git or REST API
+        if (!git) {
+            remove = true;
+        }
+        // Fetch URL does not match
+        else if (!fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
+            repositoryUrl !== (yield git.tryGetFetchUrl())) {
+            remove = true;
+        }
+        else {
+            // Delete any index.lock and shallow.lock left by a previously canceled run or crashed git process
+            const lockPaths = [
+                path.join(repositoryPath, '.git', 'index.lock'),
+                path.join(repositoryPath, '.git', 'shallow.lock')
+            ];
+            for (const lockPath of lockPaths) {
+                try {
+                    yield io.rmRF(lockPath);
+                }
+                catch (error) {
+                    core.debug(`Unable to delete '${lockPath}'. ${error.message}`);
+                }
+            }
+            try {
+                // Checkout detached HEAD
+                if (!(yield git.isDetached())) {
+                    yield git.checkoutDetach();
+                }
+                // Remove all refs/heads/*
+                let branches = yield git.branchList(false);
+                for (const branch of branches) {
+                    yield git.branchDelete(false, branch);
+                }
+                // Remove all refs/remotes/origin/* to avoid conflicts
+                branches = yield git.branchList(true);
+                for (const branch of branches) {
+                    yield git.branchDelete(true, branch);
+                }
+                // Clean
+                if (clean) {
+                    if (!(yield git.tryClean())) {
+                        core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
+                        remove = true;
+                    }
+                    else if (!(yield git.tryReset())) {
+                        remove = true;
+                    }
+                    if (remove) {
+                        core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
+                    }
+                }
+            }
+            catch (error) {
+                core.warning(`Unable to prepare the existing repository. The repository will be recreated instead.`);
+                remove = true;
+            }
+        }
+        if (remove) {
+            // Delete the contents of the directory. Don't delete the directory itself
+            // since it might be the current working directory.
+            core.info(`Deleting the contents of '${repositoryPath}'`);
+            for (const file of yield fs.promises.readdir(repositoryPath)) {
+                yield io.rmRF(path.join(repositoryPath, file));
+            }
+        }
+    });
+}
+exports.prepareExistingDirectory = prepareExistingDirectory;
+
 
 /***/ }),
 
