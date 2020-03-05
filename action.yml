@@ -30,6 +30,11 @@ inputs:
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
+  submodules:
+    description: >
+      Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+      recursively checkout submodules.
+    default: false
 runs:
   using: node12
   main: dist/index.js

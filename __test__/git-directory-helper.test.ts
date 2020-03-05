@@ -363,7 +363,11 @@ async function setup(testName: string): Promise<void> {
     lfsInstall: jest.fn(),
     log1: jest.fn(),
     remoteAdd: jest.fn(),
+    removeEnvironmentVariable: jest.fn(),
     setEnvironmentVariable: jest.fn(),
+    submoduleForeach: jest.fn(),
+    submoduleSync: jest.fn(),
+    submoduleUpdate: jest.fn(),
     tagExists: jest.fn(),
     tryClean: jest.fn(async () => {
       return true

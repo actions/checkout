@@ -5074,21 +5074,35 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const assert = __importStar(__webpack_require__(357));
 const core = __importStar(__webpack_require__(470));
 const fs = __importStar(__webpack_require__(747));
+const io = __importStar(__webpack_require__(1));
+const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
+const regexpHelper = __importStar(__webpack_require__(528));
+const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
 const HOSTNAME = 'github.com';
-const EXTRA_HEADER_KEY = `http.https://${HOSTNAME}/.extraheader`;
 function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
 }
 exports.createAuthHelper = createAuthHelper;
 class GitAuthHelper {
     constructor(gitCommandManager, gitSourceSettings) {
+        this.tokenConfigKey = `http.https://${HOSTNAME}/.extraheader`;
+        this.temporaryHomePath = '';
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
+        // Token auth header
+        const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
+        core.setSecret(basicCredential);
+        this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`;
+        this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`;
     }
     configureAuth() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -5098,37 +5112,110 @@ class GitAuthHelper {
             yield this.configureToken();
         });
     }
+    configureGlobalAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Create a temp home directory
+            const runnerTemp = process.env['RUNNER_TEMP'] || '';
+            assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
+            const uniqueId = v4_1.default();
+            this.temporaryHomePath = path.join(runnerTemp, uniqueId);
+            yield fs.promises.mkdir(this.temporaryHomePath, { recursive: true });
+            // Copy the global git config
+            const gitConfigPath = path.join(process.env['HOME'] || os.homedir(), '.gitconfig');
+            const newGitConfigPath = path.join(this.temporaryHomePath, '.gitconfig');
+            let configExists = false;
+            try {
+                yield fs.promises.stat(gitConfigPath);
+                configExists = true;
+            }
+            catch (err) {
+                if (err.code !== 'ENOENT') {
+                    throw err;
+                }
+            }
+            if (configExists) {
+                core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`);
+                yield io.cp(gitConfigPath, newGitConfigPath);
+            }
+            else {
+                yield fs.promises.writeFile(newGitConfigPath, '');
+            }
+            // Configure the token
+            try {
+                core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
+                this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
+                yield this.configureToken(newGitConfigPath, true);
+            }
+            catch (err) {
+                // Unset in case somehow written to the real global config
+                core.info('Encountered an error when attempting to configure token. Attempting unconfigure.');
+                yield this.git.tryConfigUnset(this.tokenConfigKey, true);
+                throw err;
+            }
+        });
+    }
+    configureSubmoduleAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.settings.persistCredentials) {
+                // Configure a placeholder value. This approach avoids the credential being captured
+                // by process creation audit events, which are commonly logged. For more information,
+                // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
+                const output = yield this.git.submoduleForeach(`git config "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}" && git config --local --show-origin --name-only --get-regexp remote.origin.url`, this.settings.nestedSubmodules);
+                // Replace the placeholder
+                const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
+                for (const configPath of configPaths) {
+                    core.debug(`Replacing token placeholder in '${configPath}'`);
+                    this.replaceTokenPlaceholder(configPath);
+                }
+            }
+        });
+    }
     removeAuth() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.removeToken();
         });
     }
-    configureToken() {
+    removeGlobalAuth() {
         return __awaiter(this, void 0, void 0, function* () {
+            core.info(`Unsetting HOME override`);
+            this.git.removeEnvironmentVariable('HOME');
+            yield io.rmRF(this.temporaryHomePath);
+        });
+    }
+    configureToken(configPath, globalConfig) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Validate args
+            assert.ok((configPath && globalConfig) || (!configPath && !globalConfig), 'Unexpected configureToken parameter combinations');
+            // Default config path
+            if (!configPath && !globalConfig) {
+                configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
+            }
             // Configure a placeholder value. This approach avoids the credential being captured
             // by process creation audit events, which are commonly logged. For more information,
             // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-            const placeholder = `AUTHORIZATION: basic ***`;
-            yield this.git.config(EXTRA_HEADER_KEY, placeholder);
-            // Determine the basic credential value
-            const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
-            core.setSecret(basicCredential);
-            // Replace the value in the config file
-            const configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
+            yield this.git.config(this.tokenConfigKey, this.tokenPlaceholderConfigValue, globalConfig);
+            // Replace the placeholder
+            yield this.replaceTokenPlaceholder(configPath || '');
+        });
+    }
+    replaceTokenPlaceholder(configPath) {
+        return __awaiter(this, void 0, void 0, function* () {
+            assert.ok(configPath, 'configPath is not defined');
             let content = (yield fs.promises.readFile(configPath)).toString();
-            const placeholderIndex = content.indexOf(placeholder);
+            const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue);
             if (placeholderIndex < 0 ||
-                placeholderIndex != content.lastIndexOf(placeholder)) {
-                throw new Error('Unable to replace auth placeholder in .git/config');
+                placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)) {
+                throw new Error(`Unable to replace auth placeholder in ${configPath}`);
             }
-            content = content.replace(placeholder, `AUTHORIZATION: basic ${basicCredential}`);
+            assert.ok(this.tokenConfigValue, 'tokenConfigValue is not defined');
+            content = content.replace(this.tokenPlaceholderConfigValue, this.tokenConfigValue);
             yield fs.promises.writeFile(configPath, content);
         });
     }
     removeToken() {
         return __awaiter(this, void 0, void 0, function* () {
             // HTTP extra header
-            yield this.removeGitConfig(EXTRA_HEADER_KEY);
+            yield this.removeGitConfig(this.tokenConfigKey);
         });
     }
     removeGitConfig(configKey) {
@@ -5138,6 +5225,8 @@ class GitAuthHelper {
                 // Load the config contents
                 core.warning(`Failed to remove '${configKey}' from the git config`);
             }
+            const pattern = regexpHelper.escape(configKey);
+            yield this.git.submoduleForeach(`git config --local --name-only --get-regexp ${pattern} && git config --local --unset-all ${configKey} || :`, true);
         });
     }
 }
@@ -5172,6 +5261,7 @@ const exec = __importStar(__webpack_require__(986));
 const fshelper = __importStar(__webpack_require__(618));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
+const regexpHelper = __importStar(__webpack_require__(528));
 const retryHelper = __importStar(__webpack_require__(587));
 const git_version_1 = __webpack_require__(559);
 // Auth header not supported before 2.9
@@ -5263,17 +5353,26 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    config(configKey, configValue) {
+    config(configKey, configValue, globalConfig) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['config', '--local', configKey, configValue]);
+            yield this.execGit([
+                'config',
+                globalConfig ? '--global' : '--local',
+                configKey,
+                configValue
+            ]);
         });
     }
-    configExists(configKey) {
+    configExists(configKey, globalConfig) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pattern = configKey.replace(/[^a-zA-Z0-9_]/g, x => {
-                return `\\${x}`;
-            });
-            const output = yield this.execGit(['config', '--local', '--name-only', '--get-regexp', pattern], true);
+            const pattern = regexpHelper.escape(configKey);
+            const output = yield this.execGit([
+                'config',
+                globalConfig ? '--global' : '--local',
+                '--name-only',
+                '--get-regexp',
+                pattern
+            ], true);
             return output.exitCode === 0;
         });
     }
@@ -5343,8 +5442,44 @@ class GitCommandManager {
             yield this.execGit(['remote', 'add', remoteName, remoteUrl]);
         });
     }
+    removeEnvironmentVariable(name) {
+        delete this.gitEnv[name];
+    }
     setEnvironmentVariable(name, value) {
         this.gitEnv[name] = value;
+    }
+    submoduleForeach(command, recursive) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['submodule', 'foreach'];
+            if (recursive) {
+                args.push('--recursive');
+            }
+            args.push(command);
+            const output = yield this.execGit(args);
+            return output.stdout;
+        });
+    }
+    submoduleSync(recursive) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['submodule', 'sync'];
+            if (recursive) {
+                args.push('--recursive');
+            }
+            yield this.execGit(args);
+        });
+    }
+    submoduleUpdate(fetchDepth, recursive) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['-c', 'protocol.version=2'];
+            args.push('submodule', 'update', '--init', '--force');
+            if (fetchDepth > 0) {
+                args.push(`--depth=${fetchDepth}`);
+            }
+            if (recursive) {
+                args.push('--recursive');
+            }
+            yield this.execGit(args);
+        });
     }
     tagExists(pattern) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -5358,9 +5493,14 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    tryConfigUnset(configKey) {
+    tryConfigUnset(configKey, globalConfig) {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--local', '--unset-all', configKey], true);
+            const output = yield this.execGit([
+                'config',
+                globalConfig ? '--global' : '--local',
+                '--unset-all',
+                configKey
+            ], true);
             return output.exitCode === 0;
         });
     }
@@ -5551,48 +5691,66 @@ function getSource(settings) {
             core.info(`The repository will be downloaded using the GitHub REST API`);
             core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
             yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
+            return;
         }
-        else {
-            // Save state for POST action
-            stateHelper.setRepositoryPath(settings.repositoryPath);
-            // Initialize the repository
-            if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
-                yield git.init();
-                yield git.remoteAdd('origin', repositoryUrl);
+        // Save state for POST action
+        stateHelper.setRepositoryPath(settings.repositoryPath);
+        // Initialize the repository
+        if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
+            yield git.init();
+            yield git.remoteAdd('origin', repositoryUrl);
+        }
+        // Disable automatic garbage collection
+        if (!(yield git.tryDisableAutomaticGarbageCollection())) {
+            core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
+        }
+        const authHelper = gitAuthHelper.createAuthHelper(git, settings);
+        try {
+            // Configure auth
+            yield authHelper.configureAuth();
+            // LFS install
+            if (settings.lfs) {
+                yield git.lfsInstall();
             }
-            // Disable automatic garbage collection
-            if (!(yield git.tryDisableAutomaticGarbageCollection())) {
-                core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
+            // Fetch
+            const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
+            yield git.fetch(settings.fetchDepth, refSpec);
+            // Checkout info
+            const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+            // LFS fetch
+            // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
+            // Explicit lfs fetch will fetch lfs objects in parallel.
+            if (settings.lfs) {
+                yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
             }
-            const authHelper = gitAuthHelper.createAuthHelper(git, settings);
-            try {
-                // Configure auth
-                yield authHelper.configureAuth();
-                // LFS install
-                if (settings.lfs) {
-                    yield git.lfsInstall();
+            // Checkout
+            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            // Submodules
+            if (settings.submodules) {
+                try {
+                    // Temporarily override global config
+                    yield authHelper.configureGlobalAuth();
+                    // Checkout submodules
+                    yield git.submoduleSync(settings.nestedSubmodules);
+                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                    yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
+                    // Persist credentials
+                    if (settings.persistCredentials) {
+                        yield authHelper.configureSubmoduleAuth();
+                    }
                 }
-                // Fetch
-                const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                yield git.fetch(settings.fetchDepth, refSpec);
-                // Checkout info
-                const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
-                // LFS fetch
-                // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
-                // Explicit lfs fetch will fetch lfs objects in parallel.
-                if (settings.lfs) {
-                    yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+                finally {
+                    // Remove temporary global config override
+                    yield authHelper.removeGlobalAuth();
                 }
-                // Checkout
-                yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
-                // Dump some info about the checked out commit
-                yield git.log1();
             }
-            finally {
-                // Remove auth
-                if (!settings.persistCredentials) {
-                    yield authHelper.removeAuth();
-                }
+            // Dump some info about the checked out commit
+            yield git.log1();
+        }
+        finally {
+            // Remove auth
+            if (!settings.persistCredentials) {
+                yield authHelper.removeAuth();
             }
         }
     });
@@ -9426,6 +9584,22 @@ module.exports = Hook
 module.exports.Hook = Hook
 module.exports.Singular = Hook.Singular
 module.exports.Collection = Hook.Collection
+
+
+/***/ }),
+
+/***/ 528:
+/***/ (function(__unusedmodule, exports) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+function escape(value) {
+    return value.replace(/[^a-zA-Z0-9_]/g, x => {
+        return `\\${x}`;
+    });
+}
+exports.escape = escape;
 
 
 /***/ }),
@@ -13731,10 +13905,6 @@ function getInputs() {
     // Clean
     result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
     core.debug(`clean = ${result.clean}`);
-    // Submodules
-    if (core.getInput('submodules')) {
-        throw new Error("The input 'submodules' is not supported in actions/checkout@v2");
-    }
     // Fetch depth
     result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
     if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
@@ -13744,6 +13914,19 @@ function getInputs() {
     // LFS
     result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
     core.debug(`lfs = ${result.lfs}`);
+    // Submodules
+    result.submodules = false;
+    result.nestedSubmodules = false;
+    const submodulesString = (core.getInput('submodules') || '').toUpperCase();
+    if (submodulesString == 'RECURSIVE') {
+        result.submodules = true;
+        result.nestedSubmodules = true;
+    }
+    else if (submodulesString == 'TRUE') {
+        result.submodules = true;
+    }
+    core.debug(`submodules = ${result.submodules}`);
+    core.debug(`recursive submodules = ${result.nestedSubmodules}`);
     // Auth token
     result.authToken = core.getInput('token');
     // Persist credentials

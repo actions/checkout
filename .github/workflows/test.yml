@@ -84,6 +84,35 @@ jobs:
         shell: bash
         run: __test__/verify-lfs.sh
 
+      # Submodules false
+      - name: Submodules false checkout
+        uses: ./
+        with:
+          ref: test-data/v2/submodule
+          path: submodules-false
+      - name: Verify submodules false
+        run: __test__/verify-submodules-false.sh
+
+      # Submodules one level
+      - name: Submodules true checkout
+        uses: ./
+        with:
+          ref: test-data/v2/submodule
+          path: submodules-true
+          submodules: true
+      - name: Verify submodules true
+        run: __test__/verify-submodules-true.sh
+
+      # Submodules recursive
+      - name: Submodules recursive checkout
+        uses: ./
+        with:
+          ref: test-data/v2/submodule
+          path: submodules-recursive
+          submodules: recursive
+      - name: Verify submodules recursive
+        run: __test__/verify-submodules-recursive.sh
+
       # Basic checkout using REST API
       - name: Remove basic
         if: runner.os != 'windows'

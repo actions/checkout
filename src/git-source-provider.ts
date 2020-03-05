@@ -61,63 +61,91 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       settings.commit,
       settings.repositoryPath
     )
-  } else {
-    // Save state for POST action
-    stateHelper.setRepositoryPath(settings.repositoryPath)
+    return
+  }
 
-    // Initialize the repository
-    if (
-      !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
-    ) {
-      await git.init()
-      await git.remoteAdd('origin', repositoryUrl)
+  // Save state for POST action
+  stateHelper.setRepositoryPath(settings.repositoryPath)
+
+  // Initialize the repository
+  if (
+    !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
+  ) {
+    await git.init()
+    await git.remoteAdd('origin', repositoryUrl)
+  }
+
+  // Disable automatic garbage collection
+  if (!(await git.tryDisableAutomaticGarbageCollection())) {
+    core.warning(
+      `Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`
+    )
+  }
+
+  const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+  try {
+    // Configure auth
+    await authHelper.configureAuth()
+
+    // LFS install
+    if (settings.lfs) {
+      await git.lfsInstall()
     }
 
-    // Disable automatic garbage collection
-    if (!(await git.tryDisableAutomaticGarbageCollection())) {
-      core.warning(
-        `Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`
-      )
+    // Fetch
+    const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
+    await git.fetch(settings.fetchDepth, refSpec)
+
+    // Checkout info
+    const checkoutInfo = await refHelper.getCheckoutInfo(
+      git,
+      settings.ref,
+      settings.commit
+    )
+
+    // LFS fetch
+    // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
+    // Explicit lfs fetch will fetch lfs objects in parallel.
+    if (settings.lfs) {
+      await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
     }
 
-    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
-    try {
-      // Configure auth
-      await authHelper.configureAuth()
+    // Checkout
+    await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
 
-      // LFS install
-      if (settings.lfs) {
-        await git.lfsInstall()
+    // Submodules
+    if (settings.submodules) {
+      try {
+        // Temporarily override global config
+        await authHelper.configureGlobalAuth()
+
+        // Checkout submodules
+        await git.submoduleSync(settings.nestedSubmodules)
+        await git.submoduleUpdate(
+          settings.fetchDepth,
+          settings.nestedSubmodules
+        )
+        await git.submoduleForeach(
+          'git config --local gc.auto 0',
+          settings.nestedSubmodules
+        )
+
+        // Persist credentials
+        if (settings.persistCredentials) {
+          await authHelper.configureSubmoduleAuth()
+        }
+      } finally {
+        // Remove temporary global config override
+        await authHelper.removeGlobalAuth()
       }
+    }
 
-      // Fetch
-      const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-      await git.fetch(settings.fetchDepth, refSpec)
-
-      // Checkout info
-      const checkoutInfo = await refHelper.getCheckoutInfo(
-        git,
-        settings.ref,
-        settings.commit
-      )
-
-      // LFS fetch
-      // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
-      // Explicit lfs fetch will fetch lfs objects in parallel.
-      if (settings.lfs) {
-        await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
-      }
-
-      // Checkout
-      await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
-
-      // Dump some info about the checked out commit
-      await git.log1()
-    } finally {
-      // Remove auth
-      if (!settings.persistCredentials) {
-        await authHelper.removeAuth()
-      }
+    // Dump some info about the checked out commit
+    await git.log1()
+  } finally {
+    // Remove auth
+    if (!settings.persistCredentials) {
+      await authHelper.removeAuth()
     }
   }
 }
