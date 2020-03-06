@@ -239,6 +239,8 @@ submodules scenarios: recursive, non-recursive, relative submodule paths.
 
 When fetching submodules, follow the `fetch-depth` settings.
 
+Also when fetching submodules, if the `ssh-key` input is not provided then convert SSH URLs to HTTPS: `-c url."https://github.com/".insteadOf "git@github.com:"`
+
 Credentials will be persisted in the submodules local git config too.
 
 ### Port to typescript
