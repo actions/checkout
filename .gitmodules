@@ -1,4 +1,4 @@
 [submodule "submodule-level-2"]
 	path = submodule-level-2
-	url = ./
-	branch = test-data/v2/submodule-level-2
+	url = git@github.com:actions/checkout.git
+	branch = test-data/v2/submodule-ssh-url-level-2
