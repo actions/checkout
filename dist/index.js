@@ -5095,6 +5095,8 @@ exports.createAuthHelper = createAuthHelper;
 class GitAuthHelper {
     constructor(gitCommandManager, gitSourceSettings) {
         this.tokenConfigKey = `http.https://${HOSTNAME}/.extraheader`;
+        this.insteadOfKey = `url.https://${HOSTNAME}/.insteadOf`;
+        this.insteadOfValue = `git@${HOSTNAME}:`;
         this.temporaryHomePath = '';
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
@@ -5140,11 +5142,15 @@ class GitAuthHelper {
             else {
                 yield fs.promises.writeFile(newGitConfigPath, '');
             }
-            // Configure the token
             try {
+                // Override HOME
                 core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
                 this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
+                // Configure the token
                 yield this.configureToken(newGitConfigPath, true);
+                // Configure HTTPS instead of SSH
+                yield this.git.tryConfigUnset(this.insteadOfKey, true);
+                yield this.git.config(this.insteadOfKey, this.insteadOfValue, true);
             }
             catch (err) {
                 // Unset in case somehow written to the real global config
@@ -5160,7 +5166,12 @@ class GitAuthHelper {
                 // Configure a placeholder value. This approach avoids the credential being captured
                 // by process creation audit events, which are commonly logged. For more information,
                 // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-                const output = yield this.git.submoduleForeach(`git config "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}" && git config --local --show-origin --name-only --get-regexp remote.origin.url`, this.settings.nestedSubmodules);
+                const commands = [
+                    `git config --local "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}"`,
+                    `git config --local "${this.insteadOfKey}" "${this.insteadOfValue}"`,
+                    `git config --local --show-origin --name-only --get-regexp remote.origin.url`
+                ];
+                const output = yield this.git.submoduleForeach(commands.join(' && '), this.settings.nestedSubmodules);
                 // Replace the placeholder
                 const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
                 for (const configPath of configPaths) {

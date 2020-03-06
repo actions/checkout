@@ -34,6 +34,8 @@ class GitAuthHelper {
   private readonly settings: IGitSourceSettings
   private readonly tokenConfigKey: string = `http.https://${HOSTNAME}/.extraheader`
   private readonly tokenPlaceholderConfigValue: string
+  private readonly insteadOfKey: string = `url.https://${HOSTNAME}/.insteadOf`
+  private readonly insteadOfValue: string = `git@${HOSTNAME}:`
   private temporaryHomePath = ''
   private tokenConfigValue: string
 
@@ -92,13 +94,19 @@ class GitAuthHelper {
       await fs.promises.writeFile(newGitConfigPath, '')
     }
 
-    // Configure the token
     try {
+      // Override HOME
       core.info(
         `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
       )
       this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
+
+      // Configure the token
       await this.configureToken(newGitConfigPath, true)
+
+      // Configure HTTPS instead of SSH
+      await this.git.tryConfigUnset(this.insteadOfKey, true)
+      await this.git.config(this.insteadOfKey, this.insteadOfValue, true)
     } catch (err) {
       // Unset in case somehow written to the real global config
       core.info(
@@ -114,8 +122,13 @@ class GitAuthHelper {
       // Configure a placeholder value. This approach avoids the credential being captured
       // by process creation audit events, which are commonly logged. For more information,
       // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
+      const commands = [
+        `git config --local "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}"`,
+        `git config --local "${this.insteadOfKey}" "${this.insteadOfValue}"`,
+        `git config --local --show-origin --name-only --get-regexp remote.origin.url`
+      ]
       const output = await this.git.submoduleForeach(
-        `git config "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}" && git config --local --show-origin --name-only --get-regexp remote.origin.url`,
+        commands.join(' && '),
         this.settings.nestedSubmodules
       )
 
