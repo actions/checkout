@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v2
 
       # Basic checkout
-      - name: Basic checkout
+      - name: Checkout basic
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -48,7 +48,7 @@ jobs:
       - name: Modify work tree
         shell: bash
         run: __test__/modify-work-tree.sh
-      - name: Clean checkout
+      - name: Checkout clean
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -58,12 +58,12 @@ jobs:
         run: __test__/verify-clean.sh
 
       # Side by side
-      - name: Side by side checkout 1
+      - name: Checkout side by side 1
         uses: ./
         with:
           ref: test-data/v2/side-by-side-1
           path: side-by-side-1
-      - name: Side by side checkout 2
+      - name: Checkout side by side 2
         uses: ./
         with:
           ref: test-data/v2/side-by-side-2
@@ -73,7 +73,7 @@ jobs:
         run: __test__/verify-side-by-side.sh
 
       # LFS
-      - name: LFS checkout
+      - name: Checkout LFS
         uses: ./
         with:
           repository: actions/checkout # hardcoded, otherwise doesn't work from a fork
@@ -85,29 +85,29 @@ jobs:
         run: __test__/verify-lfs.sh
 
       # Submodules false
-      - name: Submodules false checkout
+      - name: Checkout submodules false
         uses: ./
         with:
-          ref: test-data/v2/submodule
+          ref: test-data/v2/submodule-ssh-url
           path: submodules-false
       - name: Verify submodules false
         run: __test__/verify-submodules-false.sh
 
       # Submodules one level
-      - name: Submodules true checkout
+      - name: Checkout submodules true
         uses: ./
         with:
-          ref: test-data/v2/submodule
+          ref: test-data/v2/submodule-ssh-url
           path: submodules-true
           submodules: true
       - name: Verify submodules true
         run: __test__/verify-submodules-true.sh
 
       # Submodules recursive
-      - name: Submodules recursive checkout
+      - name: Checkout submodules recursive
         uses: ./
         with:
-          ref: test-data/v2/submodule
+          ref: test-data/v2/submodule-ssh-url
           path: submodules-recursive
           submodules: recursive
       - name: Verify submodules recursive
@@ -127,7 +127,7 @@ jobs:
       - name: Override git version (Windows)
         if: runner.os == 'windows'
         run: __test__\\override-git-version.cmd
-      - name: Basic checkout using REST API
+      - name: Checkout basic using REST API
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -153,7 +153,7 @@ jobs:
         uses: actions/checkout@v2
 
       # Basic checkout using git
-      - name: Basic checkout
+      - name: Checkout basic
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -185,7 +185,7 @@ jobs:
         uses: actions/checkout@v2
 
       # Basic checkout using git
-      - name: Basic checkout
+      - name: Checkout basic
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -198,7 +198,7 @@ jobs:
       # Basic checkout using REST API
       - name: Override git version
         run: __test__/override-git-version.sh
-      - name: Basic checkout using REST API
+      - name: Checkout basic using REST API
         uses: ./
         with:
           ref: test-data/v2/basic
