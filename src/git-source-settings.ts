@@ -10,5 +10,8 @@ export interface IGitSourceSettings {
   submodules: boolean
   nestedSubmodules: boolean
   authToken: string
+  sshKey: string
+  sshKnownHosts: string
+  sshStrict: boolean
   persistCredentials: boolean
 }

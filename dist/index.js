@@ -2622,12 +2622,34 @@ exports.IsPost = !!process.env['STATE_isPost'];
  */
 exports.RepositoryPath = process.env['STATE_repositoryPath'] || '';
 /**
+ * The SSH key path for the POST action. The value is empty during the MAIN action.
+ */
+exports.SshKeyPath = process.env['STATE_sshKeyPath'] || '';
+/**
+ * The SSH known hosts path for the POST action. The value is empty during the MAIN action.
+ */
+exports.SshKnownHostsPath = process.env['STATE_sshKnownHostsPath'] || '';
+/**
  * Save the repository path so the POST action can retrieve the value.
  */
 function setRepositoryPath(repositoryPath) {
     coreCommand.issueCommand('save-state', { name: 'repositoryPath' }, repositoryPath);
 }
 exports.setRepositoryPath = setRepositoryPath;
+/**
+ * Save the SSH key path so the POST action can retrieve the value.
+ */
+function setSshKeyPath(sshKeyPath) {
+    coreCommand.issueCommand('save-state', { name: 'sshKeyPath' }, sshKeyPath);
+}
+exports.setSshKeyPath = setSshKeyPath;
+/**
+ * Save the SSH known hosts path so the POST action can retrieve the value.
+ */
+function setSshKnownHostsPath(sshKnownHostsPath) {
+    coreCommand.issueCommand('save-state', { name: 'sshKnownHostsPath' }, sshKnownHostsPath);
+}
+exports.setSshKnownHostsPath = setSshKnownHostsPath;
 // Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
 // This is necessary since we don't have a separate entry point.
 if (!exports.IsPost) {
@@ -5080,14 +5102,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const assert = __importStar(__webpack_require__(357));
 const core = __importStar(__webpack_require__(470));
+const exec = __importStar(__webpack_require__(986));
 const fs = __importStar(__webpack_require__(747));
 const io = __importStar(__webpack_require__(1));
 const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const regexpHelper = __importStar(__webpack_require__(528));
+const stateHelper = __importStar(__webpack_require__(153));
 const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
 const HOSTNAME = 'github.com';
+const SSH_COMMAND_KEY = 'core.sshCommand';
 function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
 }
@@ -5097,6 +5122,8 @@ class GitAuthHelper {
         this.tokenConfigKey = `http.https://${HOSTNAME}/.extraheader`;
         this.insteadOfKey = `url.https://${HOSTNAME}/.insteadOf`;
         this.insteadOfValue = `git@${HOSTNAME}:`;
+        this.sshKeyPath = '';
+        this.sshKnownHostsPath = '';
         this.temporaryHomePath = '';
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
@@ -5111,6 +5138,7 @@ class GitAuthHelper {
             // Remove possible previous values
             yield this.removeAuth();
             // Configure new values
+            yield this.configureSsh();
             yield this.configureToken();
         });
     }
@@ -5150,7 +5178,9 @@ class GitAuthHelper {
                 yield this.configureToken(newGitConfigPath, true);
                 // Configure HTTPS instead of SSH
                 yield this.git.tryConfigUnset(this.insteadOfKey, true);
-                yield this.git.config(this.insteadOfKey, this.insteadOfValue, true);
+                if (!this.settings.sshKey) {
+                    yield this.git.config(this.insteadOfKey, this.insteadOfValue, true);
+                }
             }
             catch (err) {
                 // Unset in case somehow written to the real global config
@@ -5162,27 +5192,29 @@ class GitAuthHelper {
     }
     configureSubmoduleAuth() {
         return __awaiter(this, void 0, void 0, function* () {
+            // Remove possible previous HTTPS instead of SSH
+            yield this.removeGitConfig(this.insteadOfKey, true);
             if (this.settings.persistCredentials) {
                 // Configure a placeholder value. This approach avoids the credential being captured
                 // by process creation audit events, which are commonly logged. For more information,
                 // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-                const commands = [
-                    `git config --local "${this.tokenConfigKey}" "${this.tokenPlaceholderConfigValue}"`,
-                    `git config --local "${this.insteadOfKey}" "${this.insteadOfValue}"`,
-                    `git config --local --show-origin --name-only --get-regexp remote.origin.url`
-                ];
-                const output = yield this.git.submoduleForeach(commands.join(' && '), this.settings.nestedSubmodules);
+                const output = yield this.git.submoduleForeach(`git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url`, this.settings.nestedSubmodules);
                 // Replace the placeholder
                 const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
                 for (const configPath of configPaths) {
                     core.debug(`Replacing token placeholder in '${configPath}'`);
                     this.replaceTokenPlaceholder(configPath);
                 }
+                // Configure HTTPS instead of SSH
+                if (!this.settings.sshKey) {
+                    yield this.git.submoduleForeach(`git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`, this.settings.nestedSubmodules);
+                }
             }
         });
     }
     removeAuth() {
         return __awaiter(this, void 0, void 0, function* () {
+            yield this.removeSsh();
             yield this.removeToken();
         });
     }
@@ -5191,6 +5223,62 @@ class GitAuthHelper {
             core.info(`Unsetting HOME override`);
             this.git.removeEnvironmentVariable('HOME');
             yield io.rmRF(this.temporaryHomePath);
+        });
+    }
+    configureSsh() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.settings.sshKey) {
+                return;
+            }
+            // Write key
+            const runnerTemp = process.env['RUNNER_TEMP'] || '';
+            assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
+            const uniqueId = v4_1.default();
+            this.sshKeyPath = path.join(runnerTemp, uniqueId);
+            stateHelper.setSshKeyPath(this.sshKeyPath);
+            yield fs.promises.mkdir(runnerTemp, { recursive: true });
+            yield fs.promises.writeFile(this.sshKeyPath, this.settings.sshKey.trim() + '\n', { mode: 0o600 });
+            // Remove inherited permissions on Windows
+            if (IS_WINDOWS) {
+                const icacls = yield io.which('icacls.exe');
+                yield exec.exec(`"${icacls}" "${this.sshKeyPath}" /grant:r "${process.env['USERDOMAIN']}\\${process.env['USERNAME']}:F"`);
+                yield exec.exec(`"${icacls}" "${this.sshKeyPath}" /inheritance:r`);
+            }
+            // Write known hosts
+            const userKnownHostsPath = path.join(os.homedir(), '.ssh', 'known_hosts');
+            let userKnownHosts = '';
+            try {
+                userKnownHosts = (yield fs.promises.readFile(userKnownHostsPath)).toString();
+            }
+            catch (err) {
+                if (err.code !== 'ENOENT') {
+                    throw err;
+                }
+            }
+            let knownHosts = '';
+            if (userKnownHosts) {
+                knownHosts += `# Begin from ${userKnownHostsPath}\n${userKnownHosts}\n# End from ${userKnownHostsPath}\n`;
+            }
+            if (this.settings.sshKnownHosts) {
+                knownHosts += `# Begin from input known hosts\n${this.settings.sshKnownHosts}\n# end from input known hosts\n`;
+            }
+            knownHosts += `# Begin implicitly added github.com\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==\n# End implicitly added github.com\n`;
+            this.sshKnownHostsPath = path.join(runnerTemp, `${uniqueId}_known_hosts`);
+            stateHelper.setSshKnownHostsPath(this.sshKnownHostsPath);
+            yield fs.promises.writeFile(this.sshKnownHostsPath, knownHosts);
+            // Configure GIT_SSH_COMMAND
+            const sshPath = yield io.which('ssh', true);
+            let sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
+            if (this.settings.sshStrict) {
+                sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
+            }
+            sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(this.sshKnownHostsPath)}"`;
+            core.info(`Temporarily overriding GIT_SSH_COMMAND=${sshCommand}`);
+            this.git.setEnvironmentVariable('GIT_SSH_COMMAND', sshCommand);
+            // Configure core.sshCommand
+            if (this.settings.persistCredentials) {
+                yield this.git.config(SSH_COMMAND_KEY, sshCommand);
+            }
         });
     }
     configureToken(configPath, globalConfig) {
@@ -5223,21 +5311,50 @@ class GitAuthHelper {
             yield fs.promises.writeFile(configPath, content);
         });
     }
+    removeSsh() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // SSH key
+            const keyPath = this.sshKeyPath || stateHelper.SshKeyPath;
+            if (keyPath) {
+                try {
+                    yield io.rmRF(keyPath);
+                }
+                catch (err) {
+                    core.debug(err.message);
+                    core.warning(`Failed to remove SSH key '${keyPath}'`);
+                }
+            }
+            // SSH known hosts
+            const knownHostsPath = this.sshKnownHostsPath || stateHelper.SshKnownHostsPath;
+            if (knownHostsPath) {
+                try {
+                    yield io.rmRF(knownHostsPath);
+                }
+                catch (_a) {
+                    // Intentionally empty
+                }
+            }
+            // SSH command
+            yield this.removeGitConfig(SSH_COMMAND_KEY);
+        });
+    }
     removeToken() {
         return __awaiter(this, void 0, void 0, function* () {
             // HTTP extra header
             yield this.removeGitConfig(this.tokenConfigKey);
         });
     }
-    removeGitConfig(configKey) {
+    removeGitConfig(configKey, submoduleOnly = false) {
         return __awaiter(this, void 0, void 0, function* () {
-            if ((yield this.git.configExists(configKey)) &&
-                !(yield this.git.tryConfigUnset(configKey))) {
-                // Load the config contents
-                core.warning(`Failed to remove '${configKey}' from the git config`);
+            if (!submoduleOnly) {
+                if ((yield this.git.configExists(configKey)) &&
+                    !(yield this.git.tryConfigUnset(configKey))) {
+                    // Load the config contents
+                    core.warning(`Failed to remove '${configKey}' from the git config`);
+                }
             }
             const pattern = regexpHelper.escape(configKey);
-            yield this.git.submoduleForeach(`git config --local --name-only --get-regexp ${pattern} && git config --local --unset-all ${configKey} || :`, true);
+            yield this.git.submoduleForeach(`git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`, true);
         });
     }
 }
@@ -5680,7 +5797,9 @@ function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
-        const repositoryUrl = `https://${hostname}/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
+        const repositoryUrl = settings.sshKey
+            ? `git@${hostname}:${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}.git`
+            : `https://${hostname}/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -13940,6 +14059,11 @@ function getInputs() {
     core.debug(`recursive submodules = ${result.nestedSubmodules}`);
     // Auth token
     result.authToken = core.getInput('token');
+    // SSH
+    result.sshKey = core.getInput('ssh-key');
+    result.sshKnownHosts = core.getInput('ssh-known-hosts');
+    result.sshStrict =
+        (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE';
     // Persist credentials
     result.persistCredentials =
         (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';

@@ -2,10 +2,13 @@ import * as core from '@actions/core'
 import * as fs from 'fs'
 import * as gitAuthHelper from '../lib/git-auth-helper'
 import * as io from '@actions/io'
+import * as os from 'os'
 import * as path from 'path'
+import * as stateHelper from '../lib/state-helper'
 import {IGitCommandManager} from '../lib/git-command-manager'
 import {IGitSourceSettings} from '../lib/git-source-settings'
 
+const isWindows = process.platform === 'win32'
 const testWorkspace = path.join(__dirname, '_temp', 'git-auth-helper')
 const originalRunnerTemp = process.env['RUNNER_TEMP']
 const originalHome = process.env['HOME']
@@ -16,9 +19,13 @@ let runnerTemp: string
 let tempHomedir: string
 let git: IGitCommandManager & {env: {[key: string]: string}}
 let settings: IGitSourceSettings
+let sshPath: string
 
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {
+    // SSH
+    sshPath = await io.which('ssh')
+
     // Clear test workspace
     await io.rmRF(testWorkspace)
   })
@@ -32,6 +39,12 @@ describe('git-auth-helper tests', () => {
     jest.spyOn(core, 'warning').mockImplementation(jest.fn())
     jest.spyOn(core, 'info').mockImplementation(jest.fn())
     jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+
+    // Mock state helper
+    jest.spyOn(stateHelper, 'setSshKeyPath').mockImplementation(jest.fn())
+    jest
+      .spyOn(stateHelper, 'setSshKnownHostsPath')
+      .mockImplementation(jest.fn())
   })
 
   afterEach(() => {
@@ -108,6 +121,52 @@ describe('git-auth-helper tests', () => {
     }
   )
 
+  const configureAuth_copiesUserKnownHosts =
+    'configureAuth copies user known hosts'
+  it(configureAuth_copiesUserKnownHosts, async () => {
+    if (!sshPath) {
+      process.stdout.write(
+        `Skipped test "${configureAuth_copiesUserKnownHosts}". Executable 'ssh' not found in the PATH.\n`
+      )
+      return
+    }
+
+    // Arange
+    await setup(configureAuth_copiesUserKnownHosts)
+    expect(settings.sshKey).toBeTruthy() // sanity check
+
+    // Mock fs.promises.readFile
+    const realReadFile = fs.promises.readFile
+    jest.spyOn(fs.promises, 'readFile').mockImplementation(
+      async (file: any, options: any): Promise<Buffer> => {
+        const userKnownHostsPath = path.join(
+          os.homedir(),
+          '.ssh',
+          'known_hosts'
+        )
+        if (file === userKnownHostsPath) {
+          return Buffer.from('some-domain.com ssh-rsa ABCDEF')
+        }
+
+        return await realReadFile(file, options)
+      }
+    )
+
+    // Act
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+
+    // Assert known hosts
+    const actualSshKnownHostsPath = await getActualSshKnownHostsPath()
+    const actualSshKnownHostsContent = (
+      await fs.promises.readFile(actualSshKnownHostsPath)
+    ).toString()
+    expect(actualSshKnownHostsContent).toMatch(
+      /some-domain\.com ssh-rsa ABCDEF/
+    )
+    expect(actualSshKnownHostsContent).toMatch(/github\.com ssh-rsa AAAAB3N/)
+  })
+
   const configureAuth_registersBasicCredentialAsSecret =
     'configureAuth registers basic credential as secret'
   it(configureAuth_registersBasicCredentialAsSecret, async () => {
@@ -127,6 +186,173 @@ describe('git-auth-helper tests', () => {
       'utf8'
     ).toString('base64')
     expect(setSecretSpy).toHaveBeenCalledWith(expectedSecret)
+  })
+
+  const setsSshCommandEnvVarWhenPersistCredentialsFalse =
+    'sets SSH command env var when persist-credentials false'
+  it(setsSshCommandEnvVarWhenPersistCredentialsFalse, async () => {
+    if (!sshPath) {
+      process.stdout.write(
+        `Skipped test "${setsSshCommandEnvVarWhenPersistCredentialsFalse}". Executable 'ssh' not found in the PATH.\n`
+      )
+      return
+    }
+
+    // Arrange
+    await setup(setsSshCommandEnvVarWhenPersistCredentialsFalse)
+    settings.persistCredentials = false
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+
+    // Assert git env var
+    const actualKeyPath = await getActualSshKeyPath()
+    const actualKnownHostsPath = await getActualSshKnownHostsPath()
+    const expectedSshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
+      actualKeyPath
+    )}" -o StrictHostKeyChecking=yes -o CheckHostIP=no -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(
+      actualKnownHostsPath
+    )}"`
+    expect(git.setEnvironmentVariable).toHaveBeenCalledWith(
+      'GIT_SSH_COMMAND',
+      expectedSshCommand
+    )
+
+    // Asserty git config
+    const gitConfigLines = (await fs.promises.readFile(localGitConfigPath))
+      .toString()
+      .split('\n')
+      .filter(x => x)
+    expect(gitConfigLines).toHaveLength(1)
+    expect(gitConfigLines[0]).toMatch(/^http\./)
+  })
+
+  const configureAuth_setsSshCommandWhenPersistCredentialsTrue =
+    'sets SSH command when persist-credentials true'
+  it(configureAuth_setsSshCommandWhenPersistCredentialsTrue, async () => {
+    if (!sshPath) {
+      process.stdout.write(
+        `Skipped test "${configureAuth_setsSshCommandWhenPersistCredentialsTrue}". Executable 'ssh' not found in the PATH.\n`
+      )
+      return
+    }
+
+    // Arrange
+    await setup(configureAuth_setsSshCommandWhenPersistCredentialsTrue)
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+
+    // Assert git env var
+    const actualKeyPath = await getActualSshKeyPath()
+    const actualKnownHostsPath = await getActualSshKnownHostsPath()
+    const expectedSshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
+      actualKeyPath
+    )}" -o StrictHostKeyChecking=yes -o CheckHostIP=no -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(
+      actualKnownHostsPath
+    )}"`
+    expect(git.setEnvironmentVariable).toHaveBeenCalledWith(
+      'GIT_SSH_COMMAND',
+      expectedSshCommand
+    )
+
+    // Asserty git config
+    expect(git.config).toHaveBeenCalledWith(
+      'core.sshCommand',
+      expectedSshCommand
+    )
+  })
+
+  const configureAuth_writesExplicitKnownHosts = 'writes explicit known hosts'
+  it(configureAuth_writesExplicitKnownHosts, async () => {
+    if (!sshPath) {
+      process.stdout.write(
+        `Skipped test "${configureAuth_writesExplicitKnownHosts}". Executable 'ssh' not found in the PATH.\n`
+      )
+      return
+    }
+
+    // Arrange
+    await setup(configureAuth_writesExplicitKnownHosts)
+    expect(settings.sshKey).toBeTruthy() // sanity check
+    settings.sshKnownHosts = 'my-custom-host.com ssh-rsa ABC123'
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+
+    // Assert known hosts
+    const actualSshKnownHostsPath = await getActualSshKnownHostsPath()
+    const actualSshKnownHostsContent = (
+      await fs.promises.readFile(actualSshKnownHostsPath)
+    ).toString()
+    expect(actualSshKnownHostsContent).toMatch(
+      /my-custom-host\.com ssh-rsa ABC123/
+    )
+    expect(actualSshKnownHostsContent).toMatch(/github\.com ssh-rsa AAAAB3N/)
+  })
+
+  const configureAuth_writesSshKeyAndImplicitKnownHosts =
+    'writes SSH key and implicit known hosts'
+  it(configureAuth_writesSshKeyAndImplicitKnownHosts, async () => {
+    if (!sshPath) {
+      process.stdout.write(
+        `Skipped test "${configureAuth_writesSshKeyAndImplicitKnownHosts}". Executable 'ssh' not found in the PATH.\n`
+      )
+      return
+    }
+
+    // Arrange
+    await setup(configureAuth_writesSshKeyAndImplicitKnownHosts)
+    expect(settings.sshKey).toBeTruthy() // sanity check
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+
+    // Assert SSH key
+    const actualSshKeyPath = await getActualSshKeyPath()
+    expect(actualSshKeyPath).toBeTruthy()
+    const actualSshKeyContent = (
+      await fs.promises.readFile(actualSshKeyPath)
+    ).toString()
+    expect(actualSshKeyContent).toBe(settings.sshKey + '\n')
+    if (!isWindows) {
+      expect((await fs.promises.stat(actualSshKeyPath)).mode & 0o777).toBe(
+        0o600
+      )
+    }
+
+    // Assert known hosts
+    const actualSshKnownHostsPath = await getActualSshKnownHostsPath()
+    const actualSshKnownHostsContent = (
+      await fs.promises.readFile(actualSshKnownHostsPath)
+    ).toString()
+    expect(actualSshKnownHostsContent).toMatch(/github\.com ssh-rsa AAAAB3N/)
+  })
+
+  const configureGlobalAuth_configuresUrlInsteadOfWhenSshKeyNotSet =
+    'configureGlobalAuth configures URL insteadOf when SSH key not set'
+  it(configureGlobalAuth_configuresUrlInsteadOfWhenSshKeyNotSet, async () => {
+    // Arrange
+    await setup(configureGlobalAuth_configuresUrlInsteadOfWhenSshKeyNotSet)
+    settings.sshKey = ''
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+    await authHelper.configureGlobalAuth()
+
+    // Assert temporary global config
+    expect(git.env['HOME']).toBeTruthy()
+    const configContent = (
+      await fs.promises.readFile(path.join(git.env['HOME'], '.gitconfig'))
+    ).toString()
+    expect(
+      configContent.indexOf(`url.https://github.com/.insteadOf git@github.com`)
+    ).toBeGreaterThanOrEqual(0)
   })
 
   const configureGlobalAuth_copiesGlobalGitConfig =
@@ -211,6 +437,67 @@ describe('git-auth-helper tests', () => {
     }
   )
 
+  const configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeyNotSet =
+    'configureSubmoduleAuth configures token when persist credentials true and SSH key not set'
+  it(
+    configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeyNotSet,
+    async () => {
+      // Arrange
+      await setup(
+        configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeyNotSet
+      )
+      settings.sshKey = ''
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
+
+      // Act
+      await authHelper.configureSubmoduleAuth()
+
+      // Assert
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
+      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
+        /unset-all.*insteadOf/
+      )
+      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
+      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/url.*insteadOf/)
+    }
+  )
+
+  const configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet =
+    'configureSubmoduleAuth configures token when persist credentials true and SSH key set'
+  it(
+    configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet,
+    async () => {
+      if (!sshPath) {
+        process.stdout.write(
+          `Skipped test "${configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet}". Executable 'ssh' not found in the PATH.\n`
+        )
+        return
+      }
+
+      // Arrange
+      await setup(
+        configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet
+      )
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
+
+      // Act
+      await authHelper.configureSubmoduleAuth()
+
+      // Assert
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
+      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
+        /unset-all.*insteadOf/
+      )
+      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
+    }
+  )
+
   const configureSubmoduleAuth_doesNotConfigureTokenWhenPersistCredentialsFalse =
     'configureSubmoduleAuth does not configure token when persist credentials false'
   it(
@@ -223,36 +510,134 @@ describe('git-auth-helper tests', () => {
       settings.persistCredentials = false
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
-      ;(git.submoduleForeach as jest.Mock<any, any>).mockClear() // reset calls
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
 
       // Act
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(git.submoduleForeach).not.toHaveBeenCalled()
+      expect(mockSubmoduleForeach).toBeCalledTimes(1)
+      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
+        /unset-all.*insteadOf/
+      )
     }
   )
 
-  const configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrue =
-    'configureSubmoduleAuth configures token when persist credentials true'
+  const configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet =
+    'configureSubmoduleAuth does not configure URL insteadOf when persist credentials true and SSH key set'
   it(
-    configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrue,
+    configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet,
     async () => {
+      if (!sshPath) {
+        process.stdout.write(
+          `Skipped test "${configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet}". Executable 'ssh' not found in the PATH.\n`
+        )
+        return
+      }
+
       // Arrange
       await setup(
-        configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrue
+        configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet
       )
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
-      ;(git.submoduleForeach as jest.Mock<any, any>).mockClear() // reset calls
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
 
       // Act
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(git.submoduleForeach).toHaveBeenCalledTimes(1)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
+      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
+        /unset-all.*insteadOf/
+      )
+      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
     }
   )
+
+  const configureSubmoduleAuth_removesUrlInsteadOfWhenPersistCredentialsFalse =
+    'configureSubmoduleAuth removes URL insteadOf when persist credentials false'
+  it(
+    configureSubmoduleAuth_removesUrlInsteadOfWhenPersistCredentialsFalse,
+    async () => {
+      // Arrange
+      await setup(
+        configureSubmoduleAuth_removesUrlInsteadOfWhenPersistCredentialsFalse
+      )
+      settings.persistCredentials = false
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
+
+      // Act
+      await authHelper.configureSubmoduleAuth()
+
+      // Assert
+      expect(mockSubmoduleForeach).toBeCalledTimes(1)
+      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
+        /unset-all.*insteadOf/
+      )
+    }
+  )
+
+  const removeAuth_removesSshCommand = 'removeAuth removes SSH command'
+  it(removeAuth_removesSshCommand, async () => {
+    if (!sshPath) {
+      process.stdout.write(
+        `Skipped test "${removeAuth_removesSshCommand}". Executable 'ssh' not found in the PATH.\n`
+      )
+      return
+    }
+
+    // Arrange
+    await setup(removeAuth_removesSshCommand)
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+    let gitConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(gitConfigContent.indexOf('core.sshCommand')).toBeGreaterThanOrEqual(
+      0
+    ) // sanity check
+    const actualKeyPath = await getActualSshKeyPath()
+    expect(actualKeyPath).toBeTruthy()
+    await fs.promises.stat(actualKeyPath)
+    const actualKnownHostsPath = await getActualSshKnownHostsPath()
+    expect(actualKnownHostsPath).toBeTruthy()
+    await fs.promises.stat(actualKnownHostsPath)
+
+    // Act
+    await authHelper.removeAuth()
+
+    // Assert git config
+    gitConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(gitConfigContent.indexOf('core.sshCommand')).toBeLessThan(0)
+
+    // Assert SSH key file
+    try {
+      await fs.promises.stat(actualKeyPath)
+      throw new Error('SSH key should have been deleted')
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err
+      }
+    }
+
+    // Assert known hosts file
+    try {
+      await fs.promises.stat(actualKnownHostsPath)
+      throw new Error('SSH known hosts should have been deleted')
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err
+      }
+    }
+  })
 
   const removeAuth_removesToken = 'removeAuth removes token'
   it(removeAuth_removesToken, async () => {
@@ -401,6 +786,36 @@ async function setup(testName: string): Promise<void> {
     ref: 'refs/heads/master',
     repositoryName: 'my-repo',
     repositoryOwner: 'my-org',
-    repositoryPath: ''
+    repositoryPath: '',
+    sshKey: sshPath ? 'some ssh private key' : '',
+    sshKnownHosts: '',
+    sshStrict: true
   }
+}
+
+async function getActualSshKeyPath(): Promise<string> {
+  let actualTempFiles = (await fs.promises.readdir(runnerTemp))
+    .sort()
+    .map(x => path.join(runnerTemp, x))
+  if (actualTempFiles.length === 0) {
+    return ''
+  }
+
+  expect(actualTempFiles).toHaveLength(2)
+  expect(actualTempFiles[0].endsWith('_known_hosts')).toBeFalsy()
+  return actualTempFiles[0]
+}
+
+async function getActualSshKnownHostsPath(): Promise<string> {
+  let actualTempFiles = (await fs.promises.readdir(runnerTemp))
+    .sort()
+    .map(x => path.join(runnerTemp, x))
+  if (actualTempFiles.length === 0) {
+    return ''
+  }
+
+  expect(actualTempFiles).toHaveLength(2)
+  expect(actualTempFiles[1].endsWith('_known_hosts')).toBeTruthy()
+  expect(actualTempFiles[1].startsWith(actualTempFiles[0])).toBeTruthy()
+  return actualTempFiles[1]
 }
