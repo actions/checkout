@@ -37,6 +37,7 @@ class GitAuthHelper {
   private readonly tokenPlaceholderConfigValue: string
   private readonly insteadOfKey: string = `url.https://${HOSTNAME}/.insteadOf`
   private readonly insteadOfValue: string = `git@${HOSTNAME}:`
+  private sshCommand = ''
   private sshKeyPath = ''
   private sshKnownHostsPath = ''
   private temporaryHomePath = ''
@@ -144,8 +145,14 @@ class GitAuthHelper {
         this.replaceTokenPlaceholder(configPath)
       }
 
-      // Configure HTTPS instead of SSH
-      if (!this.settings.sshKey) {
+      if (this.settings.sshKey) {
+        // Configure core.sshCommand
+        await this.git.submoduleForeach(
+          `git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`,
+          this.settings.nestedSubmodules
+        )
+      } else {
+        // Configure HTTPS instead of SSH
         await this.git.submoduleForeach(
           `git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`,
           this.settings.nestedSubmodules
@@ -218,21 +225,21 @@ class GitAuthHelper {
 
     // Configure GIT_SSH_COMMAND
     const sshPath = await io.which('ssh', true)
-    let sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
+    this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
       this.sshKeyPath
     )}"`
     if (this.settings.sshStrict) {
-      sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no'
+      this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no'
     }
-    sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(
+    this.sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(
       this.sshKnownHostsPath
     )}"`
-    core.info(`Temporarily overriding GIT_SSH_COMMAND=${sshCommand}`)
-    this.git.setEnvironmentVariable('GIT_SSH_COMMAND', sshCommand)
+    core.info(`Temporarily overriding GIT_SSH_COMMAND=${this.sshCommand}`)
+    this.git.setEnvironmentVariable('GIT_SSH_COMMAND', this.sshCommand)
 
     // Configure core.sshCommand
     if (this.settings.persistCredentials) {
-      await this.git.config(SSH_COMMAND_KEY, sshCommand)
+      await this.git.config(SSH_COMMAND_KEY, this.sshCommand)
     }
   }
 

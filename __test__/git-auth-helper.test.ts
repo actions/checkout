@@ -320,6 +320,8 @@ describe('git-auth-helper tests', () => {
     ).toString()
     expect(actualSshKeyContent).toBe(settings.sshKey + '\n')
     if (!isWindows) {
+      // Assert read/write for user, not group or others.
+      // Otherwise SSH client will error.
       expect((await fs.promises.stat(actualSshKeyPath)).mode & 0o777).toBe(
         0o600
       )
@@ -437,14 +439,74 @@ describe('git-auth-helper tests', () => {
     }
   )
 
-  const configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeyNotSet =
-    'configureSubmoduleAuth configures token when persist credentials true and SSH key not set'
+  const configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeyNotSet =
+    'configureSubmoduleAuth configures submodules when persist credentials false and SSH key not set'
   it(
-    configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeyNotSet,
+    configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeyNotSet,
     async () => {
       // Arrange
       await setup(
-        configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeyNotSet
+        configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeyNotSet
+      )
+      settings.persistCredentials = false
+      settings.sshKey = ''
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
+
+      // Act
+      await authHelper.configureSubmoduleAuth()
+
+      // Assert
+      expect(mockSubmoduleForeach).toBeCalledTimes(1)
+      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
+        /unset-all.*insteadOf/
+      )
+    }
+  )
+
+  const configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeySet =
+    'configureSubmoduleAuth configures submodules when persist credentials false and SSH key set'
+  it(
+    configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeySet,
+    async () => {
+      if (!sshPath) {
+        process.stdout.write(
+          `Skipped test "${configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeySet}". Executable 'ssh' not found in the PATH.\n`
+        )
+        return
+      }
+
+      // Arrange
+      await setup(
+        configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeySet
+      )
+      settings.persistCredentials = false
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      mockSubmoduleForeach.mockClear() // reset calls
+
+      // Act
+      await authHelper.configureSubmoduleAuth()
+
+      // Assert
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(1)
+      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
+        /unset-all.*insteadOf/
+      )
+    }
+  )
+
+  const configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeyNotSet =
+    'configureSubmoduleAuth configures submodules when persist credentials true and SSH key not set'
+  it(
+    configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeyNotSet,
+    async () => {
+      // Arrange
+      await setup(
+        configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeyNotSet
       )
       settings.sshKey = ''
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -465,21 +527,21 @@ describe('git-auth-helper tests', () => {
     }
   )
 
-  const configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet =
-    'configureSubmoduleAuth configures token when persist credentials true and SSH key set'
+  const configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeySet =
+    'configureSubmoduleAuth configures submodules when persist credentials true and SSH key set'
   it(
-    configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet,
+    configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeySet,
     async () => {
       if (!sshPath) {
         process.stdout.write(
-          `Skipped test "${configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet}". Executable 'ssh' not found in the PATH.\n`
+          `Skipped test "${configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeySet}". Executable 'ssh' not found in the PATH.\n`
         )
         return
       }
 
       // Arrange
       await setup(
-        configureSubmoduleAuth_configuresTokenWhenPersistCredentialsTrueAndSshKeySet
+        configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeySet
       )
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
@@ -490,96 +552,12 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
       expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
         /unset-all.*insteadOf/
       )
       expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-    }
-  )
-
-  const configureSubmoduleAuth_doesNotConfigureTokenWhenPersistCredentialsFalse =
-    'configureSubmoduleAuth does not configure token when persist credentials false'
-  it(
-    configureSubmoduleAuth_doesNotConfigureTokenWhenPersistCredentialsFalse,
-    async () => {
-      // Arrange
-      await setup(
-        configureSubmoduleAuth_doesNotConfigureTokenWhenPersistCredentialsFalse
-      )
-      settings.persistCredentials = false
-      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
-      await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
-      mockSubmoduleForeach.mockClear() // reset calls
-
-      // Act
-      await authHelper.configureSubmoduleAuth()
-
-      // Assert
-      expect(mockSubmoduleForeach).toBeCalledTimes(1)
-      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
-        /unset-all.*insteadOf/
-      )
-    }
-  )
-
-  const configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet =
-    'configureSubmoduleAuth does not configure URL insteadOf when persist credentials true and SSH key set'
-  it(
-    configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet,
-    async () => {
-      if (!sshPath) {
-        process.stdout.write(
-          `Skipped test "${configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet}". Executable 'ssh' not found in the PATH.\n`
-        )
-        return
-      }
-
-      // Arrange
-      await setup(
-        configureSubmoduleAuth_doesNotConfigureUrlInsteadOfWhenPersistCredentialsTrueAndSshKeySet
-      )
-      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
-      await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
-      mockSubmoduleForeach.mockClear() // reset calls
-
-      // Act
-      await authHelper.configureSubmoduleAuth()
-
-      // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
-      )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-    }
-  )
-
-  const configureSubmoduleAuth_removesUrlInsteadOfWhenPersistCredentialsFalse =
-    'configureSubmoduleAuth removes URL insteadOf when persist credentials false'
-  it(
-    configureSubmoduleAuth_removesUrlInsteadOfWhenPersistCredentialsFalse,
-    async () => {
-      // Arrange
-      await setup(
-        configureSubmoduleAuth_removesUrlInsteadOfWhenPersistCredentialsFalse
-      )
-      settings.persistCredentials = false
-      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
-      await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
-      mockSubmoduleForeach.mockClear() // reset calls
-
-      // Act
-      await authHelper.configureSubmoduleAuth()
-
-      // Assert
-      expect(mockSubmoduleForeach).toBeCalledTimes(1)
-      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
-        /unset-all.*insteadOf/
-      )
+      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/core\.sshCommand/)
     }
   )
 

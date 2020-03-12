@@ -57,6 +57,16 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     core.info(
       `To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`
     )
+    if (settings.submodules) {
+      throw new Error(
+        `Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`
+      )
+    } else if (settings.sshKey) {
+      throw new Error(
+        `Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`
+      )
+    }
+
     await githubApiHelper.downloadRepository(
       settings.authToken,
       settings.repositoryOwner,

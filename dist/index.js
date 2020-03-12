@@ -5122,6 +5122,7 @@ class GitAuthHelper {
         this.tokenConfigKey = `http.https://${HOSTNAME}/.extraheader`;
         this.insteadOfKey = `url.https://${HOSTNAME}/.insteadOf`;
         this.insteadOfValue = `git@${HOSTNAME}:`;
+        this.sshCommand = '';
         this.sshKeyPath = '';
         this.sshKnownHostsPath = '';
         this.temporaryHomePath = '';
@@ -5205,8 +5206,12 @@ class GitAuthHelper {
                     core.debug(`Replacing token placeholder in '${configPath}'`);
                     this.replaceTokenPlaceholder(configPath);
                 }
-                // Configure HTTPS instead of SSH
-                if (!this.settings.sshKey) {
+                if (this.settings.sshKey) {
+                    // Configure core.sshCommand
+                    yield this.git.submoduleForeach(`git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`, this.settings.nestedSubmodules);
+                }
+                else {
+                    // Configure HTTPS instead of SSH
                     yield this.git.submoduleForeach(`git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`, this.settings.nestedSubmodules);
                 }
             }
@@ -5268,16 +5273,16 @@ class GitAuthHelper {
             yield fs.promises.writeFile(this.sshKnownHostsPath, knownHosts);
             // Configure GIT_SSH_COMMAND
             const sshPath = yield io.which('ssh', true);
-            let sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
+            this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
             if (this.settings.sshStrict) {
-                sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
+                this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
             }
-            sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(this.sshKnownHostsPath)}"`;
-            core.info(`Temporarily overriding GIT_SSH_COMMAND=${sshCommand}`);
-            this.git.setEnvironmentVariable('GIT_SSH_COMMAND', sshCommand);
+            this.sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(this.sshKnownHostsPath)}"`;
+            core.info(`Temporarily overriding GIT_SSH_COMMAND=${this.sshCommand}`);
+            this.git.setEnvironmentVariable('GIT_SSH_COMMAND', this.sshCommand);
             // Configure core.sshCommand
             if (this.settings.persistCredentials) {
-                yield this.git.config(SSH_COMMAND_KEY, sshCommand);
+                yield this.git.config(SSH_COMMAND_KEY, this.sshCommand);
             }
         });
     }
@@ -5820,6 +5825,12 @@ function getSource(settings) {
             // Downloading using REST API
             core.info(`The repository will be downloaded using the GitHub REST API`);
             core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
+            if (settings.submodules) {
+                throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+            }
+            else if (settings.sshKey) {
+                throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+            }
             yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
             return;
         }
