@@ -49,19 +49,19 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # with the local git config, which enables your scripts to run authenticated git
     # commands. The post-job step removes the PAT.
     #
-    # We recommend creating a service account with the least permissions necessary.
-    # Also when generating a new PAT, select the least scopes necessary.
+    # We recommend using a service account with the least permissions necessary. Also
+    # when generating a new PAT, select the least scopes necessary.
     #
     # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     #
     # Default: ${{ github.token }}
     token: ''
 
-    # SSH key used to fetch the repository. SSH key is configured with the local git
-    # config, which enables your scripts to run authenticated git commands. The
+    # SSH key used to fetch the repository. The SSH key is configured with the local
+    # git config, which enables your scripts to run authenticated git commands. The
     # post-job step removes the SSH key.
     #
-    # We recommend creating a service account with the least permissions necessary.
+    # We recommend using a service account with the least permissions necessary.
     #
     # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     ssh-key: ''

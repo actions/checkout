@@ -320,6 +320,8 @@ describe('git-auth-helper tests', () => {
     ).toString()
     expect(actualSshKeyContent).toBe(settings.sshKey + '\n')
     if (!isWindows) {
+      // Assert read/write for user, not group or others.
+      // Otherwise SSH client will error.
       expect((await fs.promises.stat(actualSshKeyPath)).mode & 0o777).toBe(
         0o600
       )
