@@ -40,9 +40,12 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     default: ${{ github.token }}
   ssh-key:
     description: >
-      SSH key used to fetch the repository. The SSH key is configured with the local
-      git config, which enables your scripts to run authenticated git commands.
-      The post-job step removes the SSH key.
+      The SSH key to use. The SSH key is configured with the local git config, which enables
+      your scripts to run authenticated git commands. The post-job step removes the SSH key.
+
+
+      When fetching the repository the workflow is running in, the auth token will be used
+      and configured instead. This enables the SSH key to be used only for submodules.
 
 
       We recommend using a service account with the least permissions necessary.
