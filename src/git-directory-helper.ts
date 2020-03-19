@@ -94,7 +94,9 @@ export async function prepareExistingDirectory(
 
       // Update to the preferred remote URL
       if (remoteUrl !== preferredRemoteUrl) {
+        core.startGroup('Setting the remote URL')
         await git.setRemoteUrl(preferredRemoteUrl)
+        core.endGroup()
       }
     } catch (error) {
       core.warning(

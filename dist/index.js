@@ -5846,13 +5846,17 @@ function getSource(settings) {
         stateHelper.setRepositoryPath(settings.repositoryPath);
         // Initialize the repository
         if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
+            core.startGroup('Initializing the repository');
             yield git.init();
             yield git.remoteAdd('origin', initialRemoteUrl);
+            core.endGroup();
         }
         // Disable automatic garbage collection
+        core.startGroup('Disabling automatic garbage collection');
         if (!(yield git.tryDisableAutomaticGarbageCollection())) {
             core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
         }
+        core.endGroup();
         const authHelper = gitAuthHelper.createAuthHelper(git, settings);
         try {
             // Configure auth
@@ -5869,7 +5873,9 @@ function getSource(settings) {
             yield git.fetch(settings.fetchDepth, refSpec);
             core.endGroup();
             // Checkout info
+            core.startGroup('Determining the checkout info');
             const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+            core.endGroup();
             // LFS fetch
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
             // Explicit lfs fetch will fetch lfs objects in parallel.
@@ -5880,10 +5886,14 @@ function getSource(settings) {
             }
             // Fix URL when using SSH
             if (settings.sshKey && initialRemoteUrl !== sshUrl) {
+                core.startGroup('Updating the repository to use the SSH URL');
                 yield git.setRemoteUrl(sshUrl);
+                core.endGroup();
             }
             // Checkout
+            core.startGroup('Checking out the ref');
             yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            core.endGroup();
             // Submodules
             if (settings.submodules) {
                 try {
@@ -7290,7 +7300,9 @@ function prepareExistingDirectory(git, repositoryPath, preferredRemoteUrl, allow
                 }
                 // Update to the preferred remote URL
                 if (remoteUrl !== preferredRemoteUrl) {
+                    core.startGroup('Setting the remote URL');
                     yield git.setRemoteUrl(preferredRemoteUrl);
+                    core.endGroup();
                 }
             }
             catch (error) {

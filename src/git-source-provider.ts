@@ -92,16 +92,20 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   if (
     !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
   ) {
+    core.startGroup('Initializing the repository')
     await git.init()
     await git.remoteAdd('origin', initialRemoteUrl)
+    core.endGroup()
   }
 
   // Disable automatic garbage collection
+  core.startGroup('Disabling automatic garbage collection')
   if (!(await git.tryDisableAutomaticGarbageCollection())) {
     core.warning(
       `Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`
     )
   }
+  core.endGroup()
 
   const authHelper = gitAuthHelper.createAuthHelper(git, settings)
   try {
@@ -122,11 +126,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     core.endGroup()
 
     // Checkout info
+    core.startGroup('Determining the checkout info')
     const checkoutInfo = await refHelper.getCheckoutInfo(
       git,
       settings.ref,
       settings.commit
     )
+    core.endGroup()
 
     // LFS fetch
     // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
@@ -139,11 +145,15 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fix URL when using SSH
     if (settings.sshKey && initialRemoteUrl !== sshUrl) {
+      core.startGroup('Updating the repository to use the SSH URL')
       await git.setRemoteUrl(sshUrl)
+      core.endGroup()
     }
 
     // Checkout
+    core.startGroup('Checking out the ref')
     await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    core.endGroup()
 
     // Submodules
     if (settings.submodules) {
