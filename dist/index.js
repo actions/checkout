@@ -5225,7 +5225,7 @@ class GitAuthHelper {
     }
     removeGlobalAuth() {
         return __awaiter(this, void 0, void 0, function* () {
-            core.info(`Unsetting HOME override`);
+            core.debug(`Unsetting HOME override`);
             this.git.removeEnvironmentVariable('HOME');
             yield io.rmRF(this.temporaryHomePath);
         });
@@ -5886,7 +5886,7 @@ function getSource(settings) {
             }
             // Fix URL when using SSH
             if (settings.sshKey && initialRemoteUrl !== sshUrl) {
-                core.startGroup('Updating the repository to use the SSH URL');
+                core.startGroup('Updating the remote URL');
                 yield git.setRemoteUrl(sshUrl);
                 core.endGroup();
             }
@@ -7300,7 +7300,7 @@ function prepareExistingDirectory(git, repositoryPath, preferredRemoteUrl, allow
                 }
                 // Update to the preferred remote URL
                 if (remoteUrl !== preferredRemoteUrl) {
-                    core.startGroup('Setting the remote URL');
+                    core.startGroup('Updating the remote URL');
                     yield git.setRemoteUrl(preferredRemoteUrl);
                     core.endGroup();
                 }

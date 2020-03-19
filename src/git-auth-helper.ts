@@ -167,7 +167,7 @@ class GitAuthHelper {
   }
 
   async removeGlobalAuth(): Promise<void> {
-    core.info(`Unsetting HOME override`)
+    core.debug(`Unsetting HOME override`)
     this.git.removeEnvironmentVariable('HOME')
     await io.rmRF(this.temporaryHomePath)
   }
