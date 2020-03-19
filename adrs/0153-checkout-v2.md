@@ -29,14 +29,26 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured
       with the local git config, which enables your scripts to run authenticated git
-      commands. The post-job step removes the PAT. [Learn more about creating and using
-      encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+      commands. The post-job step removes the PAT.
+
+
+      We recommend using a service account with the least permissions necessary.
+      Also when generating a new PAT, select the least scopes necessary.
+
+
+      [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     default: ${{ github.token }}
   ssh-key:
     description: >
-      SSH key used to fetch the repository. SSH key is configured with the local
+      SSH key used to fetch the repository. The SSH key is configured with the local
       git config, which enables your scripts to run authenticated git commands.
-      The post-job step removes the SSH key. [Learn more about creating and using
+      The post-job step removes the SSH key.
+
+
+      We recommend using a service account with the least permissions necessary.
+
+
+      [Learn more about creating and using
       encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
   ssh-known-hosts:
     description: >
@@ -44,7 +56,10 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
       SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
       `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
   ssh-strict:
-    description: 'Whether to perform strict host key checking'
+    description: >
+      Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes`
+      and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
+      configure additional hosts.
     default: true
   persist-credentials:
     description: 'Whether to configure the token or SSH key with the local git config'
@@ -64,7 +79,11 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: >
       Whether to checkout submodules: `true` to checkout submodules or `recursive` to
       recursively checkout submodules.
-    default: 'false'
+
+
+      When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
+      converted to HTTPS.
+    default: false
 ```
 
 Note:
