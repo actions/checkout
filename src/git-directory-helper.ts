@@ -1,17 +1,29 @@
+import * as assert from 'assert'
 import * as core from '@actions/core'
 import * as fs from 'fs'
 import * as fsHelper from './fs-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
 import {IGitCommandManager} from './git-command-manager'
+import {IGitSourceSettings} from './git-source-settings'
 
 export async function prepareExistingDirectory(
   git: IGitCommandManager | undefined,
   repositoryPath: string,
-  repositoryUrl: string,
+  preferredRemoteUrl: string,
+  allowedRemoteUrls: string[],
   clean: boolean
 ): Promise<void> {
+  assert.ok(repositoryPath, 'Expected repositoryPath to be defined')
+  assert.ok(preferredRemoteUrl, 'Expected preferredRemoteUrl to be defined')
+  assert.ok(allowedRemoteUrls, 'Expected allowedRemoteUrls to be defined')
+  assert.ok(allowedRemoteUrls.length, 'Expected allowedRemoteUrls to have at least one value')
+
+  // Indicates whether to delete the directory contents
   let remove = false
+
+  // The remote URL
+  let remoteUrl: string
 
   // Check whether using git or REST API
   if (!git) {
@@ -20,7 +32,7 @@ export async function prepareExistingDirectory(
   // Fetch URL does not match
   else if (
     !fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
-    repositoryUrl !== (await git.tryGetFetchUrl())
+    allowedRemoteUrls.indexOf((remoteUrl = await git.tryGetRemoteUrl())) < 0
   ) {
     remove = true
   } else {
@@ -71,6 +83,11 @@ export async function prepareExistingDirectory(
             `Unable to clean or reset the repository. The repository will be recreated instead.`
           )
         }
+      }
+
+      // Update to the preferred remote URL
+      if (remoteUrl !== preferredRemoteUrl) {
+        await git.setRemoteUrl(preferredRemoteUrl)
       }
     } catch (error) {
       core.warning(

@@ -725,6 +725,7 @@ async function setup(testName: string): Promise<void> {
     setEnvironmentVariable: jest.fn((name: string, value: string) => {
       git.env[name] = value
     }),
+    setRemoteUrl: jest.fn(),
     submoduleForeach: jest.fn(async () => {
       return ''
     }),
@@ -748,7 +749,7 @@ async function setup(testName: string): Promise<void> {
       }
     ),
     tryDisableAutomaticGarbageCollection: jest.fn(),
-    tryGetFetchUrl: jest.fn(),
+    tryGetRemoteUrl: jest.fn(),
     tryReset: jest.fn()
   }
 
@@ -757,6 +758,7 @@ async function setup(testName: string): Promise<void> {
     clean: true,
     commit: '',
     fetchDepth: 1,
+    isWorkflowRepository: true,
     lfs: false,
     submodules: false,
     nestedSubmodules: false,

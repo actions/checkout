@@ -5581,6 +5581,11 @@ class GitCommandManager {
     setEnvironmentVariable(name, value) {
         this.gitEnv[name] = value;
     }
+    setRemoteUrl(value) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.config('git.remote.url', value);
+        });
+    }
     submoduleForeach(command, recursive) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['submodule', 'foreach'];
@@ -5643,7 +5648,7 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    tryGetFetchUrl() {
+    tryGetRemoteUrl() {
         return __awaiter(this, void 0, void 0, function* () {
             const output = yield this.execGit(['config', '--local', '--get', 'remote.origin.url'], true);
             if (output.exitCode !== 0) {
@@ -5800,11 +5805,12 @@ const stateHelper = __importStar(__webpack_require__(153));
 const hostname = 'github.com';
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
-        const repositoryUrl = settings.sshKey
-            ? `git@${hostname}:${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}.git`
-            : `https://${hostname}/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
+        // Remote URL
+        const httpsUrl = `https://${hostname}/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
+        const sshUrl = `git@${hostname}:${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}.git`;
+        // Always fetch the workflow repository using the token, not the SSH key
+        const initialRemoteUrl = !settings.sshKey || settings.isWorkflowRepository ? httpsUrl : sshUrl;
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -5819,7 +5825,7 @@ function getSource(settings) {
         const git = yield getGitCommandManager(settings);
         // Prepare existing directory, otherwise recreate
         if (isExisting) {
-            yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
+            yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, initialRemoteUrl, [httpsUrl, sshUrl], settings.clean);
         }
         if (!git) {
             // Downloading using REST API
@@ -5839,7 +5845,7 @@ function getSource(settings) {
         // Initialize the repository
         if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
             yield git.init();
-            yield git.remoteAdd('origin', repositoryUrl);
+            yield git.remoteAdd('origin', initialRemoteUrl);
         }
         // Disable automatic garbage collection
         if (!(yield git.tryDisableAutomaticGarbageCollection())) {
@@ -5863,6 +5869,10 @@ function getSource(settings) {
             // Explicit lfs fetch will fetch lfs objects in parallel.
             if (settings.lfs) {
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+            }
+            // Fix URL when using SSH
+            if (settings.sshKey && initialRemoteUrl != sshUrl) {
+                yield git.setRemoteUrl(sshUrl);
             }
             // Checkout
             yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
@@ -7191,21 +7201,29 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const assert = __importStar(__webpack_require__(357));
 const core = __importStar(__webpack_require__(470));
 const fs = __importStar(__webpack_require__(747));
 const fsHelper = __importStar(__webpack_require__(618));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
+function prepareExistingDirectory(git, repositoryPath, initialRemoteUrl, allowedRemoteUrls, clean) {
     return __awaiter(this, void 0, void 0, function* () {
+        assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
+        assert.ok(allowedRemoteUrls, 'Expected allowedRemoteUrls to be defined');
+        assert.ok(allowedRemoteUrls.length, 'Expected allowedRemoteUrls to have at least one value');
+        assert.ok(initialRemoteUrl, 'Expected initialRemoteUrl to be defined');
+        // Indicates whether to delete the directory contents
         let remove = false;
+        // The remote URL
+        let remoteUrl;
         // Check whether using git or REST API
         if (!git) {
             remove = true;
         }
         // Fetch URL does not match
         else if (!fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
-            repositoryUrl !== (yield git.tryGetFetchUrl())) {
+            allowedRemoteUrls.indexOf((remoteUrl = yield git.tryGetRemoteUrl())) < 0) {
             remove = true;
         }
         else {
@@ -7249,6 +7267,10 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
                     if (remove) {
                         core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
                     }
+                }
+                // Always fetch the workflow repository using HTTPS
+                if (remoteUrl !== initialRemoteUrl) {
+                    yield git.setRemoteUrl(initialRemoteUrl);
                 }
             }
             catch (error) {
@@ -13989,6 +14011,7 @@ const core = __importStar(__webpack_require__(470));
 const fsHelper = __importStar(__webpack_require__(618));
 const github = __importStar(__webpack_require__(469));
 const path = __importStar(__webpack_require__(622));
+const hostname = 'github.com';
 function getInputs() {
     const result = {};
     // GitHub workspace
@@ -14018,12 +14041,13 @@ function getInputs() {
         throw new Error(`Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`);
     }
     // Workflow repository?
-    const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
-        `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
+    result.isWorkflowRepository =
+        qualifiedRepository.toUpperCase() ===
+            `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
     // Source branch, source version
     result.ref = core.getInput('ref');
     if (!result.ref) {
-        if (isWorkflowRepository) {
+        if (result.isWorkflowRepository) {
             result.ref = github.context.ref;
             result.commit = github.context.sha;
             // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),

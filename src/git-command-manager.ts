@@ -33,6 +33,7 @@ export interface IGitCommandManager {
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   removeEnvironmentVariable(name: string): void
   setEnvironmentVariable(name: string, value: string): void
+  setRemoteUrl(url: string): Promise<void>
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
@@ -40,7 +41,7 @@ export interface IGitCommandManager {
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
-  tryGetFetchUrl(): Promise<string>
+  tryGetRemoteUrl(): Promise<string>
   tryReset(): Promise<boolean>
 }
 
@@ -241,6 +242,10 @@ class GitCommandManager {
     this.gitEnv[name] = value
   }
 
+  async setRemoteUrl(value: string): Promise<void> {
+    await this.config('git.remote.url', value)
+  }
+
   async submoduleForeach(command: string, recursive: boolean): Promise<string> {
     const args = ['submodule', 'foreach']
     if (recursive) {
@@ -309,7 +314,7 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
-  async tryGetFetchUrl(): Promise<string> {
+  async tryGetRemoteUrl(): Promise<string> {
     const output = await this.execGit(
       ['config', '--local', '--get', 'remote.origin.url'],
       true

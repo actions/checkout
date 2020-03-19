@@ -4,6 +4,8 @@ import * as github from '@actions/github'
 import * as path from 'path'
 import {IGitSourceSettings} from './git-source-settings'
 
+const hostname = 'github.com'
+
 export function getInputs(): IGitSourceSettings {
   const result = ({} as unknown) as IGitSourceSettings
 
@@ -51,14 +53,14 @@ export function getInputs(): IGitSourceSettings {
   }
 
   // Workflow repository?
-  const isWorkflowRepository =
+  result.isWorkflowRepository =
     qualifiedRepository.toUpperCase() ===
     `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase()
 
   // Source branch, source version
   result.ref = core.getInput('ref')
   if (!result.ref) {
-    if (isWorkflowRepository) {
+    if (result.isWorkflowRepository) {
       result.ref = github.context.ref
       result.commit = github.context.sha
 

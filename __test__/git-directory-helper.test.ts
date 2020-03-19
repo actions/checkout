@@ -7,7 +7,8 @@ import {IGitCommandManager} from '../lib/git-command-manager'
 
 const testWorkspace = path.join(__dirname, '_temp', 'git-directory-helper')
 let repositoryPath: string
-let repositoryUrl: string
+let httpsUrl: string
+let sshUrl: string
 let clean: boolean
 let git: IGitCommandManager
 
@@ -40,7 +41,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -62,7 +64,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -87,7 +90,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -108,7 +112,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -136,7 +141,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -155,14 +161,15 @@ describe('git-directory-helper tests', () => {
     await setup(removesContentsWhenDifferentRepositoryUrl)
     clean = false
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    const differentRepositoryUrl =
+    const differentRemoteUrl =
       'https://github.com/my-different-org/my-different-repo'
 
     // Act
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      differentRepositoryUrl,
+      differentRemoteUrl,
+      [differentRemoteUrl],
       clean
     )
 
@@ -186,7 +193,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -211,7 +219,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -235,7 +244,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       undefined,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -259,7 +269,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -289,7 +300,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -319,7 +331,8 @@ describe('git-directory-helper tests', () => {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
-      repositoryUrl,
+      httpsUrl,
+      [httpsUrl, sshUrl],
       clean
     )
 
@@ -328,6 +341,30 @@ describe('git-directory-helper tests', () => {
     expect(files.sort()).toEqual(['.git', 'my-file'])
     expect(git.branchDelete).toHaveBeenCalledWith(true, 'remote-branch-1')
     expect(git.branchDelete).toHaveBeenCalledWith(true, 'remote-branch-2')
+  })
+
+  const updatesRemoteUrl = 'updates remote URL'
+  it(updatesRemoteUrl, async () => {
+    // Arrange
+    await setup(updatesRemoteUrl)
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      sshUrl,
+      [sshUrl, httpsUrl],
+      clean
+    )
+
+    // Assert
+    const files = await fs.promises.readdir(repositoryPath)
+    expect(files.sort()).toEqual(['.git', 'my-file'])
+    expect(git.isDetached).toHaveBeenCalled()
+    expect(git.branchList).toHaveBeenCalled()
+    expect(core.warning).not.toHaveBeenCalled()
+    expect(git.setRemoteUrl).toHaveBeenCalledWith(sshUrl)
   })
 })
 
@@ -338,8 +375,9 @@ async function setup(testName: string): Promise<void> {
   repositoryPath = path.join(testWorkspace, testName)
   await fs.promises.mkdir(path.join(repositoryPath, '.git'), {recursive: true})
 
-  // Repository URL
-  repositoryUrl = 'https://github.com/my-org/my-repo'
+  // Remote URLs
+  httpsUrl = 'https://github.com/my-org/my-repo'
+  sshUrl = 'git@github.com:my-org/my-repo'
 
   // Clean
   clean = true
@@ -365,6 +403,7 @@ async function setup(testName: string): Promise<void> {
     remoteAdd: jest.fn(),
     removeEnvironmentVariable: jest.fn(),
     setEnvironmentVariable: jest.fn(),
+    setRemoteUrl: jest.fn(),
     submoduleForeach: jest.fn(),
     submoduleSync: jest.fn(),
     submoduleUpdate: jest.fn(),
@@ -374,10 +413,10 @@ async function setup(testName: string): Promise<void> {
     }),
     tryConfigUnset: jest.fn(),
     tryDisableAutomaticGarbageCollection: jest.fn(),
-    tryGetFetchUrl: jest.fn(async () => {
+    tryGetRemoteUrl: jest.fn(async () => {
       // Sanity check - this function shouldn't be called when the .git directory doesn't exist
       await fs.promises.stat(path.join(repositoryPath, '.git'))
-      return repositoryUrl
+      return httpsUrl
     }),
     tryReset: jest.fn(async () => {
       return true

@@ -14,17 +14,21 @@ import {IGitSourceSettings} from './git-source-settings'
 const hostname = 'github.com'
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
-  // Repository URL
   core.info(
     `Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`
   )
-  const repositoryUrl = settings.sshKey
-    ? `git@${hostname}:${encodeURIComponent(
-        settings.repositoryOwner
-      )}/${encodeURIComponent(settings.repositoryName)}.git`
-    : `https://${hostname}/${encodeURIComponent(
-        settings.repositoryOwner
-      )}/${encodeURIComponent(settings.repositoryName)}`
+
+  // Remote URL
+  const httpsUrl = `https://${hostname}/${encodeURIComponent(
+    settings.repositoryOwner
+  )}/${encodeURIComponent(settings.repositoryName)}`
+  const sshUrl = `git@${hostname}:${encodeURIComponent(
+    settings.repositoryOwner
+  )}/${encodeURIComponent(settings.repositoryName)}.git`
+
+  // Always fetch the workflow repository using the token, not the SSH key
+  const initialRemoteUrl =
+    !settings.sshKey || settings.isWorkflowRepository ? httpsUrl : sshUrl
 
   // Remove conflicting file path
   if (fsHelper.fileExistsSync(settings.repositoryPath)) {
@@ -46,7 +50,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       settings.repositoryPath,
-      repositoryUrl,
+      initialRemoteUrl,
+      [httpsUrl, sshUrl],
       settings.clean
     )
   }
@@ -86,7 +91,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
   ) {
     await git.init()
-    await git.remoteAdd('origin', repositoryUrl)
+    await git.remoteAdd('origin', initialRemoteUrl)
   }
 
   // Disable automatic garbage collection
@@ -122,6 +127,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // Explicit lfs fetch will fetch lfs objects in parallel.
     if (settings.lfs) {
       await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
+    }
+
+    // Fix URL when using SSH
+    if (settings.sshKey && initialRemoteUrl != sshUrl) {
+      await git.setRemoteUrl(sshUrl)
     }
 
     // Checkout
