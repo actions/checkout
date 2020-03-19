@@ -1,9 +1,11 @@
+import * as assert from 'assert'
 import * as core from '@actions/core'
 import * as fs from 'fs'
 import * as fsHelper from './fs-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
 import {IGitCommandManager} from './git-command-manager'
+import {IGitSourceSettings} from './git-source-settings'
 
 export async function prepareExistingDirectory(
   git: IGitCommandManager | undefined,
@@ -11,6 +13,10 @@ export async function prepareExistingDirectory(
   repositoryUrl: string,
   clean: boolean
 ): Promise<void> {
+  assert.ok(repositoryPath, 'Expected repositoryPath to be defined')
+  assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined')
+
+  // Indicates whether to delete the directory contents
   let remove = false
 
   // Check whether using git or REST API
@@ -38,6 +44,7 @@ export async function prepareExistingDirectory(
     }
 
     try {
+      core.startGroup('Removing previously created refs, to avoid conflicts')
       // Checkout detached HEAD
       if (!(await git.isDetached())) {
         await git.checkoutDetach()
@@ -54,9 +61,11 @@ export async function prepareExistingDirectory(
       for (const branch of branches) {
         await git.branchDelete(true, branch)
       }
+      core.endGroup()
 
       // Clean
       if (clean) {
+        core.startGroup('Cleaning the repository')
         if (!(await git.tryClean())) {
           core.debug(
             `The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`
@@ -65,6 +74,7 @@ export async function prepareExistingDirectory(
         } else if (!(await git.tryReset())) {
           remove = true
         }
+        core.endGroup()
 
         if (remove) {
           core.warning(
