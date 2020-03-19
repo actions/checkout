@@ -5871,7 +5871,7 @@ function getSource(settings) {
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
             }
             // Fix URL when using SSH
-            if (settings.sshKey && initialRemoteUrl != sshUrl) {
+            if (settings.sshKey && initialRemoteUrl !== sshUrl) {
                 yield git.setRemoteUrl(sshUrl);
             }
             // Checkout
@@ -7207,12 +7207,12 @@ const fs = __importStar(__webpack_require__(747));
 const fsHelper = __importStar(__webpack_require__(618));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
-function prepareExistingDirectory(git, repositoryPath, initialRemoteUrl, allowedRemoteUrls, clean) {
+function prepareExistingDirectory(git, repositoryPath, preferredRemoteUrl, allowedRemoteUrls, clean) {
     return __awaiter(this, void 0, void 0, function* () {
         assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
+        assert.ok(preferredRemoteUrl, 'Expected preferredRemoteUrl to be defined');
         assert.ok(allowedRemoteUrls, 'Expected allowedRemoteUrls to be defined');
         assert.ok(allowedRemoteUrls.length, 'Expected allowedRemoteUrls to have at least one value');
-        assert.ok(initialRemoteUrl, 'Expected initialRemoteUrl to be defined');
         // Indicates whether to delete the directory contents
         let remove = false;
         // The remote URL
@@ -7268,9 +7268,9 @@ function prepareExistingDirectory(git, repositoryPath, initialRemoteUrl, allowed
                         core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
                     }
                 }
-                // Always fetch the workflow repository using HTTPS
-                if (remoteUrl !== initialRemoteUrl) {
-                    yield git.setRemoteUrl(initialRemoteUrl);
+                // Update to the preferred remote URL
+                if (remoteUrl !== preferredRemoteUrl) {
+                    yield git.setRemoteUrl(preferredRemoteUrl);
                 }
             }
             catch (error) {

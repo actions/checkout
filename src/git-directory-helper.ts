@@ -17,7 +17,10 @@ export async function prepareExistingDirectory(
   assert.ok(repositoryPath, 'Expected repositoryPath to be defined')
   assert.ok(preferredRemoteUrl, 'Expected preferredRemoteUrl to be defined')
   assert.ok(allowedRemoteUrls, 'Expected allowedRemoteUrls to be defined')
-  assert.ok(allowedRemoteUrls.length, 'Expected allowedRemoteUrls to have at least one value')
+  assert.ok(
+    allowedRemoteUrls.length,
+    'Expected allowedRemoteUrls to have at least one value'
+  )
 
   // Indicates whether to delete the directory contents
   let remove = false

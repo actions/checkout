@@ -130,7 +130,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     }
 
     // Fix URL when using SSH
-    if (settings.sshKey && initialRemoteUrl != sshUrl) {
+    if (settings.sshKey && initialRemoteUrl !== sshUrl) {
       await git.setRemoteUrl(sshUrl)
     }
 
