@@ -18,6 +18,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
   - Fetches only a single commit by default
 - Script authenticated git commands
   - Auth token persisted in the local git config
+- Supports SSH
 - Creates a local branch
   - No longer detached HEAD when checking out a branch
 - Improved layout
@@ -116,7 +117,6 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Checkout submodules](#Checkout-submodules)
 - [Fetch all tags](#Fetch-all-tags)
 - [Fetch all branches](#Fetch-all-branches)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
@@ -205,20 +205,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-```
-
-## Checkout submodules
-
-```yaml
-- uses: actions/checkout@v2
-- name: Checkout submodules
-  shell: bash
-  run: |
-    # If your submodules are configured to use SSH instead of HTTPS please uncomment the following line
-    # git config --global url."https://github.com/".insteadOf "git@github.com:"
-    auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-    git submodule sync --recursive
-    git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
 ```
 
 ## Fetch all tags
