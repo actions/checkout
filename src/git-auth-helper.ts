@@ -7,12 +7,12 @@ import * as os from 'os'
 import * as path from 'path'
 import * as regexpHelper from './regexp-helper'
 import * as stateHelper from './state-helper'
+import * as urlHelper from './url-helper'
 import {default as uuid} from 'uuid/v4'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
 const IS_WINDOWS = process.platform === 'win32'
-const HOSTNAME = 'github.com'
 const SSH_COMMAND_KEY = 'core.sshCommand'
 
 export interface IGitAuthHelper {
@@ -33,15 +33,15 @@ export function createAuthHelper(
 class GitAuthHelper {
   private readonly git: IGitCommandManager
   private readonly settings: IGitSourceSettings
-  private readonly tokenConfigKey: string = `http.https://${HOSTNAME}/.extraheader`
+  private readonly tokenConfigKey: string
+  private readonly tokenConfigValue: string
   private readonly tokenPlaceholderConfigValue: string
-  private readonly insteadOfKey: string = `url.https://${HOSTNAME}/.insteadOf`
-  private readonly insteadOfValue: string = `git@${HOSTNAME}:`
+  private readonly insteadOfKey: string
+  private readonly insteadOfValue: string
   private sshCommand = ''
   private sshKeyPath = ''
   private sshKnownHostsPath = ''
   private temporaryHomePath = ''
-  private tokenConfigValue: string
 
   constructor(
     gitCommandManager: IGitCommandManager,
@@ -51,6 +51,8 @@ class GitAuthHelper {
     this.settings = gitSourceSettings || (({} as unknown) as IGitSourceSettings)
 
     // Token auth header
+    const serverUrl = urlHelper.getServerUrl()
+    this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader` // "origin" is SCHEME://HOSTNAME[:PORT]
     const basicCredential = Buffer.from(
       `x-access-token:${this.settings.authToken}`,
       'utf8'
@@ -58,6 +60,10 @@ class GitAuthHelper {
     core.setSecret(basicCredential)
     this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`
     this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`
+
+    // Instead of SSH URL
+    this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf` // "origin" is SCHEME://HOSTNAME[:PORT]
+    this.insteadOfValue = `git@${serverUrl.hostname}:`
   }
 
   async configureAuth(): Promise<void> {

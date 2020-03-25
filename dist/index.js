@@ -1268,6 +1268,46 @@ module.exports = windowsRelease;
 
 /***/ }),
 
+/***/ 81:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
+    result["default"] = mod;
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const assert = __importStar(__webpack_require__(357));
+const url_1 = __webpack_require__(835);
+function getApiUrl() {
+    return process.env['GITHUB_API_URL'] || 'https://api.github.com';
+}
+exports.getApiUrl = getApiUrl;
+function getFetchUrl(settings) {
+    assert.ok(settings.repositoryOwner, 'settings.repositoryOwner must be defined');
+    assert.ok(settings.repositoryName, 'settings.repositoryName must be defined');
+    const serviceUrl = getServerUrl();
+    const encodedOwner = encodeURIComponent(settings.repositoryOwner);
+    const encodedName = encodeURIComponent(settings.repositoryName);
+    if (settings.sshKey) {
+        return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
+    }
+    // "origin" is SCHEME://HOSTNAME[:PORT]
+    return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
+}
+exports.getFetchUrl = getFetchUrl;
+function getServerUrl() {
+    return new url_1.URL(process.env['GITHUB_URL'] || 'https://github.com');
+}
+exports.getServerUrl = getServerUrl;
+
+
+/***/ }),
+
 /***/ 87:
 /***/ (function(module) {
 
@@ -5109,9 +5149,9 @@ const os = __importStar(__webpack_require__(87));
 const path = __importStar(__webpack_require__(622));
 const regexpHelper = __importStar(__webpack_require__(528));
 const stateHelper = __importStar(__webpack_require__(153));
+const urlHelper = __importStar(__webpack_require__(81));
 const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
-const HOSTNAME = 'github.com';
 const SSH_COMMAND_KEY = 'core.sshCommand';
 function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
@@ -5119,9 +5159,6 @@ function createAuthHelper(git, settings) {
 exports.createAuthHelper = createAuthHelper;
 class GitAuthHelper {
     constructor(gitCommandManager, gitSourceSettings) {
-        this.tokenConfigKey = `http.https://${HOSTNAME}/.extraheader`;
-        this.insteadOfKey = `url.https://${HOSTNAME}/.insteadOf`;
-        this.insteadOfValue = `git@${HOSTNAME}:`;
         this.sshCommand = '';
         this.sshKeyPath = '';
         this.sshKnownHostsPath = '';
@@ -5129,10 +5166,15 @@ class GitAuthHelper {
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
         // Token auth header
+        const serverUrl = urlHelper.getServerUrl();
+        this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader`; // "origin" is SCHEME://HOSTNAME[:PORT]
         const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
         core.setSecret(basicCredential);
         this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`;
         this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`;
+        // Instead of SSH URL
+        this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf`; // "origin" is SCHEME://HOSTNAME[:PORT]
+        this.insteadOfValue = `git@${serverUrl.hostname}:`;
     }
     configureAuth() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -5797,14 +5839,12 @@ const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const refHelper = __importStar(__webpack_require__(227));
 const stateHelper = __importStar(__webpack_require__(153));
-const hostname = 'github.com';
+const urlHelper = __importStar(__webpack_require__(81));
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
-        const repositoryUrl = settings.sshKey
-            ? `git@${hostname}:${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}.git`
-            : `https://${hostname}/${encodeURIComponent(settings.repositoryOwner)}/${encodeURIComponent(settings.repositoryName)}`;
+        const repositoryUrl = urlHelper.getFetchUrl(settings);
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -9159,6 +9199,7 @@ const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const retryHelper = __importStar(__webpack_require__(587));
 const toolCache = __importStar(__webpack_require__(533));
+const urlHelper = __importStar(__webpack_require__(81));
 const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath) {
@@ -9209,7 +9250,7 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath)
 exports.downloadRepository = downloadRepository;
 function downloadArchive(authToken, owner, repo, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = new github.GitHub(authToken);
+        const octokit = new github.GitHub(authToken, { baseUrl: urlHelper.getApiUrl() });
         const params = {
             owner: owner,
             repo: repo,

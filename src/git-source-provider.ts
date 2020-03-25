@@ -8,23 +8,16 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as refHelper from './ref-helper'
 import * as stateHelper from './state-helper'
+import * as urlHelper from './url-helper'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
-
-const hostname = 'github.com'
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
   // Repository URL
   core.info(
     `Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`
   )
-  const repositoryUrl = settings.sshKey
-    ? `git@${hostname}:${encodeURIComponent(
-        settings.repositoryOwner
-      )}/${encodeURIComponent(settings.repositoryName)}.git`
-    : `https://${hostname}/${encodeURIComponent(
-        settings.repositoryOwner
-      )}/${encodeURIComponent(settings.repositoryName)}`
+  const repositoryUrl = urlHelper.getFetchUrl(settings)
 
   // Remove conflicting file path
   if (fsHelper.fileExistsSync(settings.repositoryPath)) {

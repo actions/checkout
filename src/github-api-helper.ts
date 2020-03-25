@@ -6,6 +6,7 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
+import * as urlHelper from './url-helper'
 import {default as uuid} from 'uuid/v4'
 import {ReposGetArchiveLinkParams} from '@octokit/rest'
 
@@ -74,7 +75,7 @@ async function downloadArchive(
   ref: string,
   commit: string
 ): Promise<Buffer> {
-  const octokit = new github.GitHub(authToken)
+  const octokit = new github.GitHub(authToken, {baseUrl: urlHelper.getApiUrl()})
   const params: ReposGetArchiveLinkParams = {
     owner: owner,
     repo: repo,
