@@ -33,11 +33,11 @@ export function createAuthHelper(
 class GitAuthHelper {
   private readonly git: IGitCommandManager
   private readonly settings: IGitSourceSettings
-  private readonly tokenConfigKey: string // = `http.https://${HOSTNAME}/.extraheader`
+  private readonly tokenConfigKey: string
   private readonly tokenConfigValue: string
   private readonly tokenPlaceholderConfigValue: string
-  private readonly insteadOfKey: string // = `url.https://${HOSTNAME}/.insteadOf`
-  private readonly insteadOfValue: string //= `git@${HOSTNAME}:`
+  private readonly insteadOfKey: string
+  private readonly insteadOfValue: string
   private sshCommand = ''
   private sshKeyPath = ''
   private sshKnownHostsPath = ''
