@@ -32,7 +32,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   }
 
   // Git command manager
+  core.startGroup('Getting Git version info')
   const git = await getGitCommandManager(settings)
+  core.endGroup()
 
   // Prepare existing directory, otherwise recreate
   if (isExisting) {
@@ -78,21 +80,27 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   if (
     !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
   ) {
+    core.startGroup('Initializing the repository')
     await git.init()
     await git.remoteAdd('origin', repositoryUrl)
+    core.endGroup()
   }
 
   // Disable automatic garbage collection
+  core.startGroup('Disabling automatic garbage collection')
   if (!(await git.tryDisableAutomaticGarbageCollection())) {
     core.warning(
       `Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`
     )
   }
+  core.endGroup()
 
   const authHelper = gitAuthHelper.createAuthHelper(git, settings)
   try {
     // Configure auth
+    core.startGroup('Setting up auth')
     await authHelper.configureAuth()
+    core.endGroup()
 
     // LFS install
     if (settings.lfs) {
@@ -100,33 +108,44 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     }
 
     // Fetch
+    core.startGroup('Fetching the repository')
     const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
     await git.fetch(settings.fetchDepth, refSpec)
+    core.endGroup()
 
     // Checkout info
+    core.startGroup('Determining the checkout info')
     const checkoutInfo = await refHelper.getCheckoutInfo(
       git,
       settings.ref,
       settings.commit
     )
+    core.endGroup()
 
     // LFS fetch
     // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
     // Explicit lfs fetch will fetch lfs objects in parallel.
     if (settings.lfs) {
+      core.startGroup('Fetching LFS objects')
       await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
+      core.endGroup()
     }
 
     // Checkout
+    core.startGroup('Checking out the ref')
     await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    core.endGroup()
 
     // Submodules
     if (settings.submodules) {
       try {
         // Temporarily override global config
+        core.startGroup('Setting up auth for fetching submodules')
         await authHelper.configureGlobalAuth()
+        core.endGroup()
 
         // Checkout submodules
+        core.startGroup('Fetching submodules')
         await git.submoduleSync(settings.nestedSubmodules)
         await git.submoduleUpdate(
           settings.fetchDepth,
@@ -136,10 +155,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
           'git config --local gc.auto 0',
           settings.nestedSubmodules
         )
+        core.endGroup()
 
         // Persist credentials
         if (settings.persistCredentials) {
+          core.startGroup('Persisting credentials for submodules')
           await authHelper.configureSubmoduleAuth()
+          core.endGroup()
         }
       } finally {
         // Remove temporary global config override
@@ -152,7 +174,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   } finally {
     // Remove auth
     if (!settings.persistCredentials) {
+      core.startGroup('Removing auth')
       await authHelper.removeAuth()
+      core.endGroup()
     }
   }
 }

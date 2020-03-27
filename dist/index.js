@@ -5267,7 +5267,7 @@ class GitAuthHelper {
     }
     removeGlobalAuth() {
         return __awaiter(this, void 0, void 0, function* () {
-            core.info(`Unsetting HOME override`);
+            core.debug(`Unsetting HOME override`);
             this.git.removeEnvironmentVariable('HOME');
             yield io.rmRF(this.temporaryHomePath);
         });
@@ -5856,7 +5856,9 @@ function getSource(settings) {
             yield io.mkdirP(settings.repositoryPath);
         }
         // Git command manager
+        core.startGroup('Getting Git version info');
         const git = yield getGitCommandManager(settings);
+        core.endGroup();
         // Prepare existing directory, otherwise recreate
         if (isExisting) {
             yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean);
@@ -5878,46 +5880,66 @@ function getSource(settings) {
         stateHelper.setRepositoryPath(settings.repositoryPath);
         // Initialize the repository
         if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
+            core.startGroup('Initializing the repository');
             yield git.init();
             yield git.remoteAdd('origin', repositoryUrl);
+            core.endGroup();
         }
         // Disable automatic garbage collection
+        core.startGroup('Disabling automatic garbage collection');
         if (!(yield git.tryDisableAutomaticGarbageCollection())) {
             core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
         }
+        core.endGroup();
         const authHelper = gitAuthHelper.createAuthHelper(git, settings);
         try {
             // Configure auth
+            core.startGroup('Setting up auth');
             yield authHelper.configureAuth();
+            core.endGroup();
             // LFS install
             if (settings.lfs) {
                 yield git.lfsInstall();
             }
             // Fetch
+            core.startGroup('Fetching the repository');
             const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
             yield git.fetch(settings.fetchDepth, refSpec);
+            core.endGroup();
             // Checkout info
+            core.startGroup('Determining the checkout info');
             const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+            core.endGroup();
             // LFS fetch
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
             // Explicit lfs fetch will fetch lfs objects in parallel.
             if (settings.lfs) {
+                core.startGroup('Fetching LFS objects');
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+                core.endGroup();
             }
             // Checkout
+            core.startGroup('Checking out the ref');
             yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            core.endGroup();
             // Submodules
             if (settings.submodules) {
                 try {
                     // Temporarily override global config
+                    core.startGroup('Setting up auth for fetching submodules');
                     yield authHelper.configureGlobalAuth();
+                    core.endGroup();
                     // Checkout submodules
+                    core.startGroup('Fetching submodules');
                     yield git.submoduleSync(settings.nestedSubmodules);
                     yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
                     yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
+                    core.endGroup();
                     // Persist credentials
                     if (settings.persistCredentials) {
+                        core.startGroup('Persisting credentials for submodules');
                         yield authHelper.configureSubmoduleAuth();
+                        core.endGroup();
                     }
                 }
                 finally {
@@ -5931,7 +5953,9 @@ function getSource(settings) {
         finally {
             // Remove auth
             if (!settings.persistCredentials) {
+                core.startGroup('Removing auth');
                 yield authHelper.removeAuth();
+                core.endGroup();
             }
         }
     });
@@ -7231,6 +7255,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const assert = __importStar(__webpack_require__(357));
 const core = __importStar(__webpack_require__(470));
 const fs = __importStar(__webpack_require__(747));
 const fsHelper = __importStar(__webpack_require__(618));
@@ -7238,6 +7263,9 @@ const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
     return __awaiter(this, void 0, void 0, function* () {
+        assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
+        assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined');
+        // Indicates whether to delete the directory contents
         let remove = false;
         // Check whether using git or REST API
         if (!git) {
@@ -7263,6 +7291,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
                 }
             }
             try {
+                core.startGroup('Removing previously created refs, to avoid conflicts');
                 // Checkout detached HEAD
                 if (!(yield git.isDetached())) {
                     yield git.checkoutDetach();
@@ -7277,8 +7306,10 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
                 for (const branch of branches) {
                     yield git.branchDelete(true, branch);
                 }
+                core.endGroup();
                 // Clean
                 if (clean) {
+                    core.startGroup('Cleaning the repository');
                     if (!(yield git.tryClean())) {
                         core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
                         remove = true;
@@ -7286,6 +7317,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean) {
                     else if (!(yield git.tryReset())) {
                         remove = true;
                     }
+                    core.endGroup();
                     if (remove) {
                         core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
                     }
