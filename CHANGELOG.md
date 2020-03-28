@@ -1,6 +1,6 @@
 # Changelog
 
-## v2 (beta)
+## v2
 
 - Improved fetch performance
   - The default behavior now fetches only the SHA being checked-out
