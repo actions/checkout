@@ -3,9 +3,6 @@ name: Build and Test
 on:
   pull_request:
   push:
-    branches:
-      - master
-      - releases/*
 
 jobs:
   build:
@@ -35,7 +32,7 @@ jobs:
         uses: actions/checkout@v2
 
       # Basic checkout
-      - name: Checkout basic
+      - name: Checkout
         uses: ./
         with:
           ref: test-data/v2/basic
