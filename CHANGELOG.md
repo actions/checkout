@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.1.0
+
+- [Group output](https://github.com/actions/checkout/pull/191)
+- [Changes to support GHES alpha release](https://github.com/actions/checkout/pull/199)
+- [Persist core.sshCommand for submodules](https://github.com/actions/checkout/pull/184)
+- [Add support ssh](https://github.com/actions/checkout/pull/163)
+- [Convert submodule SSH URL to HTTPS, when not using SSH](https://github.com/actions/checkout/pull/179)
+- [Add submodule support](https://github.com/actions/checkout/pull/157)
+- [Follow proxy settings](https://github.com/actions/checkout/pull/144)
+- [Fix ref for pr closed event when a pr is merged](https://github.com/actions/checkout/pull/141)
+- [Fix issue checking detached when git less than 2.22](https://github.com/actions/checkout/pull/128)
+
+## v2.0.0
+
+- [Do not pass cred on command line](https://github.com/actions/checkout/pull/108)
+- [Add input persist-credentials](https://github.com/actions/checkout/pull/107)
+- [Fallback to REST API to download repo](https://github.com/actions/checkout/pull/104)
+
 ## v2 (beta)
 
 - Improved fetch performance
