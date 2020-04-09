@@ -112,7 +112,6 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 - [Checkout a different branch](#Checkout-a-different-branch)
 - [Checkout HEAD^](#Checkout-HEAD)
-
 - [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
 - [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
@@ -122,7 +121,6 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Fetch all tags](#Fetch-all-tags)
 - [Fetch all branches](#Fetch-all-branches)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
-
 
 ## Checkout a different branch
 
