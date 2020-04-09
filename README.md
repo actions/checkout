@@ -112,14 +112,17 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 - [Checkout a different branch](#Checkout-a-different-branch)
 - [Checkout HEAD^](#Checkout-HEAD)
+
 - [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
 - [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Fetch pull request base-ref in addition to merge commit (for diffing)](#Fetch-pull-request-base-ref-in-addition-to-merge-commit-for-diffing)
 - [Fetch all tags](#Fetch-all-tags)
 - [Fetch all branches](#Fetch-all-branches)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
+
 
 ## Checkout a different branch
 
@@ -205,6 +208,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+```
+
+## Fetch pull request base-ref in addition to merge commit (for diffing)
+
+```yml
+- uses: actions/checkout@v2
+- name: Fetch base_ref HEAD
+  run: git fetch --depth=1 origin +refs/heads/${{github.base_ref}}:refs/remotes/origin/${{github.base_ref}}
+- run: git diff origin/${{github.base_ref}}..HEAD
 ```
 
 ## Fetch all tags
