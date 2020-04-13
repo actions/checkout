@@ -172,7 +172,8 @@ class GitCommandManager {
       '--no-tags',
       '--prune',
       '--progress',
-      '--no-recurse-submodules'
+      '--no-recurse-submodules',
+      '--verbose'
     ]
     if (fetchDepth > 0) {
       args.push(`--depth=${fetchDepth}`)
