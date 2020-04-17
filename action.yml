@@ -68,6 +68,12 @@ inputs:
       When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
       converted to HTTPS.
     default: false
+  app-id:
+    description: GitHub app id
+    optional: true
+  app-private-key:
+    description: GitHub app private key
+    optional: true
 runs:
   using: node12
   main: dist/index.js
