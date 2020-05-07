@@ -2,10 +2,6 @@ import * as assert from 'assert'
 import {IGitSourceSettings} from './git-source-settings'
 import {URL} from 'url'
 
-export function getApiUrl(): string {
-  return process.env['GITHUB_API_URL'] || 'https://api.github.com'
-}
-
 export function getFetchUrl(settings: IGitSourceSettings): string {
   assert.ok(
     settings.repositoryOwner,
