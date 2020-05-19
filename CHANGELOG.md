@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.1.1
+- Changes to support GHES ([here](https://github.com/actions/checkout/pull/236) and [here](https://github.com/actions/checkout/pull/248))
+
 ## v2.1.0
 
 - [Group output](https://github.com/actions/checkout/pull/191)
