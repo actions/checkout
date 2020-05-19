@@ -5,8 +5,8 @@
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc && ncc build && node lib/misc/generate-docs.js",
-    "format": "prettier --write **/*.ts",
-    "format-check": "prettier --check **/*.ts",
+    "format": "prettier --write '**/*.ts'",
+    "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
     "test": "jest"
   },
