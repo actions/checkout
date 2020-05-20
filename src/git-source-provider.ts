@@ -170,7 +170,17 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     }
 
     // Dump some info about the checked out commit
-    await git.log1()
+    const commitInfo = await git.log1()
+
+    // Check for incorrect pull request merge commit
+    await refHelper.checkCommitInfo(
+      settings.authToken,
+      commitInfo,
+      settings.repositoryOwner,
+      settings.repositoryName,
+      settings.ref,
+      settings.commit
+    )
   } finally {
     // Remove auth
     if (!settings.persistCredentials) {

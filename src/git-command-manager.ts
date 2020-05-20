@@ -29,7 +29,7 @@ export interface IGitCommandManager {
   isDetached(): Promise<boolean>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
-  log1(): Promise<void>
+  log1(): Promise<string>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   removeEnvironmentVariable(name: string): void
   setEnvironmentVariable(name: string, value: string): void
@@ -225,8 +225,9 @@ class GitCommandManager {
     await this.execGit(['lfs', 'install', '--local'])
   }
 
-  async log1(): Promise<void> {
-    await this.execGit(['log', '-1'])
+  async log1(): Promise<string> {
+    const output = await this.execGit(['log', '-1'])
+    return output.stdout
   }
 
   async remoteAdd(remoteName: string, remoteUrl: string): Promise<void> {
