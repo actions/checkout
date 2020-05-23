@@ -230,6 +230,16 @@ jobs:
     git fetch --prune --unshallow --tags
 ```
 
+## Check Git Operations availability before checking out
+
+```yaml
+- uses: crazy-max/ghaction-github-status@v1
+  with:
+    git_threshold: major_outage
+- uses: actions/checkout@v2
+  if: success()
+```
+
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
