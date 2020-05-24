@@ -722,9 +722,11 @@ async function setup(testName: string): Promise<void> {
     log1: jest.fn(),
     remoteAdd: jest.fn(),
     removeEnvironmentVariable: jest.fn((name: string) => delete git.env[name]),
+    revParse: jest.fn(),
     setEnvironmentVariable: jest.fn((name: string, value: string) => {
       git.env[name] = value
     }),
+    shaExists: jest.fn(),
     submoduleForeach: jest.fn(async () => {
       return ''
     }),

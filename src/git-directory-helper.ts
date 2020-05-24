@@ -5,13 +5,13 @@ import * as fsHelper from './fs-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
 import {IGitCommandManager} from './git-command-manager'
-import {IGitSourceSettings} from './git-source-settings'
 
 export async function prepareExistingDirectory(
   git: IGitCommandManager | undefined,
   repositoryPath: string,
   repositoryUrl: string,
-  clean: boolean
+  clean: boolean,
+  ref: string
 ): Promise<void> {
   assert.ok(repositoryPath, 'Expected repositoryPath to be defined')
   assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined')
@@ -56,10 +56,26 @@ export async function prepareExistingDirectory(
         await git.branchDelete(false, branch)
       }
 
-      // Remove all refs/remotes/origin/* to avoid conflicts
-      branches = await git.branchList(true)
-      for (const branch of branches) {
-        await git.branchDelete(true, branch)
+      // Remove any conflicting refs/remotes/origin/*
+      // Example 1: Consider ref is refs/heads/foo and previously fetched refs/remotes/origin/foo/bar
+      // Example 2: Consider ref is refs/heads/foo/bar and previously fetched refs/remotes/origin/foo
+      if (ref) {
+        ref = ref.startsWith('refs/') ? ref : `refs/heads/${ref}`
+        if (ref.startsWith('refs/heads/')) {
+          const upperName1 = ref.toUpperCase().substr('REFS/HEADS/'.length)
+          const upperName1Slash = `${upperName1}/`
+          branches = await git.branchList(true)
+          for (const branch of branches) {
+            const upperName2 = branch.substr('origin/'.length).toUpperCase()
+            const upperName2Slash = `${upperName2}/`
+            if (
+              upperName1.startsWith(upperName2Slash) ||
+              upperName2.startsWith(upperName1Slash)
+            ) {
+              await git.branchDelete(true, branch)
+            }
+          }
+        }
       }
       core.endGroup()
 

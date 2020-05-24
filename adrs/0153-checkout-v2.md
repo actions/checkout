@@ -70,7 +70,7 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
   fetch-depth:
-    description: 'Number of commits to fetch. 0 indicates all history.'
+    description: 'Number of commits to fetch. 0 indicates all history for all tags and branches.'
     default: 1
   lfs:
     description: 'Whether to download Git-LFS files'
