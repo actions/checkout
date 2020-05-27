@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.2.0
+- [Fetch all history for all tags and branches when fetch-depth=0](https://github.com/actions/checkout/pull/258)
+
 ## v2.1.1
 - Changes to support GHES ([here](https://github.com/actions/checkout/pull/236) and [here](https://github.com/actions/checkout/pull/248))
 
