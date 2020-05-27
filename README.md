@@ -6,7 +6,7 @@
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth` to fetch more history. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
@@ -110,6 +110,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 # Scenarios
 
+- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
 - [Checkout a different branch](#Checkout-a-different-branch)
 - [Checkout HEAD^](#Checkout-HEAD)
 - [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
@@ -117,9 +118,14 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Fetch all tags](#Fetch-all-tags)
-- [Fetch all branches](#Fetch-all-branches)
-- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
+
+## Fetch all history for all tags and branches
+
+```yaml
+- uses: actions/checkout@v2
+  with:
+    fetch-depth: 0
+```
 
 ## Checkout a different branch
 
@@ -205,29 +211,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-```
-
-## Fetch all tags
-
-```yaml
-- uses: actions/checkout@v2
-- run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-```
-
-## Fetch all branches
-
-```yaml
-- uses: actions/checkout@v2
-- run: |
-    git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
-```
-
-## Fetch all history for all tags and branches
-
-```yaml
-- uses: actions/checkout@v2
-- run: |
-    git fetch --prune --unshallow --tags
 ```
 
 # License

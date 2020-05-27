@@ -9,6 +9,7 @@ const testWorkspace = path.join(__dirname, '_temp', 'git-directory-helper')
 let repositoryPath: string
 let repositoryUrl: string
 let clean: boolean
+let ref: string
 let git: IGitCommandManager
 
 describe('git-directory-helper tests', () => {
@@ -41,7 +42,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -63,7 +65,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -88,7 +91,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -109,7 +113,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -137,7 +142,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -163,7 +169,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       differentRepositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -187,7 +194,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -212,7 +220,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -236,7 +245,8 @@ describe('git-directory-helper tests', () => {
       undefined,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -260,7 +270,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -290,7 +301,8 @@ describe('git-directory-helper tests', () => {
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
@@ -305,29 +317,66 @@ describe('git-directory-helper tests', () => {
     expect(git.tryReset).not.toHaveBeenCalled()
   })
 
-  const removesRemoteBranches = 'removes local branches'
-  it(removesRemoteBranches, async () => {
+  const removesAncestorRemoteBranch = 'removes ancestor remote branch'
+  it(removesAncestorRemoteBranch, async () => {
     // Arrange
-    await setup(removesRemoteBranches)
+    await setup(removesAncestorRemoteBranch)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
     const mockBranchList = git.branchList as jest.Mock<any, any>
     mockBranchList.mockImplementation(async (remote: boolean) => {
-      return remote ? ['remote-branch-1', 'remote-branch-2'] : []
+      return remote ? ['origin/remote-branch-1', 'origin/remote-branch-2'] : []
     })
+    ref = 'remote-branch-1/conflict'
 
     // Act
     await gitDirectoryHelper.prepareExistingDirectory(
       git,
       repositoryPath,
       repositoryUrl,
-      clean
+      clean,
+      ref
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
     expect(files.sort()).toEqual(['.git', 'my-file'])
-    expect(git.branchDelete).toHaveBeenCalledWith(true, 'remote-branch-1')
-    expect(git.branchDelete).toHaveBeenCalledWith(true, 'remote-branch-2')
+    expect(git.branchDelete).toHaveBeenCalledTimes(1)
+    expect(git.branchDelete).toHaveBeenCalledWith(
+      true,
+      'origin/remote-branch-1'
+    )
+  })
+
+  const removesDescendantRemoteBranches = 'removes descendant remote branch'
+  it(removesDescendantRemoteBranches, async () => {
+    // Arrange
+    await setup(removesDescendantRemoteBranches)
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+    const mockBranchList = git.branchList as jest.Mock<any, any>
+    mockBranchList.mockImplementation(async (remote: boolean) => {
+      return remote
+        ? ['origin/remote-branch-1/conflict', 'origin/remote-branch-2']
+        : []
+    })
+    ref = 'remote-branch-1'
+
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      repositoryUrl,
+      clean,
+      ref
+    )
+
+    // Assert
+    const files = await fs.promises.readdir(repositoryPath)
+    expect(files.sort()).toEqual(['.git', 'my-file'])
+    expect(git.branchDelete).toHaveBeenCalledTimes(1)
+    expect(git.branchDelete).toHaveBeenCalledWith(
+      true,
+      'origin/remote-branch-1/conflict'
+    )
   })
 })
 
@@ -343,6 +392,9 @@ async function setup(testName: string): Promise<void> {
 
   // Clean
   clean = true
+
+  // Ref
+  ref = ''
 
   // Git command manager
   git = {
@@ -364,7 +416,9 @@ async function setup(testName: string): Promise<void> {
     log1: jest.fn(),
     remoteAdd: jest.fn(),
     removeEnvironmentVariable: jest.fn(),
+    revParse: jest.fn(),
     setEnvironmentVariable: jest.fn(),
+    shaExists: jest.fn(),
     submoduleForeach: jest.fn(),
     submoduleSync: jest.fn(),
     submoduleUpdate: jest.fn(),
