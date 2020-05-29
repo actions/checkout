@@ -117,6 +117,13 @@ describe('input-helper tests', () => {
     expect(settings.commit).toBeFalsy()
   })
 
+  it('sets correct default ref/sha for gist', () => {
+    inputs.gist = 'some-owner/some-gist'
+    const settings: IGitSourceSettings = inputHelper.getInputs()
+    expect(settings.ref).toBe('refs/heads/master')
+    expect(settings.commit).toBeFalsy()
+  })
+
   it('sets ref to empty when explicit sha', () => {
     inputs.ref = '1111111111222222222233333333334444444444'
     const settings: IGitSourceSettings = inputHelper.getInputs()

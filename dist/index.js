@@ -1389,21 +1389,30 @@ const url_1 = __webpack_require__(835);
 function getFetchUrl(settings) {
     assert.ok(settings.repositoryOwner, 'settings.repositoryOwner must be defined');
     assert.ok(settings.repositoryName, 'settings.repositoryName must be defined');
-    const serviceUrl = getServerUrl();
+    const serviceUrl = getServerUrl(settings.isGist);
     const encodedOwner = encodeURIComponent(settings.repositoryOwner);
     const encodedName = encodeURIComponent(settings.repositoryName);
+    let encodedNwo = `${encodedOwner}/${encodedName}`;
+    if (settings.isGist) {
+        encodedNwo = encodedName;
+    }
     if (settings.sshKey) {
-        return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
+        return `git@${serviceUrl.hostname}:${encodedNwo}.git`;
     }
     // "origin" is SCHEME://HOSTNAME[:PORT]
-    return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
+    return `${serviceUrl.origin}/${encodedNwo}`;
 }
 exports.getFetchUrl = getFetchUrl;
-function getServerUrl() {
+function getServerUrl(isGist) {
     // todo: remove GITHUB_URL after support for GHES Alpha is no longer needed
-    return new url_1.URL(process.env['GITHUB_SERVER_URL'] ||
+    let serverUrl = new url_1.URL(process.env['GITHUB_SERVER_URL'] ||
         process.env['GITHUB_URL'] ||
         'https://github.com');
+    // todo: don't assume subdomain isolation
+    if (isGist) {
+        serverUrl.hostname = `gist.${serverUrl.hostname}`;
+    }
+    return serverUrl;
 }
 exports.getServerUrl = getServerUrl;
 
@@ -5418,7 +5427,7 @@ class GitAuthHelper {
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
         // Token auth header
-        const serverUrl = urlHelper.getServerUrl();
+        const serverUrl = urlHelper.getServerUrl(this.settings.isGist);
         this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader`; // "origin" is SCHEME://HOSTNAME[:PORT]
         const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
         core.setSecret(basicCredential);
@@ -14438,15 +14447,22 @@ function getInputs() {
     githubWorkspacePath = path.resolve(githubWorkspacePath);
     core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
     fsHelper.directoryExistsSync(githubWorkspacePath, true);
+    // Gist repository?
+    result.isGist = !!core.getInput('gist') || false;
+    core.debug(`isGist = '${result.isGist}'`);
     // Qualified repository
-    const qualifiedRepository = core.getInput('repository') ||
+    let qualifiedRepository = core.getInput('repository') ||
         `${github.context.repo.owner}/${github.context.repo.repo}`;
+    if (result.isGist) {
+        qualifiedRepository = core.getInput('gist');
+    }
     core.debug(`qualified repository = '${qualifiedRepository}'`);
     const splitRepository = qualifiedRepository.split('/');
     if (splitRepository.length !== 2 ||
         !splitRepository[0] ||
         !splitRepository[1]) {
-        throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
+        const model = result.isGist ? 'gist' : 'repository';
+        throw new Error(`Invalid ${model} '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
     }
     result.repositoryOwner = splitRepository[0];
     result.repositoryName = splitRepository[1];

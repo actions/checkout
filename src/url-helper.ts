@@ -8,22 +8,33 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
     'settings.repositoryOwner must be defined'
   )
   assert.ok(settings.repositoryName, 'settings.repositoryName must be defined')
-  const serviceUrl = getServerUrl()
+  const serviceUrl = getServerUrl(settings.isGist)
   const encodedOwner = encodeURIComponent(settings.repositoryOwner)
   const encodedName = encodeURIComponent(settings.repositoryName)
+  let encodedNwo = `${encodedOwner}/${encodedName}`
+  if (settings.isGist) {
+    encodedNwo = encodedName
+  }
   if (settings.sshKey) {
-    return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`
+    return `git@${serviceUrl.hostname}:${encodedNwo}.git`
   }
 
   // "origin" is SCHEME://HOSTNAME[:PORT]
-  return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`
+  return `${serviceUrl.origin}/${encodedNwo}`
 }
 
-export function getServerUrl(): URL {
+export function getServerUrl(isGist: boolean): URL {
   // todo: remove GITHUB_URL after support for GHES Alpha is no longer needed
-  return new URL(
+  let serverUrl = new URL(
     process.env['GITHUB_SERVER_URL'] ||
       process.env['GITHUB_URL'] ||
       'https://github.com'
   )
+
+  // todo: don't assume subdomain isolation
+  if (isGist) {
+    serverUrl.hostname = `gist.${serverUrl.hostname}`
+  }
+
+  return serverUrl
 }

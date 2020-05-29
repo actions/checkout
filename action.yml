@@ -4,6 +4,8 @@ inputs:
   repository:
     description: 'Repository name with owner. For example, actions/checkout'
     default: ${{ github.repository }}
+  gist:
+    description: 'Gist name with owner. For example, schacon/1'
   ref:
     description: >
       The branch, tag or SHA to checkout. When checking out the repository that
