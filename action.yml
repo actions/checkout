@@ -8,7 +8,7 @@ inputs:
     description: >
       The branch, tag or SHA to checkout. When checking out the repository that
       triggered a workflow, this defaults to the reference or SHA for that
-      event.  Otherwise, defaults to `master`.
+      event.  Otherwise, uses the default branch.
   token:
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured

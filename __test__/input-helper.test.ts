@@ -110,13 +110,6 @@ describe('input-helper tests', () => {
     )
   })
 
-  it('sets correct default ref/sha for other repo', () => {
-    inputs.repository = 'some-owner/some-other-repo'
-    const settings: IGitSourceSettings = inputHelper.getInputs()
-    expect(settings.ref).toBe('refs/heads/master')
-    expect(settings.commit).toBeFalsy()
-  })
-
   it('sets ref to empty when explicit sha', () => {
     inputs.ref = '1111111111222222222233333333334444444444'
     const settings: IGitSourceSettings = inputHelper.getInputs()

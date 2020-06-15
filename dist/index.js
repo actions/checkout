@@ -6114,6 +6114,12 @@ function getSource(settings) {
         // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
         const repositoryUrl = urlHelper.getFetchUrl(settings);
+        // Determine the default branch
+        if (!settings.ref && !settings.commit) {
+            core.startGroup('Determining the default branch');
+            settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
+            core.endGroup();
+        }
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -9569,6 +9575,31 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath)
     });
 }
 exports.downloadRepository = downloadRepository;
+/**
+ * Looks up the default branch name
+ */
+function getDefaultBranch(authToken, owner, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+            core.info('Retrieving the default branch name');
+            const octokit = new github.GitHub(authToken);
+            const response = yield octokit.repos.get({ owner, repo });
+            if (response.status != 200) {
+                throw new Error(`Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`);
+            }
+            // Print the default branch
+            let result = response.data.default_branch;
+            core.info(`Default branch '${result}'`);
+            assert.ok(result, 'default_branch cannot be empty');
+            // Prefix with 'refs/heads'
+            if (!result.startsWith('refs/')) {
+                result = `refs/heads/${result}`;
+            }
+            return result;
+        }));
+    });
+}
+exports.getDefaultBranch = getDefaultBranch;
 function downloadArchive(authToken, owner, repo, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = new github.GitHub(authToken);
@@ -14471,9 +14502,6 @@ function getInputs() {
                 result.ref = `refs/heads/${result.ref}`;
             }
         }
-        if (!result.ref && !result.commit) {
-            result.ref = 'refs/heads/master';
-        }
     }
     // SHA?
     else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
@@ -14508,7 +14536,7 @@ function getInputs() {
     core.debug(`submodules = ${result.submodules}`);
     core.debug(`recursive submodules = ${result.nestedSubmodules}`);
     // Auth token
-    result.authToken = core.getInput('token');
+    result.authToken = core.getInput('token', { required: true });
     // SSH
     result.sshKey = core.getInput('ssh-key');
     result.sshKnownHosts = core.getInput('ssh-known-hosts');

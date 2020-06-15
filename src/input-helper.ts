@@ -68,10 +68,6 @@ export function getInputs(): IGitSourceSettings {
         result.ref = `refs/heads/${result.ref}`
       }
     }
-
-    if (!result.ref && !result.commit) {
-      result.ref = 'refs/heads/master'
-    }
   }
   // SHA?
   else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
@@ -110,7 +106,7 @@ export function getInputs(): IGitSourceSettings {
   core.debug(`recursive submodules = ${result.nestedSubmodules}`)
 
   // Auth token
-  result.authToken = core.getInput('token')
+  result.authToken = core.getInput('token', {required: true})
 
   // SSH
   result.sshKey = core.getInput('ssh-key')

@@ -42,7 +42,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
     # The branch, tag or SHA to checkout. When checking out the repository that
     # triggered a workflow, this defaults to the reference or SHA for that event.
-    # Otherwise, defaults to `master`.
+    # Otherwise, uses the default branch.
     ref: ''
 
     # Personal access token (PAT) used to fetch the repository. The PAT is configured
