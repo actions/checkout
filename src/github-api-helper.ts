@@ -67,6 +67,38 @@ export async function downloadRepository(
   io.rmRF(extractPath)
 }
 
+/**
+ * Looks up the default branch name
+ */
+export async function getDefaultBranch(
+  authToken: string,
+  owner: string,
+  repo: string
+): Promise<string> {
+  return await retryHelper.execute(async () => {
+    core.info('Retrieving the default branch name')
+    const octokit = new github.GitHub(authToken)
+    const response = await octokit.repos.get({owner, repo})
+    if (response.status != 200) {
+      throw new Error(
+        `Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`
+      )
+    }
+
+    // Print the default branch
+    let result = response.data.default_branch
+    core.info(`Default branch '${result}'`)
+    assert.ok(result, 'default_branch cannot be empty')
+
+    // Prefix with 'refs/heads'
+    if (!result.startsWith('refs/')) {
+      result = `refs/heads/${result}`
+    }
+
+    return result
+  })
+}
+
 async function downloadArchive(
   authToken: string,
   owner: string,
