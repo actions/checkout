@@ -76,6 +76,10 @@ export function getInputs(): IGitSourceSettings {
         result.ref = `refs/heads/${result.ref}`
       }
     }
+
+    if (result.isGist && !result.ref && !result.commit) {
+      result.ref = 'refs/heads/master'
+    }
   }
   // SHA?
   else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
