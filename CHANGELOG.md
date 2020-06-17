@@ -1,9 +1,15 @@
 # Changelog
 
+## v2.3.0
+
+- [Fallback to the default branch](https://github.com/actions/checkout/pull/278)
+
 ## v2.2.0
+
 - [Fetch all history for all tags and branches when fetch-depth=0](https://github.com/actions/checkout/pull/258)
 
 ## v2.1.1
+
 - Changes to support GHES ([here](https://github.com/actions/checkout/pull/236) and [here](https://github.com/actions/checkout/pull/248))
 
 ## v2.1.0
