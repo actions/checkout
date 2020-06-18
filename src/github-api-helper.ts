@@ -8,7 +8,6 @@ import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
 import {default as uuid} from 'uuid/v4'
 import {Octokit} from '@octokit/rest'
-import {Console} from 'console'
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -20,6 +19,12 @@ export async function downloadRepository(
   commit: string,
   repositoryPath: string
 ): Promise<void> {
+  // Determine the default branch
+  if (!ref && !commit) {
+    core.info('Determining the default branch')
+    ref = await getDefaultBranch(authToken, owner, repo)
+  }
+
   // Download the archive
   let archiveData = await retryHelper.execute(async () => {
     core.info('Downloading the archive')
