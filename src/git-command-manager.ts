@@ -25,6 +25,7 @@ export interface IGitCommandManager {
   ): Promise<void>
   configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
   fetch(refSpec: string[], fetchDepth?: number): Promise<void>
+  getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
   init(): Promise<void>
   isDetached(): Promise<boolean>
@@ -193,6 +194,34 @@ class GitCommandManager {
     await retryHelper.execute(async () => {
       await that.execGit(args)
     })
+  }
+
+  async getDefaultBranch(repositoryUrl: string): Promise<string> {
+    let output: GitOutput | undefined
+    await retryHelper.execute(async () => {
+      output = await this.execGit([
+        'ls-remote',
+        '--quiet',
+        '--exit-code',
+        '--symref',
+        repositoryUrl,
+        'HEAD'
+      ])
+    })
+
+    if (output) {
+      // Satisfy compiler, will always be set
+      for (let line of output.stdout.trim().split('\n')) {
+        line = line.trim()
+        if (line.startsWith('ref:') || line.endsWith('HEAD')) {
+          return line
+            .substr('ref:'.length, line.length - 'ref:'.length - 'HEAD'.length)
+            .trim()
+        }
+      }
+    }
+
+    throw new Error('Unexpected output when retrieving default branch')
   }
 
   getWorkingDirectory(): string {

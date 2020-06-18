@@ -5827,6 +5827,33 @@ class GitCommandManager {
             }));
         });
     }
+    getDefaultBranch(repositoryUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let output;
+            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                output = yield this.execGit([
+                    'ls-remote',
+                    '--quiet',
+                    '--exit-code',
+                    '--symref',
+                    repositoryUrl,
+                    'HEAD'
+                ]);
+            }));
+            if (output) {
+                // Satisfy compiler, will always be set
+                for (let line of output.stdout.trim().split('\n')) {
+                    line = line.trim();
+                    if (line.startsWith('ref:') || line.endsWith('HEAD')) {
+                        return line
+                            .substr('ref:'.length, line.length - 'ref:'.length - 'HEAD'.length)
+                            .trim();
+                    }
+                }
+            }
+            throw new Error('Unexpected output when retrieving default branch');
+        });
+    }
     getWorkingDirectory() {
         return this.workingDirectory;
     }
@@ -6114,12 +6141,6 @@ function getSource(settings) {
         // Repository URL
         core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
         const repositoryUrl = urlHelper.getFetchUrl(settings);
-        // Determine the default branch
-        if (!settings.ref && !settings.commit) {
-            core.startGroup('Determining the default branch');
-            settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
-            core.endGroup();
-        }
         // Remove conflicting file path
         if (fsHelper.fileExistsSync(settings.repositoryPath)) {
             yield io.rmRF(settings.repositoryPath);
@@ -6172,6 +6193,17 @@ function getSource(settings) {
             core.startGroup('Setting up auth');
             yield authHelper.configureAuth();
             core.endGroup();
+            // Determine the default branch
+            if (!settings.ref && !settings.commit) {
+                core.startGroup('Determining the default branch');
+                if (settings.sshKey) {
+                    settings.ref = yield git.getDefaultBranch(repositoryUrl);
+                }
+                else {
+                    settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
+                }
+                core.endGroup();
+            }
             // LFS install
             if (settings.lfs) {
                 yield git.lfsInstall();
@@ -9531,6 +9563,11 @@ const v4_1 = __importDefault(__webpack_require__(826));
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
+        // Determine the default branch
+        if (!ref && !commit) {
+            core.info('Determining the default branch');
+            ref = yield getDefaultBranch(authToken, owner, repo);
+        }
         // Download the archive
         let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Downloading the archive');
@@ -9583,14 +9620,25 @@ function getDefaultBranch(authToken, owner, repo) {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Retrieving the default branch name');
             const octokit = new github.GitHub(authToken);
-            const response = yield octokit.repos.get({ owner, repo });
-            if (response.status != 200) {
-                throw new Error(`Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`);
+            let result;
+            try {
+                // Get the default branch from the repo info
+                const response = yield octokit.repos.get({ owner, repo });
+                result = response.data.default_branch;
+                assert.ok(result, 'default_branch cannot be empty');
+            }
+            catch (err) {
+                // Handle .wiki repo
+                if (err['status'] === 404 && repo.toUpperCase().endsWith('.WIKI')) {
+                    result = 'master';
+                }
+                // Otherwise error
+                else {
+                    throw err;
+                }
             }
             // Print the default branch
-            let result = response.data.default_branch;
             core.info(`Default branch '${result}'`);
-            assert.ok(result, 'default_branch cannot be empty');
             // Prefix with 'refs/heads'
             if (!result.startsWith('refs/')) {
                 result = `refs/heads/${result}`;
