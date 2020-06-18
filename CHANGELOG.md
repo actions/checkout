@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.3.1
+
+- [Fix default branch resolution for .wiki and when using SSH](https://github.com/actions/checkout/pull/284)
+
+
 ## v2.3.0
 
 - [Fallback to the default branch](https://github.com/actions/checkout/pull/278)
