@@ -19,6 +19,12 @@ export async function downloadRepository(
   commit: string,
   repositoryPath: string
 ): Promise<void> {
+  // Determine the default branch
+  if (!ref && !commit) {
+    core.info('Determining the default branch')
+    ref = await getDefaultBranch(authToken, owner, repo)
+  }
+
   // Download the archive
   let archiveData = await retryHelper.execute(async () => {
     core.info('Downloading the archive')
@@ -78,17 +84,25 @@ export async function getDefaultBranch(
   return await retryHelper.execute(async () => {
     core.info('Retrieving the default branch name')
     const octokit = new github.GitHub(authToken)
-    const response = await octokit.repos.get({owner, repo})
-    if (response.status != 200) {
-      throw new Error(
-        `Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`
-      )
+    let result: string
+    try {
+      // Get the default branch from the repo info
+      const response = await octokit.repos.get({owner, repo})
+      result = response.data.default_branch
+      assert.ok(result, 'default_branch cannot be empty')
+    } catch (err) {
+      // Handle .wiki repo
+      if (err['status'] === 404 && repo.toUpperCase().endsWith('.WIKI')) {
+        result = 'master'
+      }
+      // Otherwise error
+      else {
+        throw err
+      }
     }
 
     // Print the default branch
-    let result = response.data.default_branch
     core.info(`Default branch '${result}'`)
-    assert.ok(result, 'default_branch cannot be empty')
 
     // Prefix with 'refs/heads'
     if (!result.startsWith('refs/')) {

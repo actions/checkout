@@ -714,6 +714,7 @@ async function setup(testName: string): Promise<void> {
     ),
     env: {},
     fetch: jest.fn(),
+    getDefaultBranch: jest.fn(),
     getWorkingDirectory: jest.fn(() => workspace),
     init: jest.fn(),
     isDetached: jest.fn(),

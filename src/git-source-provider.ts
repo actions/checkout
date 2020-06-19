@@ -19,17 +19,6 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   )
   const repositoryUrl = urlHelper.getFetchUrl(settings)
 
-  // Determine the default branch
-  if (!settings.ref && !settings.commit) {
-    core.startGroup('Determining the default branch')
-    settings.ref = await githubApiHelper.getDefaultBranch(
-      settings.authToken,
-      settings.repositoryOwner,
-      settings.repositoryName
-    )
-    core.endGroup()
-  }
-
   // Remove conflicting file path
   if (fsHelper.fileExistsSync(settings.repositoryPath)) {
     await io.rmRF(settings.repositoryPath)
@@ -113,6 +102,21 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     core.startGroup('Setting up auth')
     await authHelper.configureAuth()
     core.endGroup()
+
+    // Determine the default branch
+    if (!settings.ref && !settings.commit) {
+      core.startGroup('Determining the default branch')
+      if (settings.sshKey) {
+        settings.ref = await git.getDefaultBranch(repositoryUrl)
+      } else {
+        settings.ref = await githubApiHelper.getDefaultBranch(
+          settings.authToken,
+          settings.repositoryOwner,
+          settings.repositoryName
+        )
+      }
+      core.endGroup()
+    }
 
     // LFS install
     if (settings.lfs) {
