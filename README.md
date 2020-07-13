@@ -89,7 +89,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     clean: ''
 
-    # Number of commits to fetch. 0 indicates all history.
+    # Number of commits to fetch. 0 indicates all history for all branches and tags.
     # Default: 1
     fetch-depth: ''
 
