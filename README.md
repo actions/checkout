@@ -174,6 +174,8 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ## Checkout multiple repos (private)
 
+### Using a personal access token
+
 ```yaml
 - name: Checkout
   uses: actions/checkout@v2
@@ -190,6 +192,23 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
+### Using a deploy key
+
+Unlike personal access tokens, [deploy keys](https://developer.github.com/v3/guides/managing-deploy-keys/#deploy-keys) can be scoped to a specific repository.
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v2
+  with:
+    path: main
+
+- name: Checkout private tools
+  uses: actions/checkout@v2
+  with:
+    repository: my-org/my-private-tools
+    ssh-key: ${{ secrets.PRIVATE_DEPLOY_KEY }} # `PRIVATE_DEPLOY_KEY` is a secret that contains your private deploy key
+    path: my-tools
+```
 
 ## Checkout pull request HEAD commit instead of merge commit
 
