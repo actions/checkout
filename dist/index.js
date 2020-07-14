@@ -5900,7 +5900,7 @@ class GitCommandManager {
     /**
      * Resolves a ref to a SHA. For a branch or lightweight tag, the commit SHA is returned.
      * For an annotated tag, the tag SHA is returned.
-     * @param {string} ref  For example: 'refs/heads/master' or '/refs/tags/v1'
+     * @param {string} ref  For example: 'refs/heads/main' or '/refs/tags/v1'
      * @returns {Promise<string>}
      */
     revParse(ref) {
@@ -14545,7 +14545,7 @@ function getInputs() {
             result.ref = github.context.ref;
             result.commit = github.context.sha;
             // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
-            // the ref is unqualifed like "master" instead of "refs/heads/master".
+            // the ref is unqualifed like "main" instead of "refs/heads/main".
             if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
                 result.ref = `refs/heads/${result.ref}`;
             }
