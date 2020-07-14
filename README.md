@@ -118,6 +118,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 
 ## Fetch all history for all tags and branches
 
@@ -211,6 +212,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+```
+
+## Push a commit using the built-in token
+
+```yaml
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          date > generated.txt
+          git config user.name github-actions
+          git config user.email github-actions-bot@users.noreply.github.com
+          git add .
+          git commit -m "generated"
+          git push
 ```
 
 # License
