@@ -63,7 +63,7 @@ export function getInputs(): IGitSourceSettings {
       result.commit = github.context.sha
 
       // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
-      // the ref is unqualifed like "master" instead of "refs/heads/master".
+      // the ref is unqualifed like "main" instead of "refs/heads/main".
       if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
         result.ref = `refs/heads/${result.ref}`
       }

@@ -204,7 +204,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```yaml
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
     types: [opened, synchronize, closed]
 jobs:
   build:
