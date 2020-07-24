@@ -7,6 +7,11 @@ import * as stateHelper from './state-helper'
 
 async function run(): Promise<void> {
   try {
+
+    for (const key of Object.keys(process.env)) {
+      console.log(`${key}=${process.env[key]}`)
+    }
+
     const sourceSettings = inputHelper.getInputs()
 
     try {

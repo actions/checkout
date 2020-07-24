@@ -3282,6 +3282,9 @@ const stateHelper = __importStar(__webpack_require__(153));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            for (const key of Object.keys(process.env)) {
+                console.log(`${key}=${process.env[key]}`);
+            }
             const sourceSettings = inputHelper.getInputs();
             try {
                 // Register problem matcher
