@@ -118,8 +118,8 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 - [Checkout pull request on `pull_request_target`](#Checkout-pull-request-on-pull_request_target)
+- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 
 ## Fetch all history for all tags and branches
 
