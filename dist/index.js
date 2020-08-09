@@ -5939,7 +5939,7 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    submoduleUpdate(fetchDepth, recursive) {
+    submoduleUpdate(fetchDepth, recursive, fetchJobs) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['-c', 'protocol.version=2'];
             args.push('submodule', 'update', '--init', '--force');
@@ -5948,6 +5948,9 @@ class GitCommandManager {
             }
             if (recursive) {
                 args.push('--recursive');
+            }
+            if (fetchJobs > 0) {
+                args.push(`--jobs=${fetchJobs}`);
             }
             yield this.execGit(args);
         });
@@ -6252,7 +6255,7 @@ function getSource(settings) {
                     // Checkout submodules
                     core.startGroup('Fetching submodules');
                     yield git.submoduleSync(settings.nestedSubmodules);
-                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules, settings.fetchJobs);
                     yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
                     core.endGroup();
                     // Persist credentials
@@ -14567,6 +14570,12 @@ function getInputs() {
         result.fetchDepth = 0;
     }
     core.debug(`fetch depth = ${result.fetchDepth}`);
+    // Fetch jobs
+    result.fetchJobs = Math.floor(Number(core.getInput('fetch-jobs') || '0'));
+    if (isNaN(result.fetchJobs) || result.fetchJobs < 0) {
+        result.fetchJobs = 0;
+    }
+    core.debug(`fetch jobs = ${result.fetchJobs}`);
     // LFS
     result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
     core.debug(`lfs = ${result.lfs}`);
