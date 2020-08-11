@@ -1,0 +1,20 @@
+name: Licensed
+
+on:
+  push: {branches: main}
+  pull_request: {branches: main}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Check licenses
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm ci
+      - name: Install licensed
+        run: |
+          cd $RUNNER_TEMP
+          curl -Lfs -o licensed.tar.gz https://github.com/github/licensed/releases/download/2.12.2/licensed-2.12.2-linux-x64.tar.gz
+          sudo tar -xzf licensed.tar.gz
+          sudo mv licensed /usr/local/bin/licensed
+      - run: licensed status
