@@ -4,7 +4,7 @@ version: 1.5.0
 type: npm
 summary: Node Rest and Http Clients for use with TypeScript
 homepage: https://github.com/Microsoft/typed-rest-client#readme
-license: other
+license: mit
 licenses:
 - sources: LICENSE
   text: |

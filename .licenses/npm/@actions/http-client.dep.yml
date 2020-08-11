@@ -4,7 +4,7 @@ version: 1.0.8
 type: npm
 summary: Actions Http Client
 homepage: https://github.com/actions/http-client#readme
-license: other
+license: mit
 licenses:
 - sources: LICENSE
   text: |

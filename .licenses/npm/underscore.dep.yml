@@ -4,7 +4,7 @@ version: 1.8.3
 type: npm
 summary: JavaScript's functional programming helper library.
 homepage: http://underscorejs.org
-license: other
+license: mit
 licenses:
 - sources: LICENSE
   text: |

@@ -4,7 +4,7 @@ version: 4.3.2
 type: npm
 summary: The lodash method `_.set` exported as a module.
 homepage: https://lodash.com/
-license: other
+license: mit
 licenses:
 - sources: LICENSE
   text: |

@@ -4,7 +4,7 @@ version: 4.5.0
 type: npm
 summary: The lodash method `_.uniq` exported as a module.
 homepage: https://lodash.com/
-license: other
+license: mit
 licenses:
 - sources: LICENSE
   text: |
