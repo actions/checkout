@@ -38,7 +38,7 @@
     "@types/node": "^12.7.12",
     "@types/uuid": "^3.4.6",
     "@typescript-eslint/parser": "^2.8.0",
-    "@zeit/ncc": "^0.20.5",
+    "@vercel/ncc": "^0.23.0",
     "eslint": "^5.16.0",
     "eslint-plugin-github": "^2.0.0",
     "eslint-plugin-jest": "^22.21.0",
