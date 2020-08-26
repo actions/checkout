@@ -63,7 +63,7 @@ jobs:
       - name: Environment path test
         uses: ./
         with:
-          ref: test-data/v2/basic
+          ref: test-data/v2/environment-path
           path: ${{ env.main_path }}
       - name: Verify environment path test
         shell: bash
