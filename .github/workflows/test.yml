@@ -10,8 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      main_path: main_path_test
     steps:
       - uses: actions/setup-node@v1
         with:
@@ -26,6 +24,8 @@ jobs:
         run: __test__/verify-no-unstaged-changes.sh
 
   test:
+    env:
+      main_path: main_path_test
     strategy:
       matrix:
         runs-on: [ubuntu-latest, macos-latest, windows-latest]
