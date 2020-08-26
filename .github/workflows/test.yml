@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      main_path: main_path_test
     steps:
       - uses: actions/setup-node@v1
         with:
@@ -56,6 +58,16 @@ jobs:
       - name: Verify clean
         shell: bash
         run: __test__/verify-clean.sh
+
+      # Use environment variable as path
+      - name: Environment path test
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: ${{ env.main_path }}
+      - name: Verify environment path test
+        shell: bash
+        run: __test__/verify-environment-path.sh
 
       # Side by side
       - name: Checkout side by side 1
