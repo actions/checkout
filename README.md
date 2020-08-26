@@ -82,7 +82,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     persist-credentials: ''
 
-    # Relative path under $GITHUB_WORKSPACE to place the repository
+    # Relative or absolute path under $GITHUB_WORKSPACE to place the repository
     path: ''
 
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
@@ -158,6 +158,18 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
   with:
     repository: my-org/my-tools
     path: my-tools
+```
+
+## Checkout repo with a environment based path (side by side)
+
+```yaml
+env:
+  main_path: ${{ github.workspace }}/main
+steps:
+- name: Checkout
+  uses: actions/checkout@v2
+  with:
+    path: ${{ env.main_path }}
 ```
 
 ## Checkout multiple repos (nested)
