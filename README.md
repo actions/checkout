@@ -160,7 +160,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     path: my-tools
 ```
 
-## Checkout repo with a environment based path (side by side)
+## Checkout repo with a environment based path
 
 ```yaml
 env:
