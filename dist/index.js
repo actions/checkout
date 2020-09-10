@@ -5885,7 +5885,7 @@ class GitCommandManager {
     }
     log1() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['log', '-1']);
+            const output = yield this.execGit(['log', '-1'], false, true);
             return output.stdout;
         });
     }
@@ -6007,7 +6007,7 @@ class GitCommandManager {
             return result;
         });
     }
-    execGit(args, allowAllExitCodes = false) {
+    execGit(args, allowAllExitCodes = false, silent = false) {
         return __awaiter(this, void 0, void 0, function* () {
             fshelper.directoryExistsSync(this.workingDirectory, true);
             const result = new GitOutput();
@@ -6022,6 +6022,7 @@ class GitCommandManager {
             const options = {
                 cwd: this.workingDirectory,
                 env,
+                silent,
                 ignoreReturnCode: allowAllExitCodes,
                 listeners: {
                     stdout: (data) => {

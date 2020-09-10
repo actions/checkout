@@ -255,7 +255,7 @@ class GitCommandManager {
   }
 
   async log1(): Promise<string> {
-    const output = await this.execGit(['log', '-1'])
+    const output = await this.execGit(['log', '-1'], false, true)
     return output.stdout
   }
 
@@ -390,7 +390,8 @@ class GitCommandManager {
 
   private async execGit(
     args: string[],
-    allowAllExitCodes = false
+    allowAllExitCodes = false,
+    silent = false
   ): Promise<GitOutput> {
     fshelper.directoryExistsSync(this.workingDirectory, true)
 
@@ -409,6 +410,7 @@ class GitCommandManager {
     const options = {
       cwd: this.workingDirectory,
       env,
+      silent,
       ignoreReturnCode: allowAllExitCodes,
       listeners: {
         stdout: (data: Buffer) => {
