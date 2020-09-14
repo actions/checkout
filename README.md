@@ -226,7 +226,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: refs/pull/${{ github.event.pull_request.number }}/head
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
 ```
 
 **WARNING! NEVER** run code from pull requests of public repositories! The token of `pull_request_target` event has write access.
