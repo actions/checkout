@@ -105,6 +105,12 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     #
     # Default: false
     submodules: ''
+
+    # GitHub app id
+    app-id: ''
+
+    # GitHub app private key
+    app-private-key: ''
 ```
 <!-- end usage -->
 

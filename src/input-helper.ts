@@ -2,9 +2,10 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
+import * as jwt from 'jsonwebtoken'
 import {IGitSourceSettings} from './git-source-settings'
 
-export function getInputs(): IGitSourceSettings {
+export async function getInputs(): Promise<IGitSourceSettings> {
   const result = ({} as unknown) as IGitSourceSettings
 
   // GitHub workspace
@@ -106,7 +107,7 @@ export function getInputs(): IGitSourceSettings {
   core.debug(`recursive submodules = ${result.nestedSubmodules}`)
 
   // Auth token
-  result.authToken = core.getInput('token', {required: true})
+  result.authToken = await getAuthToken()
 
   // SSH
   result.sshKey = core.getInput('ssh-key')
@@ -119,4 +120,40 @@ export function getInputs(): IGitSourceSettings {
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
   return result
+}
+
+async function getAuthToken() {
+  const appId = +core.getInput('app-id')
+
+  if (appId) {
+    const appPrivateKey = core.getInput('app-private-key')
+
+    return await generateAppAccessToken(appId, appPrivateKey)
+  } else {
+    return core.getInput('token')
+  }
+}
+
+async function generateAppAccessToken(appId: number, appPrivateKey: string) {
+  const iat = secondsSinceEpoch()
+  const exp = iat + 60
+  const iss = appId
+  const payload = {iat, exp, iss}
+
+  const jwtToken = jwt.sign(payload, appPrivateKey, {algorithm: 'RS256'})
+  const octokit = new github.GitHub({auth: jwtToken})
+
+  const {data: installations} = await octokit.apps.listInstallations()
+  const installationId = installations.find(
+    installation => installation.account.login === github.context.repo.owner
+  )!.id
+  const {data: tokenInfo} = await octokit.apps.createInstallationToken({
+    installation_id: installationId
+  })
+
+  return tokenInfo.token
+}
+
+function secondsSinceEpoch() {
+  return Math.floor(new Date().getTime() / 1000)
 }
