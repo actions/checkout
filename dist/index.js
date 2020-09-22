@@ -5883,9 +5883,10 @@ class GitCommandManager {
             yield this.execGit(['lfs', 'install', '--local']);
         });
     }
-    log1() {
+    log1(format) {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['log', '-1'], false, true);
+            var args = format ? ['log', '-1', format] : ['log', '-1'];
+            const output = yield this.execGit(args, false, true);
             return output.stdout;
         });
     }
@@ -6268,8 +6269,10 @@ function getSource(settings) {
                     yield authHelper.removeGlobalAuth();
                 }
             }
-            // Dump some info about the checked out commit
+            // Get commit information
             const commitInfo = yield git.log1();
+            // Log commit sha
+            yield git.log1("--format='%H'");
             // Check for incorrect pull request merge commit
             yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit);
         }
