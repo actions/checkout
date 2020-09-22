@@ -5886,7 +5886,8 @@ class GitCommandManager {
     log1(format) {
         return __awaiter(this, void 0, void 0, function* () {
             var args = format ? ['log', '-1', format] : ['log', '-1'];
-            const output = yield this.execGit(args, false, true);
+            var silent = format ? false : true;
+            const output = yield this.execGit(args, false, silent);
             return output.stdout;
         });
     }

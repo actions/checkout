@@ -256,7 +256,8 @@ class GitCommandManager {
 
   async log1(format?: string): Promise<string> {
     var args = format ? ['log', '-1', format] : ['log', '-1']
-    const output = await this.execGit(args, false, true)
+    var silent = format ? false : true
+    const output = await this.execGit(args, false, silent)
     return output.stdout
   }
 
