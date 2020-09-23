@@ -31,7 +31,7 @@ export interface IGitCommandManager {
   isDetached(): Promise<boolean>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
-  log1(): Promise<string>
+  log1(format?: string): Promise<string>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   removeEnvironmentVariable(name: string): void
   revParse(ref: string): Promise<string>
@@ -254,8 +254,10 @@ class GitCommandManager {
     await this.execGit(['lfs', 'install', '--local'])
   }
 
-  async log1(): Promise<string> {
-    const output = await this.execGit(['log', '-1'])
+  async log1(format?: string): Promise<string> {
+    var args = format ? ['log', '-1', format] : ['log', '-1']
+    var silent = format ? false : true
+    const output = await this.execGit(args, false, silent)
     return output.stdout
   }
 
@@ -390,7 +392,8 @@ class GitCommandManager {
 
   private async execGit(
     args: string[],
-    allowAllExitCodes = false
+    allowAllExitCodes = false,
+    silent = false
   ): Promise<GitOutput> {
     fshelper.directoryExistsSync(this.workingDirectory, true)
 
@@ -409,6 +412,7 @@ class GitCommandManager {
     const options = {
       cwd: this.workingDirectory,
       env,
+      silent,
       ignoreReturnCode: allowAllExitCodes,
       listeners: {
         stdout: (data: Buffer) => {
