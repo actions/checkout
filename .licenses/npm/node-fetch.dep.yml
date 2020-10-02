@@ -1,0 +1,52 @@
+---
+name: node-fetch
+version: 2.6.0
+type: npm
+summary: A light-weight module that brings window.fetch to node.js
+homepage: https://github.com/bitinn/node-fetch
+license: mit
+licenses:
+- sources: LICENSE.md
+  text: |+
+    The MIT License (MIT)
+
+    Copyright (c) 2016 David Frank
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+- sources: README.md
+  text: |-
+    MIT
+
+    [npm-image]: https://flat.badgen.net/npm/v/node-fetch
+    [npm-url]: https://www.npmjs.com/package/node-fetch
+    [travis-image]: https://flat.badgen.net/travis/bitinn/node-fetch
+    [travis-url]: https://travis-ci.org/bitinn/node-fetch
+    [codecov-image]: https://flat.badgen.net/codecov/c/github/bitinn/node-fetch/master
+    [codecov-url]: https://codecov.io/gh/bitinn/node-fetch
+    [install-size-image]: https://flat.badgen.net/packagephobia/install/node-fetch
+    [install-size-url]: https://packagephobia.now.sh/result?p=node-fetch
+    [whatwg-fetch]: https://fetch.spec.whatwg.org/
+    [response-init]: https://fetch.spec.whatwg.org/#responseinit
+    [node-readable]: https://nodejs.org/api/stream.html#stream_readable_streams
+    [mdn-headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
+    [LIMITS.md]: https://github.com/bitinn/node-fetch/blob/master/LIMITS.md
+    [ERROR-HANDLING.md]: https://github.com/bitinn/node-fetch/blob/master/ERROR-HANDLING.md
+    [UPGRADE-GUIDE.md]: https://github.com/bitinn/node-fetch/blob/master/UPGRADE-GUIDE.md
+notices: []
