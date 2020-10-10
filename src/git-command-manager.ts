@@ -327,7 +327,7 @@ class GitCommandManager {
       args.push('--recursive')
     }
 
-    if (fetchJobs > 0) {
+    if (fetchJobs > -1) {
       args.push(`--jobs=${fetchJobs}`)
     }
 

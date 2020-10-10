@@ -93,9 +93,10 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: 1
     fetch-depth: ''
 
-    # Number of fetches to perform simultaneously when updating submodules. 0
-    # indicates default (serial updates).
-    # Default: 0
+    # Number of fetches to perform simultaneously when updating submodules: -1
+    # indicates to use git default (serial updates). 0 uses as many jobs as there are
+    # processors.
+    # Default: -1
     fetch-jobs: ''
 
     # Whether to download Git-LFS files

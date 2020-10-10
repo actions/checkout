@@ -5949,7 +5949,7 @@ class GitCommandManager {
             if (recursive) {
                 args.push('--recursive');
             }
-            if (fetchJobs > 0) {
+            if (fetchJobs > -1) {
                 args.push(`--jobs=${fetchJobs}`);
             }
             yield this.execGit(args);
@@ -14571,9 +14571,9 @@ function getInputs() {
     }
     core.debug(`fetch depth = ${result.fetchDepth}`);
     // Fetch jobs
-    result.fetchJobs = Math.floor(Number(core.getInput('fetch-jobs') || '0'));
-    if (isNaN(result.fetchJobs) || result.fetchJobs < 0) {
-        result.fetchJobs = 0;
+    result.fetchJobs = Math.floor(Number(core.getInput('fetch-jobs') || '-1'));
+    if (isNaN(result.fetchJobs) || result.fetchJobs < -1) {
+        result.fetchJobs = -1;
     }
     core.debug(`fetch jobs = ${result.fetchJobs}`);
     // LFS
