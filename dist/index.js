@@ -5498,7 +5498,7 @@ class GitAuthHelper {
                 const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
                 for (const configPath of configPaths) {
                     core.debug(`Replacing token placeholder in '${configPath}'`);
-                    this.replaceTokenPlaceholder(configPath);
+                    yield this.replaceTokenPlaceholder(configPath);
                 }
                 if (this.settings.sshKey) {
                     // Configure core.sshCommand
@@ -9594,7 +9594,7 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath)
         else {
             yield toolCache.extractTar(archivePath, extractPath);
         }
-        io.rmRF(archivePath);
+        yield io.rmRF(archivePath);
         // Determine the path of the repository content. The archive contains
         // a top-level folder and the repository content is inside.
         const archiveFileNames = yield fs.promises.readdir(extractPath);
@@ -9613,7 +9613,7 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath)
                 yield io.mv(sourcePath, targetPath);
             }
         }
-        io.rmRF(extractPath);
+        yield io.rmRF(extractPath);
     });
 }
 exports.downloadRepository = downloadRepository;

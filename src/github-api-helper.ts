@@ -47,7 +47,7 @@ export async function downloadRepository(
   } else {
     await toolCache.extractTar(archivePath, extractPath)
   }
-  io.rmRF(archivePath)
+  await io.rmRF(archivePath)
 
   // Determine the path of the repository content. The archive contains
   // a top-level folder and the repository content is inside.
@@ -70,7 +70,7 @@ export async function downloadRepository(
       await io.mv(sourcePath, targetPath)
     }
   }
-  io.rmRF(extractPath)
+  await io.rmRF(extractPath)
 }
 
 /**
