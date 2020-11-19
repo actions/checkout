@@ -88,6 +88,15 @@ export function getInputs(): IGitSourceSettings {
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
+  // Submodules fetch depth
+  result.submodulesFetchDepth = Math.floor(
+    Number(core.getInput('submodules-fetch-depth') || '-1')
+  )
+  if (isNaN(result.submodulesFetchDepth) || result.submodulesFetchDepth < 0) {
+    result.submodulesFetchDepth = result.fetchDepth
+  }
+  core.debug(`submodules fetch depth = ${result.submodulesFetchDepth}`)
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)

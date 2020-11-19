@@ -75,6 +75,7 @@ describe('input-helper tests', () => {
     expect(settings.commit).toBeTruthy()
     expect(settings.commit).toBe('1234567890123456789012345678901234567890')
     expect(settings.fetchDepth).toBe(1)
+    expect(settings.submodulesFetchDepth).toBe(1)
     expect(settings.lfs).toBe(false)
     expect(settings.ref).toBe('refs/heads/some-ref')
     expect(settings.repositoryName).toBe('some-repo')
@@ -122,5 +123,19 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = inputHelper.getInputs()
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
+  })
+
+  it('sets submodulesFetchDepth independently from fetchDepth', () => {
+    inputs['fetch-depth'] = '10'
+    inputs['submodules-fetch-depth'] = '20'
+
+    const settings: IGitSourceSettings = inputHelper.getInputs()
+    expect(settings.submodulesFetchDepth).toBe(20)
+  })
+
+  it('sets submodulesFetchDepth equal to fetchDepth by default', () => {
+    inputs['fetch-depth'] = '10'
+    const settings: IGitSourceSettings = inputHelper.getInputs()
+    expect(settings.submodulesFetchDepth).toBe(10)
   })
 })
