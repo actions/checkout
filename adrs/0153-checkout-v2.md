@@ -29,14 +29,26 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured
       with the local git config, which enables your scripts to run authenticated git
-      commands. The post-job step removes the PAT. [Learn more about creating and using
-      encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+      commands. The post-job step removes the PAT.
+
+
+      We recommend using a service account with the least permissions necessary.
+      Also when generating a new PAT, select the least scopes necessary.
+
+
+      [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     default: ${{ github.token }}
   ssh-key:
     description: >
-      SSH key used to fetch the repository. SSH key is configured with the local
+      SSH key used to fetch the repository. The SSH key is configured with the local
       git config, which enables your scripts to run authenticated git commands.
-      The post-job step removes the SSH key. [Learn more about creating and using
+      The post-job step removes the SSH key.
+
+
+      We recommend using a service account with the least permissions necessary.
+
+
+      [Learn more about creating and using
       encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
   ssh-known-hosts:
     description: >
@@ -44,7 +56,10 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
       SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
       `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
   ssh-strict:
-    description: 'Whether to perform strict host key checking'
+    description: >
+      Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes`
+      and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
+      configure additional hosts.
     default: true
   persist-credentials:
     description: 'Whether to configure the token or SSH key with the local git config'
@@ -55,10 +70,19 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
   fetch-depth:
-    description: 'Number of commits to fetch. 0 indicates all history.'
+    description: 'Number of commits to fetch. 0 indicates all history for all tags and branches.'
     default: 1
   lfs:
     description: 'Whether to download Git-LFS files'
+    default: false
+  submodules:
+    description: >
+      Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+      recursively checkout submodules.
+
+
+      When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
+      converted to HTTPS.
     default: false
 ```
 
@@ -66,7 +90,6 @@ Note:
 - SSH support is new
 - `persist-credentials` is new
 - `path` behavior is different (refer [below](#path) for details)
-- `submodules` was removed (error if specified; add later if needed)
 
 ### Fallback to GitHub API
 
@@ -74,7 +97,7 @@ When a sufficient version of git is not in the PATH, fallback to the [web API](h
 
 Note:
 - LFS files are not included in the archive. Therefore fail if LFS is set to true.
-- Submodules are also not included in the archive. However submodules are not supported by checkout v2 anyway.
+- Submodules are also not included in the archive.
 
 ### Persist credentials
 
@@ -95,7 +118,6 @@ Note:
 - The auth header is scoped to all of github `http.https://github.com/.extraheader`
   - Additional public remotes also just work.
   - If users want to authenticate to an additional private remote, they should provide the `token` input.
-  - Lines up if we add submodule support in the future. Don't need to worry about calculating relative URLs. Just works, although needs to be persisted in each submodule git config.
 
 #### SSH key
 
@@ -228,6 +250,17 @@ Multi-checkout complicates the matter. However even today submodules may cause t
 A better solution is:
 
 Given a source file path, walk up the directories until the first `.git/config` is found. Check if it matches the self repo (`url = https://github.com/OWNER/REPO`). If not, drop the source file path.
+
+### Submodules
+
+With both PAT and SSH key support, we should be able to provide frictionless support for
+submodules scenarios: recursive, non-recursive, relative submodule paths.
+
+When fetching submodules, follow the `fetch-depth` settings.
+
+Also when fetching submodules, if the `ssh-key` input is not provided then convert SSH URLs to HTTPS: `-c url."https://github.com/".insteadOf "git@github.com:"`
+
+Credentials will be persisted in the submodules local git config too.
 
 ### Port to typescript
 

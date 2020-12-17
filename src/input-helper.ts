@@ -2,10 +2,10 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
-import {ISourceSettings} from './git-source-provider'
+import {IGitSourceSettings} from './git-source-settings'
 
-export function getInputs(): ISourceSettings {
-  const result = ({} as unknown) as ISourceSettings
+export function getInputs(): IGitSourceSettings {
+  const result = ({} as unknown) as IGitSourceSettings
 
   // GitHub workspace
   let githubWorkspacePath = process.env['GITHUB_WORKSPACE']
@@ -68,10 +68,6 @@ export function getInputs(): ISourceSettings {
         result.ref = `refs/heads/${result.ref}`
       }
     }
-
-    if (!result.ref && !result.commit) {
-      result.ref = 'refs/heads/master'
-    }
   }
   // SHA?
   else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
@@ -85,13 +81,6 @@ export function getInputs(): ISourceSettings {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
-  // Submodules
-  if (core.getInput('submodules')) {
-    throw new Error(
-      "The input 'submodules' is not supported in actions/checkout@v2"
-    )
-  }
-
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
@@ -103,8 +92,27 @@ export function getInputs(): ISourceSettings {
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
 
+  // Submodules
+  result.submodules = false
+  result.nestedSubmodules = false
+  const submodulesString = (core.getInput('submodules') || '').toUpperCase()
+  if (submodulesString == 'RECURSIVE') {
+    result.submodules = true
+    result.nestedSubmodules = true
+  } else if (submodulesString == 'TRUE') {
+    result.submodules = true
+  }
+  core.debug(`submodules = ${result.submodules}`)
+  core.debug(`recursive submodules = ${result.nestedSubmodules}`)
+
   // Auth token
-  result.authToken = core.getInput('token')
+  result.authToken = core.getInput('token', {required: true})
+
+  // SSH
+  result.sshKey = core.getInput('ssh-key')
+  result.sshKnownHosts = core.getInput('ssh-known-hosts')
+  result.sshStrict =
+    (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE'
 
   // Persist credentials
   result.persistCredentials =
