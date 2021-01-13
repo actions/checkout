@@ -7589,8 +7589,10 @@ class GitAuthHelper {
                     core.warning(`Failed to remove '${configKey}' from the git config`);
                 }
             }
-            const pattern = regexpHelper.escape(configKey);
-            yield this.git.submoduleForeach(`git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`, true);
+            if (this.settings.submodules) {
+                const pattern = regexpHelper.escape(configKey);
+                yield this.git.submoduleForeach(`git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`, true);
+            }
         });
     }
 }
