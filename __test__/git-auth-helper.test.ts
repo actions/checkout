@@ -450,6 +450,7 @@ describe('git-auth-helper tests', () => {
       )
       settings.persistCredentials = false
       settings.sshKey = ''
+      settings.submodules = true
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
       const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
@@ -483,6 +484,7 @@ describe('git-auth-helper tests', () => {
         configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsFalseAndSshKeySet
       )
       settings.persistCredentials = false
+      settings.submodules = true
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
       const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
@@ -509,6 +511,7 @@ describe('git-auth-helper tests', () => {
         configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeyNotSet
       )
       settings.sshKey = ''
+      settings.submodules = true
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
       const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
@@ -543,6 +546,7 @@ describe('git-auth-helper tests', () => {
       await setup(
         configureSubmoduleAuth_configuresSubmodulesWhenPersistCredentialsTrueAndSshKeySet
       )
+      settings.submodules = true
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
       const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
