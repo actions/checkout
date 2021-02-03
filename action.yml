@@ -1,4 +1,4 @@
-name: 'Checkout'
+name: 'checkout-short-workdir'
 description: 'Checkout a Git repository at a particular version'
 inputs:
   repository:
