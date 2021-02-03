@@ -1,4 +1,20 @@
 import * as fs from 'fs'
+import { createCommandManager } from './git-command-manager'
+
+export function getWorkingDir(): string {
+
+    let currentWS = process.env['GITHUB_WORKSPACE']
+
+    // original : {{working dir}}/{{repoName}}/{{repoName}}
+    // new      : {{working dir}}/{{short-repo-name}}
+
+    let repoName = currentWS.split('\\').pop().split('/').pop()
+    let shortenedRepoName = repoName.split('.').pop()
+    let workDir = currentWS.substring(currentWS.indexOf(repoName))
+    let newWS = workDir + shortenedRepoName
+
+    return newWS  
+}
 
 export function directoryExistsSync(path: string, required?: boolean): boolean {
   if (!path) {

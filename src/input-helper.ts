@@ -8,12 +8,12 @@ export function getInputs(): IGitSourceSettings {
   const result = ({} as unknown) as IGitSourceSettings
 
   // GitHub workspace
-  let githubWorkspacePath = process.env['GITHUB_WORKSPACE']
+  let githubWorkspacePath = fsHelper.getWorkingDir()
   if (!githubWorkspacePath) {
     throw new Error('GITHUB_WORKSPACE not defined')
   }
   githubWorkspacePath = path.resolve(githubWorkspacePath)
-  core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`)
+  core.log(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`)
   fsHelper.directoryExistsSync(githubWorkspacePath, true)
 
   // Qualified repository
