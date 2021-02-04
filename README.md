@@ -82,7 +82,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     persist-credentials: ''
 
-    # Relative path under $GITHUB_WORKSPACE to place the repository
+    # Path relative to $GITHUB_WORKSPACE to place the repository
     path: ''
 
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
