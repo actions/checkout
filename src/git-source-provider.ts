@@ -181,7 +181,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         await git.submoduleSync(settings.nestedSubmodules)
         await git.submoduleUpdate(
           settings.fetchDepth,
-          settings.nestedSubmodules
+          settings.nestedSubmodules,
+          settings.fetchJobs
         )
         await git.submoduleForeach(
           'git config --local gc.auto 0',

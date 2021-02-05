@@ -88,6 +88,13 @@ export function getInputs(): IGitSourceSettings {
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
+  // Fetch jobs
+  result.fetchJobs = Math.floor(Number(core.getInput('fetch-jobs') || '-1'))
+  if (isNaN(result.fetchJobs) || result.fetchJobs < -1) {
+    result.fetchJobs = -1
+  }
+  core.debug(`fetch jobs = ${result.fetchJobs}`)
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)

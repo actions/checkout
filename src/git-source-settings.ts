@@ -35,6 +35,11 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
+   * The number of fetches to perform simultaneously when updating submodules
+   */
+  fetchJobs: number
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean
