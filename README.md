@@ -118,6 +118,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Checkout pull request on `pull_request_target`](#Checkout-pull-request-on-pull_request_target)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 
 ## Fetch all history for all tags and branches
@@ -213,6 +214,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 ```
+
+## Checkout pull request on `pull_request_target`
+
+```yaml
+on:
+  - pull_request_target
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+```
+
+**WARNING! NEVER** run code from pull requests of public repositories! The token of `pull_request_target` event has write access.
 
 ## Push a commit using the built-in token
 
