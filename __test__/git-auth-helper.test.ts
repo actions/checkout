@@ -768,6 +768,7 @@ async function setup(testName: string): Promise<void> {
     repositoryName: 'my-repo',
     repositoryOwner: 'my-org',
     repositoryPath: '',
+    isGist: false,
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
     sshStrict: true

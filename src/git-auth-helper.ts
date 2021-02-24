@@ -51,7 +51,7 @@ class GitAuthHelper {
     this.settings = gitSourceSettings || (({} as unknown) as IGitSourceSettings)
 
     // Token auth header
-    const serverUrl = urlHelper.getServerUrl()
+    const serverUrl = urlHelper.getServerUrl(this.settings.isGist)
     this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader` // "origin" is SCHEME://HOSTNAME[:PORT]
     const basicCredential = Buffer.from(
       `x-access-token:${this.settings.authToken}`,

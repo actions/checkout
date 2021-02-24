@@ -16,10 +16,17 @@ export function getInputs(): IGitSourceSettings {
   core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`)
   fsHelper.directoryExistsSync(githubWorkspacePath, true)
 
+  // Gist repository?
+  result.isGist = !!core.getInput('gist') || false
+  core.debug(`isGist = '${result.isGist}'`)
+
   // Qualified repository
-  const qualifiedRepository =
+  let qualifiedRepository =
     core.getInput('repository') ||
     `${github.context.repo.owner}/${github.context.repo.repo}`
+  if (result.isGist) {
+    qualifiedRepository = core.getInput('gist')
+  }
   core.debug(`qualified repository = '${qualifiedRepository}'`)
   const splitRepository = qualifiedRepository.split('/')
   if (
@@ -27,8 +34,9 @@ export function getInputs(): IGitSourceSettings {
     !splitRepository[0] ||
     !splitRepository[1]
   ) {
+    const model = result.isGist ? 'gist' : 'repository'
     throw new Error(
-      `Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`
+      `Invalid ${model} '${qualifiedRepository}'. Expected format {owner}/{repo}.`
     )
   }
   result.repositoryOwner = splitRepository[0]
@@ -67,6 +75,10 @@ export function getInputs(): IGitSourceSettings {
       if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
         result.ref = `refs/heads/${result.ref}`
       }
+    }
+
+    if (result.isGist && !result.ref && !result.commit) {
+      result.ref = 'refs/heads/master'
     }
   }
   // SHA?
