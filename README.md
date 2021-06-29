@@ -1,6 +1,6 @@
 # GitCheckout V2 (forked off of @actions/checkout@v2)
 
-In the examples below, use ***LexisNexis-GHA-Public/GitCheckout@v2.3.1.1*** instead.  
+In the examples below, use ***LexisNexis-GHA-Public/LNRSCheckout@v2.3.4.1*** instead.  
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
