@@ -1,5 +1,5 @@
-name: 'GitCheckout'
-description: 'Checkout a Git repository at a particular version'
+name: 'LNRSCheckout'
+description: 'Checkout a Git repository at a particular version - LNRS version'
 inputs:
   repository:
     description: 'Repository name with owner. For example, actions/checkout'
