@@ -1,8 +1,6 @@
-<p align="center">
-  <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
-</p>
+# GitCheckout V2 (forked off of @actions/checkout@v2)
 
-# Checkout V2
+In the examples below, use ***LexisNexis-GHA-Public/GitCheckout@v2.3.1.1*** instead.  
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -11,6 +9,22 @@ Only a single commit is fetched by default, for the ref/SHA that triggered the w
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
 When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
+
+## A note about your `$GITHUB_WORKSPACE`  
+On windows runner's this path is the working directory of your github runner + repo name x2.  The issue is that long repo names may result in exceeding the windows file name length restrictions, expecially if you count adding npm installers and other package management systems.  The naming format is the same for linux/macOS runners, however they do not have the same limitations Windows has.  
+
+    d:\gh\01\_work\very-long-repo-name\very-long-repo-name\
+
+This particular codebase has been modified to allow the `path` parameter to use parent folder structure.
+
+    path: '..\..\repo-workingdir'
+    allow_parent_path: true
+
+Results in a working directory:
+
+    d:\gh\01\_work\repo-workingdir
+
+In the end this is better than what we had before.  However the original working directory will still be required.  Also note it's possible this can be dangerous so be careful using this feature.
 
 # What's new
 
@@ -82,8 +96,13 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     persist-credentials: ''
 
-    # Relative path under $GITHUB_WORKSPACE to place the repository
+    # Relative path under the workspace folder to place the repository
     path: ''
+
+    # allows path option to result in a path that is a parent of the working
+    # directory. This may have unforseen consequences.
+    # Default: false
+    allow_parent_path: ''
 
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
     # Default: true
