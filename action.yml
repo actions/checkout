@@ -1,4 +1,4 @@
-name: 'Checkout'
+name: 'GitCheckout'
 description: 'Checkout a Git repository at a particular version'
 inputs:
   repository:
@@ -49,7 +49,10 @@ inputs:
     description: 'Whether to configure the token or SSH key with the local git config'
     default: true
   path:
-    description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+    description: 'Relative path under the workspace folder to place the repository'
+  allow_parent_path:
+    description: 'allows path option to result in a path that is a parent of the working directory.  This may have unforseen consequences.'
+    default: false
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true

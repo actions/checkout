@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.3.1.1
+- Adding paramater for specifying specific working directory on the runner.  This is useful for windows runners in which the working directory is too long and causing issues with npm and other build tools.
+
 ## v2.3.1
 
 - [Fix default branch resolution for .wiki and when using SSH](https://github.com/actions/checkout/pull/284)
