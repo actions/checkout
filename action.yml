@@ -71,6 +71,9 @@ inputs:
       When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
       converted to HTTPS.
     default: false
+outputs:
+  WORKSPACE_DIR:
+    description: working directory for the project
 runs:
   using: node12
   main: dist/index.js

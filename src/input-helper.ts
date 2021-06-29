@@ -51,6 +51,8 @@ export function getInputs(): IGitSourceSettings {
     )
   }
 
+  core.setOutput('WORKSPACE_DIR', result.repositoryPath)
+
   // Workflow repository?
   const isWorkflowRepository =
     qualifiedRepository.toUpperCase() ===
