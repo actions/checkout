@@ -110,6 +110,29 @@ describe('input-helper tests', () => {
     )
   })
 
+  it('parent path failure', () => {
+    inputs.path = '../../testdir'
+
+    try {
+        let test = inputHelper.getInputs()
+        assert.fail("Test should have thrown an exception")
+    } catch {
+        // empty, if it throws its good   
+    }
+  })
+
+  it('parent path success', () => {
+    inputs.path = '../../testdir'
+    inputs.allow_parent_path = true
+
+    const settings: IGitSourceSettings = inputHelper.getInputs()
+
+    expect(settings.repositoryPath).toBe(
+        path.join(gitHubWorkspace, '..', '..', 'testdir')
+      )
+  })
+
+
   it('sets ref to empty when explicit sha', () => {
     inputs.ref = '1111111111222222222233333333334444444444'
     const settings: IGitSourceSettings = inputHelper.getInputs()

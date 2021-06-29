@@ -40,15 +40,18 @@ export function getInputs(): IGitSourceSettings {
     githubWorkspacePath,
     result.repositoryPath
   )
-  if (
-    !(result.repositoryPath + path.sep).startsWith(
-      githubWorkspacePath + path.sep
-    )
-  ) {
+
+  const allowParentPath = core.getInput('allow_parent_path') 
+                            ? core.getInput('allow_parent_path').toString().toLowerCase() === 'true' 
+                            : false
+
+  if (!allowParentPath && !(result.repositoryPath + path.sep).startsWith(githubWorkspacePath + path.sep)) {
     throw new Error(
       `Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`
     )
   }
+
+  core.setOutput('WORKSPACE_DIR', result.repositoryPath)
 
   // Workflow repository?
   const isWorkflowRepository =
@@ -113,6 +116,7 @@ export function getInputs(): IGitSourceSettings {
   result.sshKnownHosts = core.getInput('ssh-known-hosts')
   result.sshStrict =
     (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE'
+
 
   // Persist credentials
   result.persistCredentials =
