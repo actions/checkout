@@ -1,4 +1,4 @@
-# GitCheckout V2 (forked off of @actions/checkout@v2)
+# LNRSCheckout V2 (forked off of @actions/checkout@v2)
 
 In the examples below, use ***LexisNexis-GHA-Public/LNRSCheckout@v2.3.4.1*** instead.  
 
