@@ -68,6 +68,9 @@ inputs:
       When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
       converted to HTTPS.
     default: false
+  autocrlf:
+    description: 'Whether to disable core.autocrlf'
+    default: true
 runs:
   using: node12
   main: dist/index.js
