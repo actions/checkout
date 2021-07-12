@@ -96,6 +96,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   }
   core.endGroup()
 
+  if (!settings.autocrlf) {
+    core.startGroup('Disabling autocrlf')
+    if (!(await git.tryDisableAutocrlf())) {
+      throw new Error("Unable to disable autocrlf")
+    }
+  }
+
   const authHelper = gitAuthHelper.createAuthHelper(git, settings)
   try {
     // Configure auth

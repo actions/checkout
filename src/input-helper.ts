@@ -118,5 +118,9 @@ export function getInputs(): IGitSourceSettings {
   result.persistCredentials =
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
+  // Autocrlf
+  result.autocrlf = (core.getInput('autocrlf') || 'true').toUpperCase() === 'TRUE'
+  core.debug(`autocrlf = ${result.autocrlf}`)
+
   return result
 }

@@ -44,6 +44,7 @@ export interface IGitCommandManager {
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
+  tryDisableAutocrlf(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
 }
@@ -353,6 +354,14 @@ class GitCommandManager {
   async tryDisableAutomaticGarbageCollection(): Promise<boolean> {
     const output = await this.execGit(
       ['config', '--local', 'gc.auto', '0'],
+      true
+    )
+    return output.exitCode === 0
+  }
+
+  async tryDisableAutocrlf(): Promise<boolean> {
+    const output = await this.execGit(
+      ['config', '--local', 'core.autocrlf', 'false'],
       true
     )
     return output.exitCode === 0

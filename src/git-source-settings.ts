@@ -73,4 +73,9 @@ export interface IGitSourceSettings {
    * Indicates whether to persist the credentials on disk to enable scripting authenticated git commands
    */
   persistCredentials: boolean
+
+  /**
+   * Indicates whether to enable autocrlf or not when checking out a repository
+   */
+  autocrlf: boolean
 }
