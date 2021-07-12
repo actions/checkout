@@ -3286,6 +3286,7 @@ function run() {
             try {
                 // Register problem matcher
                 coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
+                console.log(JSON.stringify(process.env, null, '  '));
                 // Get sources
                 yield gitSourceProvider.getSource(sourceSettings);
             }
