@@ -1,7 +1,7 @@
 name: Build and Test
 
 on:
-  pull_request:
+  pull_request: null
   push:
     branches:
       - main
@@ -11,9 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: 12.x
+          cache: npm
       - uses: actions/checkout@v2
       - run: npm ci
       - run: npm run build
