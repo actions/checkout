@@ -43,9 +43,9 @@ jobs:
             exit 1
           fi
 
-      # If index.js was different than expected, upload the expected version as an artifact
+      # If dist/ was different than expected, upload the expected version as an artifact
       - uses: actions/upload-artifact@v2
         if: ${{ failure() && steps.diff.conclusion == 'failure' }}
         with:
-          name: index.js
-          path: dist/index.js
+          name: dist
+          path: dist/
