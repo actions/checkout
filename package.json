@@ -34,19 +34,19 @@
     "uuid": "^3.3.3"
   },
   "devDependencies": {
-    "@types/jest": "^24.0.23",
+    "@types/jest": "^27.0.2",
     "@types/node": "^12.7.12",
     "@types/uuid": "^3.4.6",
-    "@typescript-eslint/parser": "^2.8.0",
+    "@typescript-eslint/parser": "^5.1.0",
     "@zeit/ncc": "^0.20.5",
-    "eslint": "^5.16.0",
-    "eslint-plugin-github": "^2.0.0",
-    "eslint-plugin-jest": "^22.21.0",
-    "jest": "^24.9.0",
-    "jest-circus": "^24.9.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-github": "^4.3.2",
+    "eslint-plugin-jest": "^25.2.2",
+    "jest": "^27.3.0",
+    "jest-circus": "^27.3.0",
     "js-yaml": "^3.13.1",
     "prettier": "^1.19.1",
-    "ts-jest": "^24.2.0",
-    "typescript": "^3.6.4"
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.4.4"
   }
 }

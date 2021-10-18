@@ -94,7 +94,7 @@ class GitAuthHelper {
       await fs.promises.stat(gitConfigPath)
       configExists = true
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -213,7 +213,7 @@ class GitAuthHelper {
         await fs.promises.readFile(userKnownHostsPath)
       ).toString()
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -302,7 +302,7 @@ class GitAuthHelper {
       try {
         await io.rmRF(keyPath)
       } catch (err) {
-        core.debug(err.message)
+        core.debug(`${(err as any)?.message ?? err}`)
         core.warning(`Failed to remove SSH key '${keyPath}'`)
       }
     }
