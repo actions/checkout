@@ -11,7 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0 # licensed sometimes needs more than latest commit on a branch
+          fetch-depth: 0 # licensed may need more than latest commit on a branch
+      - uses: jonabc/setup-licensed@v1
+        with:
+          version: 2.x
       - run: npm ci
       - id: licensed
         uses: jonabc/licensed-ci@v1
