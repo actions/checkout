@@ -25,7 +25,9 @@ describe('ref-helper tests', () => {
       await refHelper.getCheckoutInfo(git, '', '')
       throw new Error('Should not reach here')
     } catch (err) {
-      expect((err as any)?.message).toBe('Args ref and commit cannot both be empty')
+      expect((err as any)?.message).toBe(
+        'Args ref and commit cannot both be empty'
+      )
     }
   })
 
