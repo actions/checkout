@@ -417,7 +417,7 @@ describe('git-auth-helper tests', () => {
           `Did not expect file to exist: '${globalGitConfigPath}'`
         )
       } catch (err) {
-        if (err.code !== 'ENOENT') {
+        if ((err as any)?.code !== 'ENOENT') {
           throw err
         }
       }
@@ -601,7 +601,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKeyPath)
       throw new Error('SSH key should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -611,7 +611,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKnownHostsPath)
       throw new Error('SSH known hosts should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -658,7 +658,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(homeOverride)
       throw new Error(`Should have been deleted '${homeOverride}'`)
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
