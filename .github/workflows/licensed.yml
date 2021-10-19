@@ -10,11 +10,21 @@ jobs:
     name: Check licenses
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # licensed sometimes needs more than latest commit on a branch
       - run: npm ci
-      - name: Install licensed
-        run: |
-          cd $RUNNER_TEMP
-          curl -Lfs -o licensed.tar.gz https://github.com/github/licensed/releases/download/2.12.2/licensed-2.12.2-linux-x64.tar.gz
-          sudo tar -xzf licensed.tar.gz
-          sudo mv licensed /usr/local/bin/licensed
+      - id: licensed
+        uses: jonabc/licensed-ci@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/github-script@0.2.0
+        if: always() && steps.licensed.outputs.pr_number
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.createComment({
+              ...context.repo,
+              issue_number: ${{ steps.licensed.outputs.pr_number }}
+              body: 'My custom PR message'
+            })
       - run: licensed status
