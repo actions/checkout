@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -e
 
 src/misc/licensed-download.sh
