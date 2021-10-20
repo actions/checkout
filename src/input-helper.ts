@@ -81,6 +81,12 @@ export function getInputs(): IGitSourceSettings {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
+  if (core.getInput('fetch-depth') && core.getInput('shallow-since')) {
+    throw new Error(
+      '`fetch-depth` and `shallow-since` cannot be used at the same time'
+    )
+  }
+
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
@@ -91,12 +97,6 @@ export function getInputs(): IGitSourceSettings {
   // Shallow since
   result.shallowSince = core.getInput('shallow-since')
   core.debug(`shallow since = ${result.shallowSince}`)
-
-  if (result.fetchDepth > 0 && result.shallowSince) {
-    throw new Error(
-      '`fetch-depath` and `shallow-since` cannot be used at the same time'
-    )
-  }
 
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'

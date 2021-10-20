@@ -187,10 +187,10 @@ class GitCommandManager {
     }
 
     args.push('--prune', '--progress', '--no-recurse-submodules')
-    if (fetchDepth && fetchDepth > 0) {
-      args.push(`--depth=${fetchDepth}`)
-    } else if (shallowSince) {
+    if (shallowSince) {
       args.push(`--shallow-since=${shallowSince}`)
+    } else if (fetchDepth && fetchDepth > 0) {
+      args.push(`--depth=${fetchDepth}`)
     } else if (
       fshelper.fileExistsSync(
         path.join(this.workingDirectory, '.git', 'shallow')
