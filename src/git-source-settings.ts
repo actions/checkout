@@ -35,6 +35,11 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
+   * The date which a history after is fetched
+   */
+  shallowSince: string
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean

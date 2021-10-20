@@ -88,6 +88,16 @@ export function getInputs(): IGitSourceSettings {
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
+  // Shallow since
+  result.shallowSince = core.getInput('shallow-since')
+  core.debug(`shallow since = ${result.shallowSince}`)
+
+  if (result.fetchDepth > 0 && result.shallowSince) {
+    throw new Error(
+      '`fetch-depath` and `shallow-since` cannot be used at the same time'
+    )
+  }
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)

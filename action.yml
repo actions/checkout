@@ -55,7 +55,8 @@ inputs:
     default: true
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
-    default: 1
+  shallow-since:
+    description: 'Date like `2days` or `1970-01-01`. Fetch a history after the specified time.'
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false

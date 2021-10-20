@@ -141,7 +141,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       }
     } else {
       const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-      await git.fetch(refSpec, settings.fetchDepth)
+      await git.fetch(refSpec, settings.fetchDepth, settings.shallowSince)
     }
     core.endGroup()
 
@@ -181,7 +181,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         await git.submoduleSync(settings.nestedSubmodules)
         await git.submoduleUpdate(
           settings.fetchDepth,
-          settings.nestedSubmodules
+          settings.nestedSubmodules,
+          settings.shallowSince
         )
         await git.submoduleForeach(
           'git config --local gc.auto 0',
