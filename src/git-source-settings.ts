@@ -50,6 +50,11 @@ export interface IGitSourceSettings {
   nestedSubmodules: boolean
 
   /**
+   * The fetch depth for submodules
+   */
+  submodulesFetchDepth: number
+
+  /**
    * The auth token to use when fetching the repository
    */
   authToken: string

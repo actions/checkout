@@ -7415,7 +7415,7 @@ function getSource(settings) {
                     // Checkout submodules
                     core.startGroup('Fetching submodules');
                     yield git.submoduleSync(settings.nestedSubmodules);
-                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                    yield git.submoduleUpdate(settings.submodulesFetchDepth, settings.nestedSubmodules);
                     yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
                     core.endGroup();
                     // Persist credentials
@@ -17128,6 +17128,12 @@ function getInputs() {
         result.fetchDepth = 0;
     }
     core.debug(`fetch depth = ${result.fetchDepth}`);
+    // Submodules fetch depth
+    result.submodulesFetchDepth = Math.floor(Number(core.getInput('submodules-fetch-depth') || '-1'));
+    if (isNaN(result.submodulesFetchDepth) || result.submodulesFetchDepth < 0) {
+        result.submodulesFetchDepth = result.fetchDepth;
+    }
+    core.debug(`submodules fetch depth = ${result.submodulesFetchDepth}`);
     // LFS
     result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
     core.debug(`lfs = ${result.lfs}`);
