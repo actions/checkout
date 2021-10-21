@@ -72,6 +72,8 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all tags and branches.'
     default: 1
+  shallow-since:
+    description: 'Date like `2days` or `1970-01-01`. Fetch a history after the specified time.'
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
@@ -155,7 +157,7 @@ Fetch only the SHA being built and set depth=1. This significantly reduces the f
 
 If a SHA isn't available (e.g. multi repo), then fetch only the specified ref with depth=1.
 
-The input `fetch-depth` can be used to control the depth.
+The input `fetch-depth` and `shallow-since` can be used to control the depth.
 
 Note:
 - Fetching a single commit is supported by Git wire protocol version 2. The git client uses protocol version 0 by default. The desired protocol version can be overridden in the git config or on the fetch command line invocation (`-c protocol.version=2`). We will override on the fetch command line, for transparency.

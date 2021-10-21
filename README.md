@@ -90,8 +90,10 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     clean: ''
 
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
-    # Default: 1
     fetch-depth: ''
+
+    # Date like `2days` or `1970-01-01`. Fetch a history after the specified time.
+    shallow-since: ''
 
     # Whether to download Git-LFS files
     # Default: false
