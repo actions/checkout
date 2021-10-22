@@ -1,9 +1,9 @@
-import * as assert from 'assert'
 import * as core from '@actions/core'
 import * as fsHelper from '../lib/fs-helper'
 import * as github from '@actions/github'
 import * as inputHelper from '../lib/input-helper'
 import * as path from 'path'
+import * as workflowContextHelper from '../lib/workflow-context-helper'
 import {IGitSourceSettings} from '../lib/git-source-settings'
 
 const originalGitHubWorkspace = process.env['GITHUB_WORKSPACE']
@@ -42,6 +42,11 @@ describe('input-helper tests', () => {
     jest
       .spyOn(fsHelper, 'directoryExistsSync')
       .mockImplementation((path: string) => path == gitHubWorkspace)
+
+    // Mock ./workflowContextHelper getOrganizationId()
+    jest
+      .spyOn(workflowContextHelper, 'getOrganizationId')
+      .mockImplementation(() => Promise.resolve(123456))
 
     // GitHub workspace
     process.env['GITHUB_WORKSPACE'] = gitHubWorkspace
@@ -127,5 +132,10 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
+  })
+
+  it('sets workflow organization ID', async () => {
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.workflowOrganizationId).toBe(123456)
   })
 })
