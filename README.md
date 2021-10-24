@@ -185,7 +185,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
   uses: actions/checkout@v2
   with:
     repository: my-org/my-private-tools
-    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
+    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
     path: my-tools
 ```
 
