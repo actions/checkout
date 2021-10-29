@@ -7101,6 +7101,26 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
+    submoduleReset(recursive) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['submodule', 'foreach'];
+            if (recursive) {
+                args.push('--recursive');
+            }
+            args.push('git reset --hard');
+            yield this.execGit(args);
+        });
+    }
+    submoduleClean(recursive) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['submodule', 'foreach'];
+            if (recursive) {
+                args.push('--recursive');
+            }
+            args.push('git clean -ffdx');
+            yield this.execGit(args);
+        });
+    }
     tagExists(pattern) {
         return __awaiter(this, void 0, void 0, function* () {
             const output = yield this.execGit(['tag', '--list', pattern]);
@@ -7416,6 +7436,8 @@ function getSource(settings) {
                     core.startGroup('Fetching submodules');
                     yield git.submoduleSync(settings.nestedSubmodules);
                     yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                    yield git.submoduleReset(settings.nestedSubmodules);
+                    yield git.submoduleClean(settings.nestedSubmodules);
                     yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
                     core.endGroup();
                     // Persist credentials

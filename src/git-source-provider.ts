@@ -183,6 +183,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
           settings.fetchDepth,
           settings.nestedSubmodules
         )
+        await git.submoduleReset(settings.nestedSubmodules)
+        await git.submoduleClean(settings.nestedSubmodules)
         await git.submoduleForeach(
           'git config --local gc.auto 0',
           settings.nestedSubmodules

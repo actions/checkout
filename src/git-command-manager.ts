@@ -40,6 +40,8 @@ export interface IGitCommandManager {
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
+  submoduleReset(recursive: boolean): Promise<void>
+  submoduleClean(recursive: boolean): Promise<void>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
@@ -320,6 +322,26 @@ class GitCommandManager {
     if (recursive) {
       args.push('--recursive')
     }
+
+    await this.execGit(args)
+  }
+
+  async submoduleReset(recursive: boolean): Promise<void> {
+    const args = ['submodule', 'foreach']
+    if (recursive) {
+      args.push('--recursive')
+    }
+    args.push('git reset --hard')
+
+    await this.execGit(args)
+  }
+
+  async submoduleClean(recursive: boolean): Promise<void> {
+    const args = ['submodule', 'foreach']
+    if (recursive) {
+      args.push('--recursive')
+    }
+    args.push('git clean -ffdx')
 
     await this.execGit(args)
   }
