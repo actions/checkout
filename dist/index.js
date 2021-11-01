@@ -4149,7 +4149,7 @@ function run() {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const sourceSettings = inputHelper.getInputs();
+            const sourceSettings = yield inputHelper.getInputs();
             try {
                 // Register problem matcher
                 coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
@@ -6542,6 +6542,7 @@ function createAuthHelper(git, settings) {
 exports.createAuthHelper = createAuthHelper;
 class GitAuthHelper {
     constructor(gitCommandManager, gitSourceSettings) {
+        this.insteadOfValues = [];
         this.sshCommand = '';
         this.sshKeyPath = '';
         this.sshKnownHostsPath = '';
@@ -6557,7 +6558,10 @@ class GitAuthHelper {
         this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`;
         // Instead of SSH URL
         this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf`; // "origin" is SCHEME://HOSTNAME[:PORT]
-        this.insteadOfValue = `git@${serverUrl.hostname}:`;
+        this.insteadOfValues.push(`git@${serverUrl.hostname}:`);
+        if (this.settings.workflowOrganizationId) {
+            this.insteadOfValues.push(`org-${this.settings.workflowOrganizationId}@github.com:`);
+        }
     }
     configureAuth() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -6606,7 +6610,9 @@ class GitAuthHelper {
                 // Configure HTTPS instead of SSH
                 yield this.git.tryConfigUnset(this.insteadOfKey, true);
                 if (!this.settings.sshKey) {
-                    yield this.git.config(this.insteadOfKey, this.insteadOfValue, true);
+                    for (const insteadOfValue of this.insteadOfValues) {
+                        yield this.git.config(this.insteadOfKey, insteadOfValue, true, true);
+                    }
                 }
             }
             catch (err) {
@@ -6638,7 +6644,9 @@ class GitAuthHelper {
                 }
                 else {
                     // Configure HTTPS instead of SSH
-                    yield this.git.submoduleForeach(`git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`, this.settings.nestedSubmodules);
+                    for (const insteadOfValue of this.insteadOfValues) {
+                        yield this.git.submoduleForeach(`git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`, this.settings.nestedSubmodules);
+                    }
                 }
             }
         });
@@ -6928,14 +6936,14 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    config(configKey, configValue, globalConfig) {
+    config(configKey, configValue, globalConfig, add) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit([
-                'config',
-                globalConfig ? '--global' : '--local',
-                configKey,
-                configValue
-            ]);
+            const args = ['config', globalConfig ? '--global' : '--local'];
+            if (add) {
+                args.push('--add');
+            }
+            args.push(...[configKey, configValue]);
+            yield this.execGit(args);
         });
     }
     configExists(configKey, globalConfig) {
@@ -13524,6 +13532,75 @@ module.exports = require("net");
 
 /***/ }),
 
+/***/ 642:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getOrganizationId = void 0;
+const core = __importStar(__webpack_require__(470));
+const fs = __importStar(__webpack_require__(747));
+/**
+ * Gets the organization ID of the running workflow or undefined if the value cannot be loaded from the GITHUB_EVENT_PATH
+ */
+function getOrganizationId() {
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const eventPath = process.env.GITHUB_EVENT_PATH;
+            if (!eventPath) {
+                core.debug(`GITHUB_EVENT_PATH is not defined`);
+                return;
+            }
+            const content = yield fs.promises.readFile(eventPath, { encoding: 'utf8' });
+            const event = JSON.parse(content);
+            const id = (_b = (_a = event === null || event === void 0 ? void 0 : event.repository) === null || _a === void 0 ? void 0 : _a.owner) === null || _b === void 0 ? void 0 : _b.id;
+            if (typeof id !== 'number') {
+                core.debug('Repository owner ID not found within GITHUB event info');
+                return;
+            }
+            return id;
+        }
+        catch (err) {
+            core.debug(`Unable to load organization ID from GITHUB_EVENT_PATH: ${err
+                .message || err}`);
+        }
+    });
+}
+exports.getOrganizationId = getOrganizationId;
+
+
+/***/ }),
+
 /***/ 649:
 /***/ (function(module) {
 
@@ -17062,99 +17139,113 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getInputs = void 0;
 const core = __importStar(__webpack_require__(470));
 const fsHelper = __importStar(__webpack_require__(618));
 const github = __importStar(__webpack_require__(469));
 const path = __importStar(__webpack_require__(622));
+const workflowContextHelper = __importStar(__webpack_require__(642));
 function getInputs() {
-    const result = {};
-    // GitHub workspace
-    let githubWorkspacePath = process.env['GITHUB_WORKSPACE'];
-    if (!githubWorkspacePath) {
-        throw new Error('GITHUB_WORKSPACE not defined');
-    }
-    githubWorkspacePath = path.resolve(githubWorkspacePath);
-    core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
-    fsHelper.directoryExistsSync(githubWorkspacePath, true);
-    // Qualified repository
-    const qualifiedRepository = core.getInput('repository') ||
-        `${github.context.repo.owner}/${github.context.repo.repo}`;
-    core.debug(`qualified repository = '${qualifiedRepository}'`);
-    const splitRepository = qualifiedRepository.split('/');
-    if (splitRepository.length !== 2 ||
-        !splitRepository[0] ||
-        !splitRepository[1]) {
-        throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
-    }
-    result.repositoryOwner = splitRepository[0];
-    result.repositoryName = splitRepository[1];
-    // Repository path
-    result.repositoryPath = core.getInput('path') || '.';
-    result.repositoryPath = path.resolve(githubWorkspacePath, result.repositoryPath);
-    if (!(result.repositoryPath + path.sep).startsWith(githubWorkspacePath + path.sep)) {
-        throw new Error(`Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`);
-    }
-    // Workflow repository?
-    const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
-        `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
-    // Source branch, source version
-    result.ref = core.getInput('ref');
-    if (!result.ref) {
-        if (isWorkflowRepository) {
-            result.ref = github.context.ref;
-            result.commit = github.context.sha;
-            // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
-            // the ref is unqualifed like "main" instead of "refs/heads/main".
-            if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
-                result.ref = `refs/heads/${result.ref}`;
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = {};
+        // GitHub workspace
+        let githubWorkspacePath = process.env['GITHUB_WORKSPACE'];
+        if (!githubWorkspacePath) {
+            throw new Error('GITHUB_WORKSPACE not defined');
+        }
+        githubWorkspacePath = path.resolve(githubWorkspacePath);
+        core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
+        fsHelper.directoryExistsSync(githubWorkspacePath, true);
+        // Qualified repository
+        const qualifiedRepository = core.getInput('repository') ||
+            `${github.context.repo.owner}/${github.context.repo.repo}`;
+        core.debug(`qualified repository = '${qualifiedRepository}'`);
+        const splitRepository = qualifiedRepository.split('/');
+        if (splitRepository.length !== 2 ||
+            !splitRepository[0] ||
+            !splitRepository[1]) {
+            throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
+        }
+        result.repositoryOwner = splitRepository[0];
+        result.repositoryName = splitRepository[1];
+        // Repository path
+        result.repositoryPath = core.getInput('path') || '.';
+        result.repositoryPath = path.resolve(githubWorkspacePath, result.repositoryPath);
+        if (!(result.repositoryPath + path.sep).startsWith(githubWorkspacePath + path.sep)) {
+            throw new Error(`Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`);
+        }
+        // Workflow repository?
+        const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
+            `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
+        // Source branch, source version
+        result.ref = core.getInput('ref');
+        if (!result.ref) {
+            if (isWorkflowRepository) {
+                result.ref = github.context.ref;
+                result.commit = github.context.sha;
+                // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
+                // the ref is unqualifed like "main" instead of "refs/heads/main".
+                if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
+                    result.ref = `refs/heads/${result.ref}`;
+                }
             }
         }
-    }
-    // SHA?
-    else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
-        result.commit = result.ref;
-        result.ref = '';
-    }
-    core.debug(`ref = '${result.ref}'`);
-    core.debug(`commit = '${result.commit}'`);
-    // Clean
-    result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
-    core.debug(`clean = ${result.clean}`);
-    // Fetch depth
-    result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
-    if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
-        result.fetchDepth = 0;
-    }
-    core.debug(`fetch depth = ${result.fetchDepth}`);
-    // LFS
-    result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
-    core.debug(`lfs = ${result.lfs}`);
-    // Submodules
-    result.submodules = false;
-    result.nestedSubmodules = false;
-    const submodulesString = (core.getInput('submodules') || '').toUpperCase();
-    if (submodulesString == 'RECURSIVE') {
-        result.submodules = true;
-        result.nestedSubmodules = true;
-    }
-    else if (submodulesString == 'TRUE') {
-        result.submodules = true;
-    }
-    core.debug(`submodules = ${result.submodules}`);
-    core.debug(`recursive submodules = ${result.nestedSubmodules}`);
-    // Auth token
-    result.authToken = core.getInput('token', { required: true });
-    // SSH
-    result.sshKey = core.getInput('ssh-key');
-    result.sshKnownHosts = core.getInput('ssh-known-hosts');
-    result.sshStrict =
-        (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE';
-    // Persist credentials
-    result.persistCredentials =
-        (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
-    return result;
+        // SHA?
+        else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
+            result.commit = result.ref;
+            result.ref = '';
+        }
+        core.debug(`ref = '${result.ref}'`);
+        core.debug(`commit = '${result.commit}'`);
+        // Clean
+        result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
+        core.debug(`clean = ${result.clean}`);
+        // Fetch depth
+        result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
+        if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
+            result.fetchDepth = 0;
+        }
+        core.debug(`fetch depth = ${result.fetchDepth}`);
+        // LFS
+        result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
+        core.debug(`lfs = ${result.lfs}`);
+        // Submodules
+        result.submodules = false;
+        result.nestedSubmodules = false;
+        const submodulesString = (core.getInput('submodules') || '').toUpperCase();
+        if (submodulesString == 'RECURSIVE') {
+            result.submodules = true;
+            result.nestedSubmodules = true;
+        }
+        else if (submodulesString == 'TRUE') {
+            result.submodules = true;
+        }
+        core.debug(`submodules = ${result.submodules}`);
+        core.debug(`recursive submodules = ${result.nestedSubmodules}`);
+        // Auth token
+        result.authToken = core.getInput('token', { required: true });
+        // SSH
+        result.sshKey = core.getInput('ssh-key');
+        result.sshKnownHosts = core.getInput('ssh-known-hosts');
+        result.sshStrict =
+            (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE';
+        // Persist credentials
+        result.persistCredentials =
+            (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
+        // Workflow organization ID
+        result.workflowOrganizationId = yield workflowContextHelper.getOrganizationId();
+        return result;
+    });
 }
 exports.getInputs = getInputs;
 
