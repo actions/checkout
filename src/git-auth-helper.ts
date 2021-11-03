@@ -350,10 +350,12 @@ class GitAuthHelper {
       }
     }
 
-    const pattern = regexpHelper.escape(configKey)
-    await this.git.submoduleForeach(
-      `git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`,
-      true
-    )
+    if (this.settings.submodules) {
+      const pattern = regexpHelper.escape(configKey)
+      await this.git.submoduleForeach(
+        `git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`,
+        true
+      )
+    }
   }
 }
