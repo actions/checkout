@@ -1,14 +1,14 @@
 ---
-name: underscore
-version: 1.13.1
+name: has
+version: 1.0.3
 type: npm
-summary: JavaScript's functional programming helper library.
-homepage: https://underscorejs.org
+summary: Object.prototype.hasOwnProperty.call shortcut
+homepage: https://github.com/tarruda/has
 license: mit
 licenses:
-- sources: LICENSE
+- sources: LICENSE-MIT
   text: |
-    Copyright (c) 2009-2021 Jeremy Ashkenas, Julian Gonggrijp, and DocumentCloud and Investigative Reporters & Editors
+    Copyright (c) 2013 Thiago de Arruda
 
     Permission is hereby granted, free of charge, to any person
     obtaining a copy of this software and associated documentation

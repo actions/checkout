@@ -16,7 +16,7 @@ describe('ref-helper tests', () => {
       await refHelper.getCheckoutInfo(git, 'refs/heads/my/branch', commit)
       throw new Error('Should not reach here')
     } catch (err) {
-      expect(err.message).toBe('Arg git cannot be empty')
+      expect((err as any)?.message).toBe('Arg git cannot be empty')
     }
   })
 
@@ -25,7 +25,9 @@ describe('ref-helper tests', () => {
       await refHelper.getCheckoutInfo(git, '', '')
       throw new Error('Should not reach here')
     } catch (err) {
-      expect(err.message).toBe('Args ref and commit cannot both be empty')
+      expect((err as any)?.message).toBe(
+        'Args ref and commit cannot both be empty'
+      )
     }
   })
 
@@ -102,7 +104,7 @@ describe('ref-helper tests', () => {
       await refHelper.getCheckoutInfo(git, 'my-ref', '')
       throw new Error('Should not reach here')
     } catch (err) {
-      expect(err.message).toBe(
+      expect((err as any)?.message).toBe(
         "A branch or tag with the name 'my-ref' could not be found"
       )
     }

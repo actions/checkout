@@ -37,7 +37,7 @@ class GitAuthHelper {
   private readonly tokenConfigValue: string
   private readonly tokenPlaceholderConfigValue: string
   private readonly insteadOfKey: string
-  private readonly insteadOfValue: string
+  private readonly insteadOfValues: string[] = []
   private sshCommand = ''
   private sshKeyPath = ''
   private sshKnownHostsPath = ''
@@ -45,7 +45,7 @@ class GitAuthHelper {
 
   constructor(
     gitCommandManager: IGitCommandManager,
-    gitSourceSettings?: IGitSourceSettings
+    gitSourceSettings: IGitSourceSettings | undefined
   ) {
     this.git = gitCommandManager
     this.settings = gitSourceSettings || (({} as unknown) as IGitSourceSettings)
@@ -63,7 +63,12 @@ class GitAuthHelper {
 
     // Instead of SSH URL
     this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf` // "origin" is SCHEME://HOSTNAME[:PORT]
-    this.insteadOfValue = `git@${serverUrl.hostname}:`
+    this.insteadOfValues.push(`git@${serverUrl.hostname}:`)
+    if (this.settings.workflowOrganizationId) {
+      this.insteadOfValues.push(
+        `org-${this.settings.workflowOrganizationId}@github.com:`
+      )
+    }
   }
 
   async configureAuth(): Promise<void> {
@@ -94,7 +99,7 @@ class GitAuthHelper {
       await fs.promises.stat(gitConfigPath)
       configExists = true
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -118,7 +123,9 @@ class GitAuthHelper {
       // Configure HTTPS instead of SSH
       await this.git.tryConfigUnset(this.insteadOfKey, true)
       if (!this.settings.sshKey) {
-        await this.git.config(this.insteadOfKey, this.insteadOfValue, true)
+        for (const insteadOfValue of this.insteadOfValues) {
+          await this.git.config(this.insteadOfKey, insteadOfValue, true, true)
+        }
       }
     } catch (err) {
       // Unset in case somehow written to the real global config
@@ -159,10 +166,12 @@ class GitAuthHelper {
         )
       } else {
         // Configure HTTPS instead of SSH
-        await this.git.submoduleForeach(
-          `git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`,
-          this.settings.nestedSubmodules
-        )
+        for (const insteadOfValue of this.insteadOfValues) {
+          await this.git.submoduleForeach(
+            `git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`,
+            this.settings.nestedSubmodules
+          )
+        }
       }
     }
   }
@@ -213,7 +222,7 @@ class GitAuthHelper {
         await fs.promises.readFile(userKnownHostsPath)
       ).toString()
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -302,7 +311,7 @@ class GitAuthHelper {
       try {
         await io.rmRF(keyPath)
       } catch (err) {
-        core.debug(err.message)
+        core.debug(`${(err as any)?.message ?? err}`)
         core.warning(`Failed to remove SSH key '${keyPath}'`)
       }
     }
