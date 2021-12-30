@@ -73,4 +73,9 @@ export interface IGitSourceSettings {
    * Indicates whether to persist the credentials on disk to enable scripting authenticated git commands
    */
   persistCredentials: boolean
+
+  /**
+   * Organization ID for the currently running workflow (used for auth settings)
+   */
+  workflowOrganizationId: number | undefined
 }

@@ -417,7 +417,7 @@ describe('git-auth-helper tests', () => {
           `Did not expect file to exist: '${globalGitConfigPath}'`
         )
       } catch (err) {
-        if (err.code !== 'ENOENT') {
+        if ((err as any)?.code !== 'ENOENT') {
           throw err
         }
       }
@@ -518,12 +518,17 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(4)
       expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
         /unset-all.*insteadOf/
       )
       expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/url.*insteadOf/)
+      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(
+        /url.*insteadOf.*git@github.com:/
+      )
+      expect(mockSubmoduleForeach.mock.calls[3][0]).toMatch(
+        /url.*insteadOf.*org-123456@github.com:/
+      )
     }
   )
 
@@ -601,7 +606,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKeyPath)
       throw new Error('SSH key should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -611,7 +616,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKnownHostsPath)
       throw new Error('SSH known hosts should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -658,7 +663,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(homeOverride)
       throw new Error(`Should have been deleted '${homeOverride}'`)
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -770,7 +775,8 @@ async function setup(testName: string): Promise<void> {
     repositoryPath: '',
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
-    sshStrict: true
+    sshStrict: true,
+    workflowOrganizationId: 123456
   }
 }
 

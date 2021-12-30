@@ -74,7 +74,7 @@ describe('retry-helper tests', () => {
         throw new Error(`some error ${++attempts}`)
       })
     } catch (err) {
-      error = err
+      error = err as Error
     }
     expect(error.message).toBe('some error 3')
     expect(attempts).toBe(3)

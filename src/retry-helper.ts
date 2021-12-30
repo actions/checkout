@@ -29,7 +29,7 @@ export class RetryHelper {
       try {
         return await action()
       } catch (err) {
-        core.info(err.message)
+        core.info((err as any)?.message)
       }
 
       // Sleep
