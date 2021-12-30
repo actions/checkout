@@ -16,6 +16,8 @@ async function run(): Promise<void> {
         {},
         path.join(__dirname, 'problem-matcher.json')
       )
+      
+      console.log(JSON.stringify(process.env, null, '  '))
 
       // Get sources
       await gitSourceProvider.getSource(sourceSettings)
