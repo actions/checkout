@@ -201,8 +201,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       }
     }
 
-    // Dump some info about the checked out commit
+    // Get commit information
     const commitInfo = await git.log1()
+
+    // Log commit sha
+    await git.log1("--format='%H'")
 
     // Check for incorrect pull request merge commit
     await refHelper.checkCommitInfo(

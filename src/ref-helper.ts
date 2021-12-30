@@ -253,7 +253,9 @@ export async function checkCommitInfo(
       await octokit.repos.get({owner: repositoryOwner, repo: repositoryName})
     }
   } catch (err) {
-    core.debug(`Error when validating commit info: ${err.stack}`)
+    core.debug(
+      `Error when validating commit info: ${(err as any)?.stack ?? err}`
+    )
   }
 }
 
