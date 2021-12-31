@@ -17,14 +17,14 @@ jobs:
   tag:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Git config
-      run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-    - name: Tag new target
-      run: git tag -f ${{ github.event.inputs.main_version }} ${{ github.event.inputs.target }}
-    - name: Push new tag
-      run: git push origin ${{ github.event.inputs.main_version }} --force
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Git config
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+      - name: Tag new target
+        run: git tag -f ${{ github.event.inputs.main_version }} ${{ github.event.inputs.target }}
+      - name: Push new tag
+        run: git push origin ${{ github.event.inputs.main_version }} --force

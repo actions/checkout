@@ -17,76 +17,77 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
 ### Inputs
 
 ```yaml
-  repository:
-    description: 'Repository name with owner. For example, actions/checkout'
-    default: ${{ github.repository }}
-  ref:
-    description: >
-      The branch, tag or SHA to checkout. When checking out the repository that
-      triggered a workflow, this defaults to the reference or SHA for that
-      event.  Otherwise, uses the default branch.
-  token:
-    description: >
-      Personal access token (PAT) used to fetch the repository. The PAT is configured
-      with the local git config, which enables your scripts to run authenticated git
-      commands. The post-job step removes the PAT.
+repository:
+  description: 'Repository name with owner. For example, actions/checkout'
+  default: ${{ github.repository }}
+ref:
+  description: >
+    The branch, tag or SHA to checkout. When checking out the repository that
+    triggered a workflow, this defaults to the reference or SHA for that
+    event.  Otherwise, uses the default branch.
+token:
+  description: >
+    Personal access token (PAT) used to fetch the repository. The PAT is configured
+    with the local git config, which enables your scripts to run authenticated git
+    commands. The post-job step removes the PAT.
 
 
-      We recommend using a service account with the least permissions necessary.
-      Also when generating a new PAT, select the least scopes necessary.
+    We recommend using a service account with the least permissions necessary.
+    Also when generating a new PAT, select the least scopes necessary.
 
 
-      [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
-    default: ${{ github.token }}
-  ssh-key:
-    description: >
-      SSH key used to fetch the repository. The SSH key is configured with the local
-      git config, which enables your scripts to run authenticated git commands.
-      The post-job step removes the SSH key.
+    [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+  default: ${{ github.token }}
+ssh-key:
+  description: >
+    SSH key used to fetch the repository. The SSH key is configured with the local
+    git config, which enables your scripts to run authenticated git commands.
+    The post-job step removes the SSH key.
 
 
-      We recommend using a service account with the least permissions necessary.
+    We recommend using a service account with the least permissions necessary.
 
 
-      [Learn more about creating and using
-      encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
-  ssh-known-hosts:
-    description: >
-      Known hosts in addition to the user and global host key database. The public
-      SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
-      `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
-  ssh-strict:
-    description: >
-      Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes`
-      and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
-      configure additional hosts.
-    default: true
-  persist-credentials:
-    description: 'Whether to configure the token or SSH key with the local git config'
-    default: true
-  path:
-    description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
-  clean:
-    description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
-    default: true
-  fetch-depth:
-    description: 'Number of commits to fetch. 0 indicates all history for all tags and branches.'
-    default: 1
-  lfs:
-    description: 'Whether to download Git-LFS files'
-    default: false
-  submodules:
-    description: >
-      Whether to checkout submodules: `true` to checkout submodules or `recursive` to
-      recursively checkout submodules.
+    [Learn more about creating and using
+    encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+ssh-known-hosts:
+  description: >
+    Known hosts in addition to the user and global host key database. The public
+    SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
+    `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
+ssh-strict:
+  description: >
+    Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes`
+    and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
+    configure additional hosts.
+  default: true
+persist-credentials:
+  description: 'Whether to configure the token or SSH key with the local git config'
+  default: true
+path:
+  description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+clean:
+  description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
+  default: true
+fetch-depth:
+  description: 'Number of commits to fetch. 0 indicates all history for all tags and branches.'
+  default: 1
+lfs:
+  description: 'Whether to download Git-LFS files'
+  default: false
+submodules:
+  description: >
+    Whether to checkout submodules: `true` to checkout submodules or `recursive` to
+    recursively checkout submodules.
 
 
-      When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
-      converted to HTTPS.
-    default: false
+    When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
+    converted to HTTPS.
+  default: false
 ```
 
 Note:
+
 - SSH support is new
 - `persist-credentials` is new
 - `path` behavior is different (refer [below](#path) for details)
@@ -96,6 +97,7 @@ Note:
 When a sufficient version of git is not in the PATH, fallback to the [web API](https://developer.github.com/v3/repos/contents/#get-archive-link) to download a tarball/zipball.
 
 Note:
+
 - LFS files are not included in the archive. Therefore fail if LFS is set to true.
 - Submodules are also not included in the archive.
 
@@ -108,6 +110,7 @@ A post script will remove the credentials (cleanup for self-hosted).
 Users may opt-out by specifying `persist-credentials: false`
 
 Note:
+
 - Users scripting `git commit` may need to set the username and email. The service does not provide any reasonable default value. Users can add `git config user.name <NAME>` and `git config user.email <EMAIL>`. We will document this guidance.
 
 #### PAT
@@ -115,6 +118,7 @@ Note:
 When using the `${{github.token}}` or a PAT, the token will be persisted in the local git config. The config key `http.https://github.com/.extraheader` enables an auth header to be specified on all authenticated commands `AUTHORIZATION: basic <BASE64_U:P>`.
 
 Note:
+
 - The auth header is scoped to all of github `http.https://github.com/.extraheader`
   - Additional public remotes also just work.
   - If users want to authenticate to an additional private remote, they should provide the `token` input.
@@ -140,6 +144,7 @@ git config core.sshCommand 'ssh -i "$RUNNER_TEMP/path-to-ssh-key" -o StrictHostK
 When the input `ssh-strict` is set to `false`, the options `CheckHostIP` and `StrictHostKeyChecking` will not be overridden.
 
 Note:
+
 - When `ssh-strict` is set to `true` (default), the SSH option `CheckHostIP` can safely be disabled.
   Strict host checking verifies the server's public key. Therefore, IP verification is unnecessary
   and noisy. For example:
@@ -158,6 +163,7 @@ If a SHA isn't available (e.g. multi repo), then fetch only the specified ref wi
 The input `fetch-depth` can be used to control the depth.
 
 Note:
+
 - Fetching a single commit is supported by Git wire protocol version 2. The git client uses protocol version 0 by default. The desired protocol version can be overridden in the git config or on the fetch command line invocation (`-c protocol.version=2`). We will override on the fetch command line, for transparency.
 - Git client version 2.18+ (released June 2018) is required for wire protocol version 2.
 
@@ -168,6 +174,7 @@ For CI, checkout will create a local ref with the upstream set. This allows user
 For PR, continue to checkout detached head. The PR branch is special - the branch and merge commit are created by the server. It doesn't match a users' local workflow.
 
 Note:
+
 - Consider deleting all local refs during cleanup if that helps avoid collisions. More testing required.
 
 ### Path
@@ -192,6 +199,7 @@ These behavioral changes align better with container actions. The [documented fi
 - `/github/workflow`
 
 Note:
+
 - The tracking config will not be updated to reflect the path of the workflow repo.
 - Any existing workflow repo will not be moved when the checkout path changes. In fact some customers want to checkout the workflow repo twice, side by side against different branches.
 - Actions that need to operate only against the root of the self repo, should expose a `path` input.
@@ -205,6 +213,7 @@ This default fits the mainline scenario well: single checkout
 For multi-checkout, users must specify the `path` input for at least one of the repositories.
 
 Note:
+
 - An alternative is for the self repo to default to `./` and other repos default to `<REPO_NAME>`. However nested layout is an atypical git layout and therefore is not a good default. Users should supply the path info.
 
 #### Example - Nested layout
@@ -265,6 +274,7 @@ Credentials will be persisted in the submodules local git config too.
 ### Port to typescript
 
 The checkout action should be a typescript action on the GitHub graph, for the following reasons:
+
 - Enables customers to fork the checkout repo and modify
 - Serves as an example for customers
 - Demystifies the checkout action manifest
@@ -272,6 +282,7 @@ The checkout action should be a typescript action on the GitHub graph, for the f
 - Reduce the amount of runner code to port (if we ever do)
 
 Note:
+
 - This means job-container images will need git in the PATH, for checkout.
 
 ### Branching strategy and release tags
