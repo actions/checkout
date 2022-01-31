@@ -420,6 +420,7 @@ async function setup(testName: string): Promise<void> {
     revParse: jest.fn(),
     setEnvironmentVariable: jest.fn(),
     shaExists: jest.fn(),
+    sparseCheckout: jest.fn(),
     submoduleForeach: jest.fn(),
     submoduleSync: jest.fn(),
     submoduleUpdate: jest.fn(),

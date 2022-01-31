@@ -93,6 +93,19 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
 
+  if (core.getInput('sparse')) {
+    const paths = core
+      .getInput('sparse')
+      .trim()
+      .split(`\n`)
+      .map(s => s.trim())
+
+    result.sparse = paths
+  }
+
+  result.sparseCone =
+    (core.getInput('sparse-cone') || 'false').toUpperCase() === 'TRUE'
+
   // Submodules
   result.submodules = false
   result.nestedSubmodules = false

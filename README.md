@@ -97,6 +97,14 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: false
     lfs: ''
 
+    # Do a sparse checkout on given patterns
+    # Default: null
+    sparse: ''
+
+    # Use cone pattern for sparse checkout
+    # Default: false
+    sparse-cone: ''
+
     # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
     # recursively checkout submodules.
     #

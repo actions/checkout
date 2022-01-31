@@ -113,6 +113,20 @@ jobs:
       - name: Verify submodules recursive
         run: __test__/verify-submodules-recursive.sh
 
+      # Sparse checkout
+      - name: Sparse checkout
+        uses: ./
+        with:
+          ref: test-data/v2/sparse-checkout
+          path: sparse-checkout
+          sparse: |
+            dir2
+            dir3
+          sparse-cone: true
+      - name: Verify sparse checkout
+        run: __test__/verify-sparse-checkout.sh
+
+
       # Basic checkout using REST API
       - name: Remove basic
         if: runner.os != 'windows'

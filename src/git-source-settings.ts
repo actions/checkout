@@ -78,4 +78,14 @@ export interface IGitSourceSettings {
    * Organization ID for the currently running workflow (used for auth settings)
    */
   workflowOrganizationId: number | undefined
+
+  /**
+   * Patterns to do a sparse checkout on
+   */
+  sparse: string[] | null
+
+  /**
+   * Whether or not to use cone pattern on sparse checkout
+   */
+  sparseCone: boolean
 }

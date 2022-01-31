@@ -59,6 +59,12 @@ inputs:
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
+  sparse:
+    description: 'Do a sparse checkout on given patterns'
+    default: null
+  sparse-cone:
+    description: 'Use cone pattern for sparse checkout'
+    default: false
   submodules:
     description: >
       Whether to checkout submodules: `true` to checkout submodules or `recursive` to

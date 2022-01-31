@@ -163,6 +163,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       core.endGroup()
     }
 
+    // Sparse checkout
+    if (settings.sparse) {
+      core.startGroup('Sparse checkout')
+      await git.sparseCheckout(settings.sparseCone, settings.sparse)
+      core.endGroup()
+    }
+
     // Checkout
     core.startGroup('Checking out the ref')
     await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)

@@ -38,6 +38,7 @@ export interface IGitCommandManager {
   revParse(ref: string): Promise<string>
   setEnvironmentVariable(name: string, value: string): void
   shaExists(sha: string): Promise<boolean>
+  sparseCheckout(cone: boolean, paths: string[]): Promise<void>
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
@@ -290,6 +291,19 @@ class GitCommandManager {
     const args = ['rev-parse', '--verify', '--quiet', `${sha}^{object}`]
     const output = await this.execGit(args, true)
     return output.exitCode === 0
+  }
+
+  async sparseCheckout(cone: boolean, paths: string[]): Promise<void> {
+    const args1 = ['sparse-checkout', 'init']
+
+    if (cone) {
+      args1.push('--cone')
+    }
+
+    const args2 = ['sparse-checkout', 'set', '--', ...paths]
+
+    await this.execGit(args1)
+    await this.execGit(args2)
   }
 
   async submoduleForeach(command: string, recursive: boolean): Promise<string> {

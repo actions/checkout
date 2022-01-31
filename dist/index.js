@@ -7076,6 +7076,17 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
+    sparseCheckout(cone, paths) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args1 = ['sparse-checkout', 'init'];
+            if (cone) {
+                args1.push('--cone');
+            }
+            const args2 = ['sparse-checkout', 'set', '--', ...paths];
+            yield this.execGit(args1);
+            yield this.execGit(args2);
+        });
+    }
     submoduleForeach(command, recursive) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['submodule', 'foreach'];
@@ -7407,6 +7418,12 @@ function getSource(settings) {
             if (settings.lfs) {
                 core.startGroup('Fetching LFS objects');
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+                core.endGroup();
+            }
+            // Sparse checkout
+            if (settings.sparse) {
+                core.startGroup('Sparse checkout');
+                yield git.sparseCheckout(settings.sparseCone, settings.sparse);
                 core.endGroup();
             }
             // Checkout
@@ -17219,6 +17236,16 @@ function getInputs() {
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
         core.debug(`lfs = ${result.lfs}`);
+        if (core.getInput('sparse')) {
+            const paths = core
+                .getInput('sparse')
+                .trim()
+                .split(`\n`)
+                .map(s => s.trim());
+            result.sparse = paths;
+        }
+        result.sparseCone =
+            (core.getInput('sparse-cone') || 'false').toUpperCase() === 'TRUE';
         // Submodules
         result.submodules = false;
         result.nestedSubmodules = false;
