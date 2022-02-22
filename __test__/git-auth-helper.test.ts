@@ -733,6 +733,8 @@ async function setup(testName: string): Promise<void> {
     }),
     submoduleSync: jest.fn(),
     submoduleUpdate: jest.fn(),
+    submoduleReset: jest.fn(),
+    submoduleClean: jest.fn(),
     tagExists: jest.fn(),
     tryClean: jest.fn(),
     tryConfigUnset: jest.fn(
