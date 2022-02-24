@@ -177,8 +177,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         core.endGroup()
 
         // Clean existing submodules
-        await git.submoduleReset(settings.nestedSubmodules)
-        await git.submoduleClean(settings.nestedSubmodules)
+        if (settings.clean)
+        {
+            await git.submoduleReset(settings.nestedSubmodules)
+            await git.submoduleClean(settings.nestedSubmodules)
+        }
 
         // Checkout submodules
         core.startGroup('Fetching submodules')
