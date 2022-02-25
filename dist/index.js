@@ -7432,12 +7432,15 @@ function getSource(settings) {
                     core.startGroup('Setting up auth for fetching submodules');
                     yield authHelper.configureGlobalAuth();
                     core.endGroup();
+                    // Clean existing submodules
+                    if (settings.clean) {
+                        yield git.submoduleReset(settings.nestedSubmodules);
+                        yield git.submoduleClean(settings.nestedSubmodules);
+                    }
                     // Checkout submodules
                     core.startGroup('Fetching submodules');
                     yield git.submoduleSync(settings.nestedSubmodules);
                     yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
-                    yield git.submoduleReset(settings.nestedSubmodules);
-                    yield git.submoduleClean(settings.nestedSubmodules);
                     yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
                     core.endGroup();
                     // Persist credentials
