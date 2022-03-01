@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 16.x
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: npm ci
       - run: npm run build
       - run: npm run format-check
@@ -32,7 +32,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Basic checkout
       - name: Checkout basic
@@ -150,7 +150,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Basic checkout using git
       - name: Checkout basic
@@ -182,7 +182,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Basic checkout using git
       - name: Checkout basic
