@@ -14,7 +14,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # What's new
 
-- Updated to the node16 runtime by default as node12
+- Updated to the node16 runtime by default
   - This requires a minimum [Actions Runner](https://github.com/actions/runner/releases/tag/v2.285.0) version of v2.285.0 to run, which is by default available in GHES 3.4 or later.
 
 # Usage
