@@ -34,7 +34,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -123,7 +123,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     fetch-depth: 0
 ```
@@ -131,7 +131,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     ref: my-branch
 ```
@@ -139,7 +139,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -149,12 +149,12 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -164,10 +164,10 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
 
 - name: Checkout tools repo
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -177,12 +177,12 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -195,7 +195,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -211,7 +211,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 ```
 
 ## Push a commit using the built-in token
@@ -222,7 +222,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: |
           date > generated.txt
           git config user.name github-actions
