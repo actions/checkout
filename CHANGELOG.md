@@ -47,6 +47,28 @@
 
 - [Update to node 16](https://github.com/actions/checkout/pull/689)
 
+## v2.4.0
+
+- Convert SSH URLs like `org-<ORG_ID>@github.com:` to `https://github.com/` [PR](https://github.com/actions/checkout/pull/621)
+
+## v2.3.5
+
+- Update dependencies
+
+## v2.3.4
+
+- [Add missing `await`s](https://github.com/actions/checkout/pull/379)
+- [Swap to Environment Files](https://github.com/actions/checkout/pull/360)
+
+## v2.3.3
+
+- [Remove Unneeded commit information from build logs](https://github.com/actions/checkout/pull/345)
+- [Add Licensed to verify third party dependencies](https://github.com/actions/checkout/pull/326)
+
+## v2.3.2
+
+- [Add Third Party License Information to Dist Files](https://github.com/actions/checkout/pull/320)
+
 ## v2.3.1
 
 - [Fix default branch resolution for .wiki and when using SSH](https://github.com/actions/checkout/pull/284)
@@ -97,7 +119,6 @@
   - `with.path` is always relative to `github.workspace`
   - Aligns better with container actions, where `github.workspace` gets mapped in
 - Removed input `submodules`
-
 
 ## v1
 
