@@ -184,7 +184,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ```yaml
 - uses: actions/checkout@v3
   with:
-    ref: ${{ github.event.pull_request.head.sha }}
+    ref: ${{ github.event.pull_request.head.sha || github.ref }}
 ```
 
 ## Checkout pull request on closed event
