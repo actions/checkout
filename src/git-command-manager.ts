@@ -110,9 +110,9 @@ class GitCommandManager {
       branch = branch.trim()
       if (branch) {
         if (branch.startsWith('refs/heads/')) {
-          branch = branch.substr('refs/heads/'.length)
+          branch = branch.slice('refs/heads/'.length)
         } else if (branch.startsWith('refs/remotes/')) {
-          branch = branch.substr('refs/remotes/'.length)
+          branch = branch.slice('refs/remotes/'.length)
         }
 
         result.push(branch)
@@ -217,7 +217,7 @@ class GitCommandManager {
         line = line.trim()
         if (line.startsWith('ref:') || line.endsWith('HEAD')) {
           return line
-            .substr('ref:'.length, line.length - 'ref:'.length - 'HEAD'.length)
+            .slice('ref:'.length, line.length - 'HEAD'.length)
             .trim()
         }
       }
