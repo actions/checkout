@@ -1,0 +1,462 @@
+Format: 1.0
+Package: buildah
+Binary: buildah
+Architecture: any
+Version: 100:1.19.6-2
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/projectatomic/buildah.git
+Standards-Version: 4.3.0
+Vcs-Git: git://github.com/lsm5/buildah.git
+Build-Depends: debhelper (>= 9), libassuan-dev, libgpgme11-dev, dh-golang (>> 1.47), golang-1.15 | golang-1.14 | golang, libbtrfs-dev | btrfs-progs, libglib2.0-dev, libseccomp-dev, go-md2man, git
+Package-List:
+ buildah deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ b60770b528d85e106ad0439d34c8d088b13a68c5 790 buildah_1.19.6-2.dsc
+ cc576df1c688eec0cf8c3a88474a4a067592876b 97322254 buildah_1.19.6-2.tar.gz
+Checksums-Sha256:
+ 5edc49431cb6d8fedc8aad6bd93d7d6107ac5f9c095dc8ec97483f0fa3147b16 790 buildah_1.19.6-2.dsc
+ 7573d2c068453ccdb3283e52cdc9f4bfbb294449ec2c1c0f75944bfcf5c8d202 97322254 buildah_1.19.6-2.tar.gz
+Files:
+ 23b008e03fdf410709ae846accadf66c 790 buildah_1.19.6-2.dsc
+ 2c0b7f46b7c6effea1c832698246de51 97322254 buildah_1.19.6-2.tar.gz
+
+Format: 1.0
+Package: catatonit
+Binary: catatonit
+Architecture: any
+Version: 0.1.5~1
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/openSUSE/catatonit.git
+Standards-Version: 4.3.0
+Vcs-Git: https://gitlab.com/rhcontainerbot/catatonit.git
+Build-Depends: debhelper (>= 9), autoconf, automake, file, gcc, libtool
+Package-List:
+ catatonit deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ 0367592e8ccbb03787e13f2a360a0c27a0ce3199 675 catatonit_0.1.5~1.dsc
+ bf19ce5e86ff83de91efec486fff4de830d486e0 419981 catatonit_0.1.5~1.tar.gz
+Checksums-Sha256:
+ 46d0dd6634788fd5f702b0a4c9454106d09dd5a986c1184d91197489e5adcdc8 675 catatonit_0.1.5~1.dsc
+ 32f655920e9c4f224c011b65860855b335747dded35a2a469fcf58fcd65ef4c3 419981 catatonit_0.1.5~1.tar.gz
+Files:
+ 3a782f905686f9078c156f4184427884 675 catatonit_0.1.5~1.dsc
+ 7bc4f427d5b7d008ee6f4bd60934d2ca 419981 catatonit_0.1.5~1.tar.gz
+
+Format: 1.0
+Package: conmon
+Binary: conmon
+Architecture: any
+Version: 100:2.0.30-2
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/containers/conmon.git
+Standards-Version: 4.3.0
+Vcs-Git: git://github.com/lsm5/conmon.git
+Build-Depends: debhelper (>= 9), dh-strip-nondeterminism, dh-autoreconf, libglib2.0-dev, libseccomp-dev, libsystemd-dev
+Package-List:
+ conmon deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ e2deb69698b8150bc1d6ff9820c61dc0ece26eb5 697 conmon_2.0.30-2.dsc
+ 2c7b7d3159cd676b706f896c1a26fd25322d4436 970973 conmon_2.0.30-2.tar.gz
+Checksums-Sha256:
+ 34fa0ac9a100a291d078f1d6b9fd82736ddf645180c513af5f48864729e6c4ec 697 conmon_2.0.30-2.dsc
+ d4f25ebaa574c8b372bd13c8295d3d0ad8841b561e905604ca5adbabeda0841f 970973 conmon_2.0.30-2.tar.gz
+Files:
+ 5ba5a9fb80c1accdb85ff6ad849dc364 697 conmon_2.0.30-2.dsc
+ 44e2641914cfba3c3d8299f19dd33ece 970973 conmon_2.0.30-2.tar.gz
+
+Format: 1.0
+Package: containernetworking-plugins
+Binary: containernetworking-plugins
+Architecture: any
+Version: 100:0.9.1-1
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/containernetworking/plugins
+Standards-Version: 4.3.0
+Vcs-Browser: https://github.com/lsm5/plugins
+Vcs-Git: https://github.com/lsm5/plugins
+Build-Depends: debhelper (>= 9), dh-golang (>> 1.47), golang-1.15 | golang-1.14, golang
+Package-List:
+ containernetworking-plugins deb devel extra arch=any
+Directory: .
+Checksums-Sha1:
+ 535037cbdeb19bf75e4a58bcd1766ae8482ac545 840 containernetworking-plugins_0.9.1-1.dsc
+ bfc5ce72b61a6104365de98acbb9177879182239 12029404 containernetworking-plugins_0.9.1-1.tar.gz
+Checksums-Sha256:
+ c7801c015c84605c2fef832db68e0e0fa9a28235305cd7ba07fa98cb886af706 840 containernetworking-plugins_0.9.1-1.dsc
+ b6efdc87ca499a3846a84877314f1307d12ce8c151a2f719d159d7742f858d46 12029404 containernetworking-plugins_0.9.1-1.tar.gz
+Files:
+ b98de6c8890f7d120a5c0d641e00d6a8 840 containernetworking-plugins_0.9.1-1.dsc
+ c7e2b0cf6fb983e3a12485d07fb61f51 12029404 containernetworking-plugins_0.9.1-1.tar.gz
+
+Format: 1.0
+Package: containers-common
+Binary: containers-common
+Architecture: all
+Version: 100:1-22
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/projectatomic/skopeo
+Standards-Version: 4.3.0
+Build-Depends: debhelper (>= 9), config-package-dev, go-md2man
+Package-List:
+ containers-common deb devel optional arch=all
+Directory: .
+Checksums-Sha1:
+ 42913db41af8b0e5a172b9cfa8f1ba5f479f4c92 647 containers-common_1-22.dsc
+ ed5ea20284706f52ec4ec00513d6ab8a2b1db4b5 123217 containers-common_1-22.tar.gz
+Checksums-Sha256:
+ 14b64d38a2912f22a42630462b4d6237a01078b9221b47e00b1c8c92c5f10710 647 containers-common_1-22.dsc
+ 9d95672a7cd46a6e764be9875c593ea2d212e133fdcc7310aea67156e654e90b 123217 containers-common_1-22.tar.gz
+Files:
+ b0fa7431da46cb3e64e38f5f8ef64c03 647 containers-common_1-22.dsc
+ e14dc8a88d15fa02e8ffb06d57398200 123217 containers-common_1-22.tar.gz
+
+Format: 1.0
+Package: cri-o-runc
+Binary: cri-o-runc
+Architecture: any
+Version: 1.0.1~0
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/opencontainers/runc
+Standards-Version: 4.3.0
+Vcs-Browser: https://gitlab.com/rhcontainerbot/cri-o-runc.git
+Vcs-Git: https://gitlab.com/rhcontainerbot/cri-o-runc.git
+Build-Depends: debhelper (>= 9), dh-golang (>> 1.47), golang-1.15 | golang-1.14, golang, go-md2man, libapparmor-dev, protobuf-compiler, libseccomp-dev, pkg-config
+Package-List:
+ cri-o-runc deb devel extra arch=any
+Directory: .
+Checksums-Sha1:
+ 5446edee7a715c7fdd9043d0fb91f98d421f661b 835 cri-o-runc_1.0.1~0.dsc
+ 4201ef306b1e2198c05373845297b9b60e1ea91f 24681719 cri-o-runc_1.0.1~0.tar.gz
+Checksums-Sha256:
+ 6fffedfcb6eb829d30b29a53be25fb50e1f96979014a1aef815a665a3983d83c 835 cri-o-runc_1.0.1~0.dsc
+ ea3c5e1c81cf87f450eb293c7213470e86bbb3b1eb57afce175a01369b735db1 24681719 cri-o-runc_1.0.1~0.tar.gz
+Files:
+ e1a7d308f717c08e9f0265aa961e6d6c 835 cri-o-runc_1.0.1~0.dsc
+ e7611fceea3dc71e488938b982a0ee53 24681719 cri-o-runc_1.0.1~0.tar.gz
+
+Format: 1.0
+Package: cri-tools
+Binary: cri-tools
+Architecture: any
+Version: 1.17.0~3
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/kubernetes-sigs/cri-tools.git
+Standards-Version: 4.3.0
+Vcs-Git: https://gitlab.com/rhcontainerbot/cri-tools.git
+Build-Depends: debhelper (>= 9), rsync, libassuan-dev, libgpgme11-dev, dh-golang, golang, libglib2.0-dev, go-md2man
+Package-List:
+ cri-tools deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ 30048c99f01954cf139d2aacde0464225febb3e3 736 cri-tools_1.17.0~3.dsc
+ 13cd2a21e4c7af58052ea2fef801c132cfb7414e 33383821 cri-tools_1.17.0~3.tar.gz
+Checksums-Sha256:
+ 1e9bfb8a48aa578bb68e08fec6db818690d373db76cbf7b5a455c294c82bc287 736 cri-tools_1.17.0~3.dsc
+ 9ea3169d6a6bc3e27b643cfdc2959c18eaf204452842e2e25321f628b919bf51 33383821 cri-tools_1.17.0~3.tar.gz
+Files:
+ 4170942a2570b6d85ca58e298c41cd68 736 cri-tools_1.17.0~3.dsc
+ 5711da22e8d93eace3809df65eacb757 33383821 cri-tools_1.17.0~3.tar.gz
+
+Format: 3.0 (quilt)
+Package: criu
+Binary: criu
+Architecture: amd64 arm64 armhf ppc64el s390x
+Version: 3.16.1-3
+Maintainer: Salvatore Bonaccorso <carnil@debian.org>
+Homepage: https://www.criu.org/
+Standards-Version: 4.1.5
+Vcs-Browser: https://salsa.debian.org/debian/criu
+Vcs-Git: https://salsa.debian.org/debian/criu.git
+Build-Depends: asciidoctor, debhelper (>= 11), dh-python, git, libbsd-dev, libcap-dev, libgnutls28-dev, libgnutls30, libnet1-dev, libnl-3-dev, libprotobuf-c-dev, libprotobuf-dev, pkg-config, protobuf-c-compiler, protobuf-compiler, python3-all
+Package-List:
+ criu deb admin optional arch=amd64,arm64,armhf,ppc64el,s390x
+Directory: .
+Checksums-Sha1:
+ 80814f41219da83c1e7722ba5fc0d9f38201351f 1159 criu_3.16.1-3.dsc
+ aab38d1dab5c61be04f3f9b2a92ffb10b8c63cd6 1228535 criu_3.16.1.orig.tar.gz
+ 236081b9f99ea8b2ed86b0eb161b121cff58842b 6908 criu_3.16.1-3.debian.tar.xz
+Checksums-Sha256:
+ adb9f2b5918d094baeef827f5fae02f05d84fcc624262418a21f4414ed3053ed 1159 criu_3.16.1-3.dsc
+ 13d6e2f99a34abf83ec2b9777af5bd069e739bf38582857c7f4c19a355a2b0b5 1228535 criu_3.16.1.orig.tar.gz
+ 7fd5878198cdc29dd0573fa198ac36ebd89ebc5fb245d98de1de44a703ff7724 6908 criu_3.16.1-3.debian.tar.xz
+Files:
+ b45d29c71e10bdaa7dfdb8a07146fc10 1159 criu_3.16.1-3.dsc
+ eb4330f57145d403565a6a3328c8bc72 1228535 criu_3.16.1.orig.tar.gz
+ 9917cd8cfbc698b19219dd59dc0fe3d9 6908 criu_3.16.1-3.debian.tar.xz
+
+Format: 1.0
+Package: crun
+Binary: crun
+Architecture: any
+Version: 100:0.18-2
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/containers/crun.git
+Standards-Version: 4.3.0
+Vcs-Git: https://gitlab.com/rhcontainerbot/crun.git
+Build-Depends: debhelper (>= 9), criu (>= 3.15), git, dh-autoreconf, dh-strip-nondeterminism, libglib2.0-dev, libcap-dev, libseccomp-dev, libsystemd-dev, libyajl-dev
+Package-List:
+ crun deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ f481aba82110522d8fff1cf39e2d24a2cef78f35 737 crun_0.18-2.dsc
+ 5badc728327a9eb0f686644cc5794e6bc5170094 19704274 crun_0.18-2.tar.gz
+Checksums-Sha256:
+ 693f215616ec7340d4314553b9756434051473962490ba59dfd52b1c5617c2ec 737 crun_0.18-2.dsc
+ ba17ecc9e720cb91edc0562c94623e15fb1541438a7580b0512010e3064dd1c8 19704274 crun_0.18-2.tar.gz
+Files:
+ 470aa2db625fc9b52a52b572d4cdcb04 737 crun_0.18-2.dsc
+ 5213a4fbd4fd1f0f8e8ba82b0c51025b 19704274 crun_0.18-2.tar.gz
+
+Format: 3.0 (native)
+Package: dh-golang
+Binary: dh-golang
+Architecture: all
+Version: 1.48~bpo10+1
+Maintainer: Debian Go Packaging Team <team+pkg-go@tracker.debian.org>
+Uploaders: Michael Stapelberg <stapelberg@debian.org>, Martina Ferrari <tincho@debian.org>, Anthony Fok <foka@debian.org>, Dr. Tobias Quathamer <toddy@debian.org>,
+Standards-Version: 4.5.0
+Vcs-Browser: https://salsa.debian.org/go-team/packages/dh-golang
+Vcs-Git: https://salsa.debian.org/go-team/packages/dh-golang.git
+Build-Depends: debhelper-compat (= 10), libmodule-install-perl
+Package-List:
+ dh-golang deb devel optional arch=all
+Directory: .
+Checksums-Sha1:
+ 6dc25f606c41e4e2771750db5d78fa64c091fcb7 893 dh-golang_1.48~bpo10+1.dsc
+ a49182cd856763c1b093b73cea397fada8673e3a 16484 dh-golang_1.48~bpo10+1.tar.xz
+Checksums-Sha256:
+ e21ee7275a38ca8db52281a2e5068b97029870b8103dd6b6c147930d803de09d 893 dh-golang_1.48~bpo10+1.dsc
+ 6a259342872189f694c5ed8b459b823af2373d9292c09e0184029f5400d67b02 16484 dh-golang_1.48~bpo10+1.tar.xz
+Files:
+ 6c340177fd1e2fa87a1570046d57db82 893 dh-golang_1.48~bpo10+1.dsc
+ 68514741519f0c3ab58a26069117a94f 16484 dh-golang_1.48~bpo10+1.tar.xz
+
+Format: 1.0
+Package: fuse-overlayfs
+Binary: fuse-overlayfs
+Architecture: any
+Version: 1.4.0~1
+Maintainer: Reinhard Tartler <siretart@tauware.de>
+Uploaders: Dmitry Smirnov <onlyjob@debian.org>
+Homepage: https://github.com/containers/fuse-overlayfs
+Standards-Version: 4.5.0
+Vcs-Browser: https://salsa.debian.org/debian/fuse-overlayfs
+Vcs-Git: https://salsa.debian.org/debian/fuse-overlayfs.git
+Build-Depends: debhelper-compat (= 12), autoconf, automake, go-md2man, libfuse3-dev, pkg-config | pkgconf
+Package-List:
+ fuse-overlayfs deb misc optional arch=any
+Directory: .
+Checksums-Sha1:
+ 2372ce979fb899984ed025542356c4e92114a119 851 fuse-overlayfs_1.4.0~1.dsc
+ 35ffab09e19f5c6345df124d108fd8f075f18e32 1147939 fuse-overlayfs_1.4.0~1.tar.gz
+Checksums-Sha256:
+ 3d9a4398ceb78bc28dd8b1d4c36afa96b26683a6d5ad2fd4cd012352fdcab561 851 fuse-overlayfs_1.4.0~1.dsc
+ 24740ec108b0183984871d639619a57469f6c67593bd0ae2d8945414790259d6 1147939 fuse-overlayfs_1.4.0~1.tar.gz
+Files:
+ 0cf763211bffd79eb5672542bb443923 851 fuse-overlayfs_1.4.0~1.dsc
+ 2892996acc99b25132ec234ccc0f3b34 1147939 fuse-overlayfs_1.4.0~1.tar.gz
+
+Format: 1.0
+Package: golang-1.14
+Binary: golang-1.14-go, golang-1.14-src, golang-1.14-doc, golang-1.14
+Architecture: amd64 arm64 armel armhf i386 mips mips64el mipsel ppc64 ppc64el riscv64 s390x all
+Version: 1.14.4-3
+Maintainer: Go Compiler Team <team+go-compiler@tracker.debian.org>
+Uploaders: Michael Stapelberg <stapelberg@debian.org>, Paul Tagliamonte <paultag@debian.org>, Tianon Gravi <tianon@debian.org>, Michael Hudson-Doyle <mwhudson@debian.org>, Dr. Tobias Quathamer <toddy@debian.org>
+Homepage: https://golang.org
+Standards-Version: 4.5.0
+Vcs-Browser: https://salsa.debian.org/go-team/compiler/golang/tree/golang-1.14
+Vcs-Git: https://salsa.debian.org/go-team/compiler/golang.git -b golang-1.14
+Build-Depends: debhelper-compat (= 10), golang-any (>= 2:1.4~) | golang-go (>= 2:1.4~) | gccgo (>= 4:5~), netbase
+Package-List:
+ golang-1.14 deb devel optional arch=all
+ golang-1.14-doc deb doc optional arch=all
+ golang-1.14-go deb devel optional arch=amd64,arm64,armel,armhf,i386,mips,mips64el,mipsel,ppc64,ppc64el,riscv64,s390x
+ golang-1.14-src deb devel optional arch=amd64,arm64,armel,armhf,i386,mips,mips64el,mipsel,ppc64,ppc64el,riscv64,s390x
+Directory: .
+Checksums-Sha1:
+ bde3e7cfc8209490ba0f19a4a7def4b141d2251b 1454 golang-1.14_1.14.4-3.dsc
+ 2531d36b444d808c70ed544fdb86e104cde26acd 1364335460 golang-1.14_1.14.4-3.tar.gz
+Checksums-Sha256:
+ 44eddadce1ed64f7fbc690a81a9a15dc6386999922f2e4c639e54a7c515ce565 1454 golang-1.14_1.14.4-3.dsc
+ 64bdf698b955c3f24f773359de8321a9ddea3e70d6aa8f7fb9c5659659ec0eba 1364335460 golang-1.14_1.14.4-3.tar.gz
+Files:
+ 5d91d26b6bdcfbc8d036ed4f8fbad045 1454 golang-1.14_1.14.4-3.dsc
+ 39f7d379ef65f0498653508bed314fe9 1364335460 golang-1.14_1.14.4-3.tar.gz
+
+Format: 1.0
+Package: golang-1.15
+Binary: golang-1.15-go, golang-1.15-src, golang-1.15-doc, golang-1.15
+Architecture: amd64 arm64 armel armhf i386 mips mips64el mipsel ppc64 ppc64el riscv64 s390x all
+Version: 1.15.2-1
+Maintainer: Go Compiler Team <team+go-compiler@tracker.debian.org>
+Uploaders: Michael Stapelberg <stapelberg@debian.org>, Paul Tagliamonte <paultag@debian.org>, Tianon Gravi <tianon@debian.org>, Michael Hudson-Doyle <mwhudson@debian.org>, Dr. Tobias Quathamer <toddy@debian.org>
+Homepage: https://golang.org
+Standards-Version: 4.5.0
+Vcs-Browser: https://salsa.debian.org/go-team/compiler/golang/tree/golang-1.15
+Vcs-Git: https://salsa.debian.org/go-team/compiler/golang.git -b golang-1.15
+Build-Depends: debhelper-compat (= 10), golang | golang-any (>= 2:1.4~) | golang-go (>= 2:1.4~) | gccgo (>= 4:5~), netbase
+Package-List:
+ golang-1.15 deb devel optional arch=all
+ golang-1.15-doc deb doc optional arch=all
+ golang-1.15-go deb devel optional arch=amd64,arm64,armel,armhf,i386,mips,mips64el,mipsel,ppc64,ppc64el,riscv64,s390x
+ golang-1.15-src deb devel optional arch=amd64,arm64,armel,armhf,i386,mips,mips64el,mipsel,ppc64,ppc64el,riscv64,s390x
+Directory: .
+Checksums-Sha1:
+ 21cbd7af6714fc586f172b7fc7f34117a59d1588 1463 golang-1.15_1.15.2-1.dsc
+ 31c1e5b14f18b741c8403a1abde10cb78a70dbec 1365462709 golang-1.15_1.15.2-1.tar.gz
+Checksums-Sha256:
+ 03aa7652efb523a2df61e7d6f03d632f771fee830a4179ddd8bcd44538eebcc9 1463 golang-1.15_1.15.2-1.dsc
+ 850b8df1dbbc29cc3296ce186dfec0eb595cd3c468f09e898027126b3eaa3f61 1365462709 golang-1.15_1.15.2-1.tar.gz
+Files:
+ 2b0429374a33ead42756a2daaa2b7c88 1463 golang-1.15_1.15.2-1.dsc
+ d5f1ddb8345ed557fc107b9071a9c37b 1365462709 golang-1.15_1.15.2-1.tar.gz
+
+Format: 1.0
+Package: golang-1.16
+Binary: golang-1.16-go, golang-1.16-src, golang-1.16-doc, golang-1.16
+Architecture: amd64 arm64 armel armhf i386 mips mips64el mipsel ppc64 ppc64el riscv64 s390x all
+Version: 1.16.6-5
+Maintainer: Go Compiler Team <team+go-compiler@tracker.debian.org>
+Uploaders: Michael Stapelberg <stapelberg@debian.org>, Paul Tagliamonte <paultag@debian.org>, Tianon Gravi <tianon@debian.org>, Michael Hudson-Doyle <mwhudson@debian.org>, Dr. Tobias Quathamer <toddy@debian.org>, Anthony Fok <foka@debian.org>
+Homepage: https://golang.org
+Standards-Version: 4.5.0
+Vcs-Browser: https://salsa.debian.org/go-team/compiler/golang/tree/golang-1.16
+Vcs-Git: https://salsa.debian.org/go-team/compiler/golang.git -b golang-1.16
+Build-Depends: debhelper-compat (= 10), golang-1.15 | golang-any (>= 2:1.4~) | golang-go (>= 2:1.4~) | gccgo (>= 4:5~), netbase
+Package-List:
+ golang-1.16 deb golang optional arch=all
+ golang-1.16-doc deb doc optional arch=all
+ golang-1.16-go deb golang optional arch=amd64,arm64,armel,armhf,i386,mips,mips64el,mipsel,ppc64,ppc64el,riscv64,s390x
+ golang-1.16-src deb golang optional arch=all
+Directory: .
+Checksums-Sha1:
+ 1b5a22dbf4280c50e37e1dbfa6d2df1ba1bef7bd 1425 golang-1.16_1.16.6-5.dsc
+ c4b08fbe7d01dbc35e2aa3d52b72c2353e96942b 156242466 golang-1.16_1.16.6-5.tar.gz
+Checksums-Sha256:
+ ff4563f32053679207ca93670b621aed67da2025663dc2989bcaad427a62495f 1425 golang-1.16_1.16.6-5.dsc
+ 1909124fdf4eb4874b2656d8ce343ab05b02e965e7e98f8854367bbf39b80d44 156242466 golang-1.16_1.16.6-5.tar.gz
+Files:
+ f2ea561af62a4b119cbfc44d5de376dc 1425 golang-1.16_1.16.6-5.dsc
+ f5586207a6c0c877f6d98cbf03064484 156242466 golang-1.16_1.16.6-5.tar.gz
+
+Format: 1.0
+Package: podman-machine-cni
+Binary: podman-machine-cni
+Architecture: any
+Version: 100:0.0.0-1
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/containers/podman-machine-cni.git
+Standards-Version: 4.3.0
+Vcs-Git: https://gitlab.com/rhcontainerbot/podman-machine-cni.git
+Build-Depends: debhelper (>= 9), dh-golang (>> 1.47), golang-1.15 | golang-1.14, golang, go-md2man, git
+Package-List:
+ podman-machine-cni deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ bf753b7bfcbd374011d262567492427c4200f036 788 podman-machine-cni_0.0.0-1.dsc
+ 5169367c51585444cf710e53b7e5f25af8c0575a 5435209 podman-machine-cni_0.0.0-1.tar.gz
+Checksums-Sha256:
+ 5eff5851a51121303318c8629acb51b71cc4cf001589eda730de7aacdf7485af 788 podman-machine-cni_0.0.0-1.dsc
+ 13138395b8000c54d6a933ab3c5d5a2125647b63d84034bf5bbdc4c2983f83a8 5435209 podman-machine-cni_0.0.0-1.tar.gz
+Files:
+ 03f9e7cf01513ad704818e4e379ad5a1 788 podman-machine-cni_0.0.0-1.dsc
+ e4f1865497f860b43de1bc268873191f 5435209 podman-machine-cni_0.0.0-1.tar.gz
+
+Format: 1.0
+Package: podman-plugins
+Binary: podman-plugins
+Architecture: any
+Version: 100:1.1.1-5
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/containers/dnsname.git
+Standards-Version: 4.3.0
+Vcs-Git: https://gitlab.com/rhcontainerbot/podman-plugins.git
+Build-Depends: debhelper (>= 9), dh-golang (>> 1.47), golang-1.15 | golang-1.14, golang, go-md2man, git
+Package-List:
+ podman-plugins deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ 457d412f38654c23d1fdf80b8a25b5e832225ad2 752 podman-plugins_1.1.1-5.dsc
+ 4469cf8c2b1e49c857cda34d0df56d7099ad1d1b 37766862 podman-plugins_1.1.1-5.tar.gz
+Checksums-Sha256:
+ 89268c6000e506df7cb7a9a381b66591ce08bfc426f2c9b202f786293109fd80 752 podman-plugins_1.1.1-5.dsc
+ 8c1e706bb5db788075ca71ffaf270c73f4c788a72b4d16cb2078e063650acc06 37766862 podman-plugins_1.1.1-5.tar.gz
+Files:
+ de1ee275215e17873d72200b5f4d9e7e 752 podman-plugins_1.1.1-5.dsc
+ e3a2807c0be0546865096b2b70c6c54f 37766862 podman-plugins_1.1.1-5.tar.gz
+
+Format: 1.0
+Package: podman
+Binary: podman, podman-rootless
+Architecture: any
+Version: 100:3.0.1-2
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/containers/podman.git
+Standards-Version: 4.3.0
+Vcs-Git: https://gitlab.com/rhcontainerbot/podman.git
+Build-Depends: debhelper (>= 9), cpio, libassuan-dev, libgpgme11-dev, libseccomp-dev, libsystemd-dev, libbtrfs-dev | btrfs-progs, dh-golang (>> 1.47), golang-1.15 | golang-1.14, golang, libglib2.0-dev, go-md2man, git
+Package-List:
+ podman deb devel optional arch=any
+ podman-rootless deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ 1e90a9417af61fd9b2e03e3049c979a0619a05ba 873 podman_3.0.1-2.dsc
+ c8a6a76c8821d9412ca695441f86b2e4da07276f 129856422 podman_3.0.1-2.tar.gz
+Checksums-Sha256:
+ 40ca4fdc10654830feabf402e59dac0f882ea37581e7b4a0ff1d53f6d32c7e94 873 podman_3.0.1-2.dsc
+ 9a57c6812db03f26de704d66625e8f7ec04e8aa4a3ef0b5886603f1736e288ed 129856422 podman_3.0.1-2.tar.gz
+Files:
+ 56e3042f91666bebf77c7d6234ea2042 873 podman_3.0.1-2.dsc
+ 8bb3775f6204cfc941d70fb6f419306e 129856422 podman_3.0.1-2.tar.gz
+
+Format: 1.0
+Package: skopeo
+Binary: skopeo
+Architecture: any
+Version: 100:1.2.2-2
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/projectatomic/skopeo
+Standards-Version: 4.3.0
+Build-Depends: debhelper (>= 9), config-package-dev, libgpgme11-dev, libassuan-dev, libbtrfs-dev | btrfs-progs, dh-golang (>> 1.47), golang-1.15 | golang-1.14, golang, libglib2.0-dev, go-md2man
+Package-List:
+ skopeo deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ 80aa605df5f07c26a5dc74843664140f45737eae 733 skopeo_1.2.2-2.dsc
+ ba70c8dea23f12d872d284097549ef4797adce70 105759212 skopeo_1.2.2-2.tar.gz
+Checksums-Sha256:
+ 8619bb7f3275779c0b8d1bd094dba89a40d837e448fc9ecb28543cd9162590e8 733 skopeo_1.2.2-2.dsc
+ 5c8642a96a59771180c23bc59ed3438c20586ada4489fcf3e43690348a8349ac 105759212 skopeo_1.2.2-2.tar.gz
+Files:
+ e8a6db8b0f531d7b5f73b6366b694677 733 skopeo_1.2.2-2.dsc
+ a984058a5e9e4bb75e010d52b7d7f885 105759212 skopeo_1.2.2-2.tar.gz
+
+Format: 1.0
+Package: slirp4netns
+Binary: slirp4netns
+Architecture: any
+Version: 100:1.1.8-3
+Maintainer: Lokesh Mandvekar <lsm5@fedoraproject.org>
+Homepage: https://github.com/rootless-containers/slirp4netns
+Standards-Version: 4.3.0
+Vcs-Browser: https://gitlab.com/rhcontainerbot/slirp4netns
+Vcs-Git: https://gitlab.com/rhcontainerbot/slirp4netns.git
+Testsuite: autopkgtest
+Build-Depends: debhelper (>= 9), autoconf, automake, autotools-dev, dh-autoreconf, libcap-dev, libglib2.0-dev, libseccomp-dev
+Package-List:
+ slirp4netns deb devel optional arch=any
+Directory: .
+Checksums-Sha1:
+ 6066526104b524bf82261eb3b750526383486fa2 841 slirp4netns_1.1.8-3.dsc
+ 51e5137b4fae89ce7ab3eddccc75fac4f46acb00 2316590 slirp4netns_1.1.8-3.tar.gz
+Checksums-Sha256:
+ 56b64da3348f369dce58d51b3eaac1fa5905b9440b6d00a2c0c7c1aeec655c92 841 slirp4netns_1.1.8-3.dsc
+ 8c10225fdde58a2eab8784cd8bdee2a72feabbf3c70c9856cf8bd8354e6cb4c0 2316590 slirp4netns_1.1.8-3.tar.gz
+Files:
+ d4a0128e1194d6feca673c6f02063333 841 slirp4netns_1.1.8-3.dsc
+ 55064e30e7216599723e9ef8c83f9e63 2316590 slirp4netns_1.1.8-3.tar.gz
+
