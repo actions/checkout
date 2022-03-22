@@ -75,6 +75,6 @@ inputs:
       converted to HTTPS.
     default: false
 runs:
-  using: node12
+  using: node16
   main: dist/index.js
   post: dist/index.js

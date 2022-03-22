@@ -1,0 +1,51 @@
+---
+name: object-inspect
+version: 1.11.0
+type: npm
+summary: string representations of objects in node and the browser
+homepage: https://github.com/inspect-js/object-inspect
+license: mit
+licenses:
+- sources: LICENSE
+  text: |
+    MIT License
+
+    Copyright (c) 2013 James Halliday
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+- sources: readme.markdown
+  text: |-
+    MIT
+
+    [1]: https://npmjs.org/package/object-inspect
+    [2]: https://versionbadg.es/inspect-js/object-inspect.svg
+    [5]: https://david-dm.org/inspect-js/object-inspect.svg
+    [6]: https://david-dm.org/inspect-js/object-inspect
+    [7]: https://david-dm.org/inspect-js/object-inspect/dev-status.svg
+    [8]: https://david-dm.org/inspect-js/object-inspect#info=devDependencies
+    [11]: https://nodei.co/npm/object-inspect.png?downloads=true&stars=true
+    [license-image]: https://img.shields.io/npm/l/object-inspect.svg
+    [license-url]: LICENSE
+    [downloads-image]: https://img.shields.io/npm/dm/object-inspect.svg
+    [downloads-url]: https://npm-stat.com/charts.html?package=object-inspect
+    [codecov-image]: https://codecov.io/gh/inspect-js/object-inspect/branch/main/graphs/badge.svg
+    [codecov-url]: https://app.codecov.io/gh/inspect-js/object-inspect/
+    [actions-image]: https://img.shields.io/endpoint?url=https://github-actions-badge-u3jn4tfpocch.runkit.sh/inspect-js/object-inspect
+    [actions-url]: https://github.com/inspect-js/object-inspect/actions
+notices: []
