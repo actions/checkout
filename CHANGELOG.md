@@ -1,9 +1,12 @@
 # Changelog
 
+## v3.0.0
+
+- [Update to node 16](https://github.com/actions/checkout/pull/689)
+
 ## v2.3.1
 
 - [Fix default branch resolution for .wiki and when using SSH](https://github.com/actions/checkout/pull/284)
-
 
 ## v2.3.0
 
