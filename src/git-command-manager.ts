@@ -21,7 +21,8 @@ export interface IGitCommandManager {
   config(
     configKey: string,
     configValue: string,
-    globalConfig?: boolean
+    globalConfig?: boolean,
+    add?: boolean
   ): Promise<void>
   configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
   fetch(refSpec: string[], fetchDepth?: number): Promise<void>
@@ -31,7 +32,7 @@ export interface IGitCommandManager {
   isDetached(): Promise<boolean>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
-  log1(): Promise<string>
+  log1(format?: string): Promise<string>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   removeEnvironmentVariable(name: string): void
   revParse(ref: string): Promise<string>
@@ -140,14 +141,15 @@ class GitCommandManager {
   async config(
     configKey: string,
     configValue: string,
-    globalConfig?: boolean
+    globalConfig?: boolean,
+    add?: boolean
   ): Promise<void> {
-    await this.execGit([
-      'config',
-      globalConfig ? '--global' : '--local',
-      configKey,
-      configValue
-    ])
+    const args: string[] = ['config', globalConfig ? '--global' : '--local']
+    if (add) {
+      args.push('--add')
+    }
+    args.push(...[configKey, configValue])
+    await this.execGit(args)
   }
 
   async configExists(
@@ -254,8 +256,10 @@ class GitCommandManager {
     await this.execGit(['lfs', 'install', '--local'])
   }
 
-  async log1(): Promise<string> {
-    const output = await this.execGit(['log', '-1'])
+  async log1(format?: string): Promise<string> {
+    var args = format ? ['log', '-1', format] : ['log', '-1']
+    var silent = format ? false : true
+    const output = await this.execGit(args, false, silent)
     return output.stdout
   }
 
@@ -270,7 +274,7 @@ class GitCommandManager {
   /**
    * Resolves a ref to a SHA. For a branch or lightweight tag, the commit SHA is returned.
    * For an annotated tag, the tag SHA is returned.
-   * @param {string} ref  For example: 'refs/heads/master' or '/refs/tags/v1'
+   * @param {string} ref  For example: 'refs/heads/main' or '/refs/tags/v1'
    * @returns {Promise<string>}
    */
   async revParse(ref: string): Promise<string> {
@@ -390,7 +394,8 @@ class GitCommandManager {
 
   private async execGit(
     args: string[],
-    allowAllExitCodes = false
+    allowAllExitCodes = false,
+    silent = false
   ): Promise<GitOutput> {
     fshelper.directoryExistsSync(this.workingDirectory, true)
 
@@ -409,6 +414,7 @@ class GitCommandManager {
     const options = {
       cwd: this.workingDirectory,
       env,
+      silent,
       ignoreReturnCode: allowAllExitCodes,
       listeners: {
         stdout: (data: Buffer) => {
