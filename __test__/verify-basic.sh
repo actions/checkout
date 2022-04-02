@@ -20,5 +20,5 @@ else
 
   # Verify auth token
   cd basic
-  git fetch --no-tags --depth=1 origin +refs/heads/master:refs/remotes/origin/master
+  git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
 fi
