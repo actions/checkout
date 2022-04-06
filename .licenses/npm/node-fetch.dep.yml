@@ -1,6 +1,6 @@
 ---
 name: node-fetch
-version: 2.6.5
+version: 2.6.7
 type: npm
 summary: A light-weight module that brings window.fetch to node.js
 homepage: https://github.com/bitinn/node-fetch
