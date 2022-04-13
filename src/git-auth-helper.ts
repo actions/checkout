@@ -19,8 +19,9 @@ export interface IGitAuthHelper {
   configureAuth(): Promise<void>
   configureGlobalAuth(): Promise<void>
   configureSubmoduleAuth(): Promise<void>
+  configureTempGlobalConfig(repositoryPath?: string): Promise<string>
   removeAuth(): Promise<void>
-  removeGlobalAuth(): Promise<void>
+  removeGlobalConfig(): Promise<void>
 }
 
 export function createAuthHelper(
@@ -80,7 +81,11 @@ class GitAuthHelper {
     await this.configureToken()
   }
 
-  async configureGlobalAuth(): Promise<void> {
+  async configureTempGlobalConfig(repositoryPath?: string): Promise<string> {
+    // Already setup global config
+    if (this.temporaryHomePath?.length > 0) {
+      return path.join(this.temporaryHomePath, '.gitconfig')
+    }
     // Create a temp home directory
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
@@ -110,13 +115,34 @@ class GitAuthHelper {
       await fs.promises.writeFile(newGitConfigPath, '')
     }
 
-    try {
-      // Override HOME
-      core.info(
-        `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
-      )
-      this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
+    // Override HOME
+    core.info(
+      `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
+    )
+    this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
 
+    // Setup the workspace as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+    // Otherwise all git commands we run in a container fail
+    core.info(
+      `Adding working directory to the temporary git global config as a safe directory`
+    )
+    await this.git
+      .config(
+        'safe.directory',
+        repositoryPath ?? this.settings.repositoryPath,
+        true,
+        true
+      )
+      .catch(error => {
+        core.info(`Failed to initialize safe directory with error: ${error}`)
+      })
+    return newGitConfigPath
+  }
+
+  async configureGlobalAuth(): Promise<void> {
+    // 'configureTempGlobalConfig' noops if already set, just returns the path
+    const newGitConfigPath = await this.configureTempGlobalConfig()
+    try {
       // Configure the token
       await this.configureToken(newGitConfigPath, true)
 
@@ -181,10 +207,12 @@ class GitAuthHelper {
     await this.removeToken()
   }
 
-  async removeGlobalAuth(): Promise<void> {
-    core.debug(`Unsetting HOME override`)
-    this.git.removeEnvironmentVariable('HOME')
-    await io.rmRF(this.temporaryHomePath)
+  async removeGlobalConfig(): Promise<void> {
+    if (this.temporaryHomePath?.length > 0) {
+      core.debug(`Unsetting HOME override`)
+      this.git.removeEnvironmentVariable('HOME')
+      await io.rmRF(this.temporaryHomePath)
+    }
   }
 
   private async configureSsh(): Promise<void> {
