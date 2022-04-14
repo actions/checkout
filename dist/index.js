@@ -6572,9 +6572,13 @@ class GitAuthHelper {
             yield this.configureToken();
         });
     }
-    configureGlobalAuth() {
-        var _a;
+    configureTempGlobalConfig(repositoryPath) {
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
+            // Already setup global config
+            if (((_a = this.temporaryHomePath) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                return path.join(this.temporaryHomePath, '.gitconfig');
+            }
             // Create a temp home directory
             const runnerTemp = process.env['RUNNER_TEMP'] || '';
             assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
@@ -6590,7 +6594,7 @@ class GitAuthHelper {
                 configExists = true;
             }
             catch (err) {
-                if (((_a = err) === null || _a === void 0 ? void 0 : _a.code) !== 'ENOENT') {
+                if (((_b = err) === null || _b === void 0 ? void 0 : _b.code) !== 'ENOENT') {
                     throw err;
                 }
             }
@@ -6601,10 +6605,25 @@ class GitAuthHelper {
             else {
                 yield fs.promises.writeFile(newGitConfigPath, '');
             }
+            // Override HOME
+            core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
+            this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
+            // Setup the workspace as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+            // Otherwise all git commands we run in a container fail
+            core.info(`Adding working directory to the temporary git global config as a safe directory`);
+            yield this.git
+                .config('safe.directory', repositoryPath !== null && repositoryPath !== void 0 ? repositoryPath : this.settings.repositoryPath, true, true)
+                .catch(error => {
+                core.info(`Failed to initialize safe directory with error: ${error}`);
+            });
+            return newGitConfigPath;
+        });
+    }
+    configureGlobalAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // 'configureTempGlobalConfig' noops if already set, just returns the path
+            const newGitConfigPath = yield this.configureTempGlobalConfig();
             try {
-                // Override HOME
-                core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
-                this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
                 // Configure the token
                 yield this.configureToken(newGitConfigPath, true);
                 // Configure HTTPS instead of SSH
@@ -6657,11 +6676,14 @@ class GitAuthHelper {
             yield this.removeToken();
         });
     }
-    removeGlobalAuth() {
+    removeGlobalConfig() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            core.debug(`Unsetting HOME override`);
-            this.git.removeEnvironmentVariable('HOME');
-            yield io.rmRF(this.temporaryHomePath);
+            if (((_a = this.temporaryHomePath) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                core.debug(`Unsetting HOME override`);
+                this.git.removeEnvironmentVariable('HOME');
+                yield io.rmRF(this.temporaryHomePath);
+            }
         });
     }
     configureSsh() {
@@ -7326,40 +7348,48 @@ function getSource(settings) {
         core.startGroup('Getting Git version info');
         const git = yield getGitCommandManager(settings);
         core.endGroup();
-        // Prepare existing directory, otherwise recreate
-        if (isExisting) {
-            yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
-        }
-        if (!git) {
-            // Downloading using REST API
-            core.info(`The repository will be downloaded using the GitHub REST API`);
-            core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
-            if (settings.submodules) {
-                throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
-            }
-            else if (settings.sshKey) {
-                throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
-            }
-            yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
-            return;
-        }
-        // Save state for POST action
-        stateHelper.setRepositoryPath(settings.repositoryPath);
-        // Initialize the repository
-        if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
-            core.startGroup('Initializing the repository');
-            yield git.init();
-            yield git.remoteAdd('origin', repositoryUrl);
-            core.endGroup();
-        }
-        // Disable automatic garbage collection
-        core.startGroup('Disabling automatic garbage collection');
-        if (!(yield git.tryDisableAutomaticGarbageCollection())) {
-            core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
-        }
-        core.endGroup();
-        const authHelper = gitAuthHelper.createAuthHelper(git, settings);
+        let authHelper = null;
         try {
+            if (git) {
+                authHelper = gitAuthHelper.createAuthHelper(git, settings);
+                yield authHelper.configureTempGlobalConfig();
+            }
+            // Prepare existing directory, otherwise recreate
+            if (isExisting) {
+                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
+            }
+            if (!git) {
+                // Downloading using REST API
+                core.info(`The repository will be downloaded using the GitHub REST API`);
+                core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
+                if (settings.submodules) {
+                    throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+                }
+                else if (settings.sshKey) {
+                    throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+                }
+                yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
+                return;
+            }
+            // Save state for POST action
+            stateHelper.setRepositoryPath(settings.repositoryPath);
+            // Initialize the repository
+            if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
+                core.startGroup('Initializing the repository');
+                yield git.init();
+                yield git.remoteAdd('origin', repositoryUrl);
+                core.endGroup();
+            }
+            // Disable automatic garbage collection
+            core.startGroup('Disabling automatic garbage collection');
+            if (!(yield git.tryDisableAutomaticGarbageCollection())) {
+                core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
+            }
+            core.endGroup();
+            // If we didn't initialize it above, do it now
+            if (!authHelper) {
+                authHelper = gitAuthHelper.createAuthHelper(git, settings);
+            }
             // Configure auth
             core.startGroup('Setting up auth');
             yield authHelper.configureAuth();
@@ -7415,27 +7445,21 @@ function getSource(settings) {
             core.endGroup();
             // Submodules
             if (settings.submodules) {
-                try {
-                    // Temporarily override global config
-                    core.startGroup('Setting up auth for fetching submodules');
-                    yield authHelper.configureGlobalAuth();
+                // Temporarily override global config
+                core.startGroup('Setting up auth for fetching submodules');
+                yield authHelper.configureGlobalAuth();
+                core.endGroup();
+                // Checkout submodules
+                core.startGroup('Fetching submodules');
+                yield git.submoduleSync(settings.nestedSubmodules);
+                yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
+                core.endGroup();
+                // Persist credentials
+                if (settings.persistCredentials) {
+                    core.startGroup('Persisting credentials for submodules');
+                    yield authHelper.configureSubmoduleAuth();
                     core.endGroup();
-                    // Checkout submodules
-                    core.startGroup('Fetching submodules');
-                    yield git.submoduleSync(settings.nestedSubmodules);
-                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
-                    yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
-                    core.endGroup();
-                    // Persist credentials
-                    if (settings.persistCredentials) {
-                        core.startGroup('Persisting credentials for submodules');
-                        yield authHelper.configureSubmoduleAuth();
-                        core.endGroup();
-                    }
-                }
-                finally {
-                    // Remove temporary global config override
-                    yield authHelper.removeGlobalAuth();
                 }
             }
             // Get commit information
@@ -7447,10 +7471,13 @@ function getSource(settings) {
         }
         finally {
             // Remove auth
-            if (!settings.persistCredentials) {
-                core.startGroup('Removing auth');
-                yield authHelper.removeAuth();
-                core.endGroup();
+            if (authHelper) {
+                if (!settings.persistCredentials) {
+                    core.startGroup('Removing auth');
+                    yield authHelper.removeAuth();
+                    core.endGroup();
+                }
+                authHelper.removeGlobalConfig();
             }
         }
     });
@@ -7472,7 +7499,13 @@ function cleanup(repositoryPath) {
         }
         // Remove auth
         const authHelper = gitAuthHelper.createAuthHelper(git);
-        yield authHelper.removeAuth();
+        try {
+            yield authHelper.configureTempGlobalConfig(repositoryPath);
+            yield authHelper.removeAuth();
+        }
+        finally {
+            yield authHelper.removeGlobalConfig();
+        }
     });
 }
 exports.cleanup = cleanup;
