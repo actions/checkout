@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.4.1
+- [Set the safe directory option on git to prevent git commands failing when running in containers](https://github.com/actions/checkout/pull/762)
+
 ## v2.3.1
 
 - [Fix default branch resolution for .wiki and when using SSH](https://github.com/actions/checkout/pull/284)
