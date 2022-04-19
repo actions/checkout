@@ -3592,7 +3592,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.RepositoryPath = exports.IsPost = void 0;
+exports.setSafeDirectory = exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
 const coreCommand = __importStar(__webpack_require__(431));
 /**
  * Indicates whether the POST action is running
@@ -3602,6 +3602,10 @@ exports.IsPost = !!process.env['STATE_isPost'];
  * The repository path for the POST action. The value is empty during the MAIN action.
  */
 exports.RepositoryPath = process.env['STATE_repositoryPath'] || '';
+/**
+ * The set-safe-directory for the POST action. The value is set if input: 'safe-directory' is set during the MAIN action.
+ */
+exports.PostSetSafeDirectory = process.env['STATE_setSafeDirectory'] === 'true';
 /**
  * The SSH key path for the POST action. The value is empty during the MAIN action.
  */
@@ -3631,6 +3635,13 @@ function setSshKnownHostsPath(sshKnownHostsPath) {
     coreCommand.issueCommand('save-state', { name: 'sshKnownHostsPath' }, sshKnownHostsPath);
 }
 exports.setSshKnownHostsPath = setSshKnownHostsPath;
+/**
+ * Save the sef-safe-directory input so the POST action can retrieve the value.
+ */
+function setSafeDirectory() {
+    coreCommand.issueCommand('save-state', { name: 'setSafeDirectory' }, 'true');
+}
+exports.setSafeDirectory = setSafeDirectory;
 // Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
 // This is necessary since we don't have a separate entry point.
 if (!exports.IsPost) {
@@ -6572,7 +6583,7 @@ class GitAuthHelper {
             yield this.configureToken();
         });
     }
-    configureTempGlobalConfig(repositoryPath) {
+    configureTempGlobalConfig() {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
             // Already setup global config
@@ -6608,14 +6619,6 @@ class GitAuthHelper {
             // Override HOME
             core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
             this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
-            // Setup the workspace as a safe directory, so if we pass this into a container job with a different user it doesn't fail
-            // Otherwise all git commands we run in a container fail
-            core.info(`Adding working directory to the temporary git global config as a safe directory`);
-            yield this.git
-                .config('safe.directory', repositoryPath !== null && repositoryPath !== void 0 ? repositoryPath : this.settings.repositoryPath, true, true)
-                .catch(error => {
-                core.info(`Failed to initialize safe directory with error: ${error}`);
-            });
             return newGitConfigPath;
         });
     }
@@ -7352,7 +7355,18 @@ function getSource(settings) {
         try {
             if (git) {
                 authHelper = gitAuthHelper.createAuthHelper(git, settings);
-                yield authHelper.configureTempGlobalConfig();
+                if (settings.setSafeDirectory) {
+                    // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+                    // Otherwise all git commands we run in a container fail
+                    yield authHelper.configureTempGlobalConfig();
+                    core.info(`Adding repository directory to the temporary git global config as a safe directory`);
+                    yield git
+                        .config('safe.directory', settings.repositoryPath, true, true)
+                        .catch(error => {
+                        core.info(`Failed to initialize safe directory with error: ${error}`);
+                    });
+                    stateHelper.setSafeDirectory();
+                }
             }
             // Prepare existing directory, otherwise recreate
             if (isExisting) {
@@ -7500,7 +7514,17 @@ function cleanup(repositoryPath) {
         // Remove auth
         const authHelper = gitAuthHelper.createAuthHelper(git);
         try {
-            yield authHelper.configureTempGlobalConfig(repositoryPath);
+            if (stateHelper.PostSetSafeDirectory) {
+                // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+                // Otherwise all git commands we run in a container fail
+                yield authHelper.configureTempGlobalConfig();
+                core.info(`Adding repository directory to the temporary git global config as a safe directory`);
+                yield git
+                    .config('safe.directory', repositoryPath, true, true)
+                    .catch(error => {
+                    core.info(`Failed to initialize safe directory with error: ${error}`);
+                });
+            }
             yield authHelper.removeAuth();
         }
         finally {
@@ -17303,6 +17327,9 @@ function getInputs() {
             (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
         // Workflow organization ID
         result.workflowOrganizationId = yield workflowContextHelper.getOrganizationId();
+        // Set safe.directory in git global config.
+        result.setSafeDirectory =
+            (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
         return result;
     });
 }

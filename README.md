@@ -92,6 +92,11 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     #
     # Default: false
     submodules: ''
+
+    # Add repository path as safe.directory for Git global config by running `git
+    # config --global --add safe.directory <path>`
+    # Default: true
+    set-safe-directory: ''
 ```
 <!-- end usage -->
 
