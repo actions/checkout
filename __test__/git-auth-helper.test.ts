@@ -643,10 +643,11 @@ describe('git-auth-helper tests', () => {
     expect(gitConfigContent.indexOf('http.')).toBeLessThan(0)
   })
 
-  const removeGlobalAuth_removesOverride = 'removeGlobalAuth removes override'
-  it(removeGlobalAuth_removesOverride, async () => {
+  const removeGlobalConfig_removesOverride =
+    'removeGlobalConfig removes override'
+  it(removeGlobalConfig_removesOverride, async () => {
     // Arrange
-    await setup(removeGlobalAuth_removesOverride)
+    await setup(removeGlobalConfig_removesOverride)
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
     await authHelper.configureAuth()
     await authHelper.configureGlobalAuth()
@@ -655,7 +656,7 @@ describe('git-auth-helper tests', () => {
     await fs.promises.stat(path.join(git.env['HOME'], '.gitconfig'))
 
     // Act
-    await authHelper.removeGlobalAuth()
+    await authHelper.removeGlobalConfig()
 
     // Assert
     expect(git.env['HOME']).toBeUndefined()
