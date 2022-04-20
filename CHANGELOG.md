@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.0.1
+- [Fixed an issue where checkout failed to run in container jobs due to the new git setting `safe.directory`](https://github.com/actions/checkout/pull/762)
+- [Bumped various npm package versions](https://github.com/actions/checkout/pull/744)
+
 ## v3.0.0
 
 - [Update to node 16](https://github.com/actions/checkout/pull/689)
