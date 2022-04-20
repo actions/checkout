@@ -238,6 +238,7 @@ jobs:
           git config --global --add safe.directory "*"
           git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
 
+      # needed to make checkout post cleanup succeed
       - name: Fix Checkout v3
         uses: actions/checkout@v3
         with:
