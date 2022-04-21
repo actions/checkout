@@ -33,7 +33,7 @@
     "@actions/github": "^5.0.0",
     "@actions/io": "^1.0.1",
     "@actions/tool-cache": "^1.1.2",
-    "uuid": "^3.4.0"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
