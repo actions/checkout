@@ -19,7 +19,7 @@ export interface IGitAuthHelper {
   configureAuth(): Promise<void>
   configureGlobalAuth(): Promise<void>
   configureSubmoduleAuth(): Promise<void>
-  configureTempGlobalConfig(repositoryPath?: string): Promise<string>
+  configureTempGlobalConfig(): Promise<string>
   removeAuth(): Promise<void>
   removeGlobalConfig(): Promise<void>
 }
@@ -81,7 +81,7 @@ class GitAuthHelper {
     await this.configureToken()
   }
 
-  async configureTempGlobalConfig(repositoryPath?: string): Promise<string> {
+  async configureTempGlobalConfig(): Promise<string> {
     // Already setup global config
     if (this.temporaryHomePath?.length > 0) {
       return path.join(this.temporaryHomePath, '.gitconfig')
@@ -121,21 +121,6 @@ class GitAuthHelper {
     )
     this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
 
-    // Setup the workspace as a safe directory, so if we pass this into a container job with a different user it doesn't fail
-    // Otherwise all git commands we run in a container fail
-    core.info(
-      `Adding working directory to the temporary git global config as a safe directory`
-    )
-    await this.git
-      .config(
-        'safe.directory',
-        repositoryPath ?? this.settings.repositoryPath,
-        true,
-        true
-      )
-      .catch(error => {
-        core.info(`Failed to initialize safe directory with error: ${error}`)
-      })
     return newGitConfigPath
   }
 
