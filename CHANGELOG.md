@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.4.2
+- [Add input `set-safe-directory`](https://github.com/actions/checkout/pull/776)
+
 ## v2.4.1
 - [Set the safe directory option on git to prevent git commands failing when running in containers](https://github.com/actions/checkout/pull/762)
 
