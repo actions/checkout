@@ -40,7 +40,24 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   try {
     if (git) {
       authHelper = gitAuthHelper.createAuthHelper(git, settings)
-      await authHelper.configureTempGlobalConfig()
+      if (settings.setSafeDirectory) {
+        // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+        // Otherwise all git commands we run in a container fail
+        await authHelper.configureTempGlobalConfig()
+        core.info(
+          `Adding repository directory to the temporary git global config as a safe directory`
+        )
+
+        await git
+          .config('safe.directory', settings.repositoryPath, true, true)
+          .catch(error => {
+            core.info(
+              `Failed to initialize safe directory with error: ${error}`
+            )
+          })
+
+        stateHelper.setSafeDirectory()
+      }
     }
 
     // Prepare existing directory, otherwise recreate
@@ -249,7 +266,21 @@ export async function cleanup(repositoryPath: string): Promise<void> {
   // Remove auth
   const authHelper = gitAuthHelper.createAuthHelper(git)
   try {
-    await authHelper.configureTempGlobalConfig(repositoryPath)
+    if (stateHelper.PostSetSafeDirectory) {
+      // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+      // Otherwise all git commands we run in a container fail
+      await authHelper.configureTempGlobalConfig()
+      core.info(
+        `Adding repository directory to the temporary git global config as a safe directory`
+      )
+
+      await git
+        .config('safe.directory', repositoryPath, true, true)
+        .catch(error => {
+          core.info(`Failed to initialize safe directory with error: ${error}`)
+        })
+    }
+
     await authHelper.removeAuth()
   } finally {
     await authHelper.removeGlobalConfig()
