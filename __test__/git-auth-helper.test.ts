@@ -777,7 +777,8 @@ async function setup(testName: string): Promise<void> {
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
     sshStrict: true,
-    workflowOrganizationId: 123456
+    workflowOrganizationId: 123456,
+    setSafeDirectory: true
   }
 }
 
