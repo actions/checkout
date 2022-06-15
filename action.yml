@@ -71,6 +71,13 @@ inputs:
   set-safe-directory:
     description: Add repository path as safe.directory for Git global config by running `git config --global --add safe.directory <path>`
     default: true
+  
+    setHost:
+      description: >
+        override the github host that is set automatically to the github instance the action was called from. 
+        This is useful if you need to clone from an instance that is not the one your action is running from.  
+        For example, you need to clone a cloud hosted repo from an action run by an on prem instance.
+      required: false
 runs:
   using: node16
   main: dist/index.js
