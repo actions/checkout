@@ -83,4 +83,10 @@ export interface IGitSourceSettings {
    * Indicates whether to add repositoryPath as safe.directory in git global config
    */
   setSafeDirectory: boolean
+
+  /**
+   * Set a host to override the automatic detection. Useful when you need to clone
+   * from cloud when running an action on an on prem server
+   */
+  setHost: string | undefined
 }
