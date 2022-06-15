@@ -1,6 +1,7 @@
 import * as assert from 'assert'
 import {IGitSourceSettings} from './git-source-settings'
 import {URL} from 'url'
+import { settings } from 'cluster'
 
 export function getFetchUrl(settings: IGitSourceSettings): string {
   assert.ok(
@@ -8,7 +9,7 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
     'settings.repositoryOwner must be defined'
   )
   assert.ok(settings.repositoryName, 'settings.repositoryName must be defined')
-  const serviceUrl = getServerUrl()
+  const serviceUrl = getServerUrl(settings.setHost)
   const encodedOwner = encodeURIComponent(settings.repositoryOwner)
   const encodedName = encodeURIComponent(settings.repositoryName)
   if (settings.sshKey) {
@@ -19,7 +20,10 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
   return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`
 }
 
-export function getServerUrl(): URL {
+export function getServerUrl(configHost: string|undefined = undefined): URL {
+  if (configHost) {
+    return new URL(configHost)
+  }
   // todo: remove GITHUB_URL after support for GHES Alpha is no longer needed
   return new URL(
     process.env['GITHUB_SERVER_URL'] ||
