@@ -1,0 +1,36 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+Archive: Raspbian_10
+Codename: Raspbian_10
+Origin: obs://build.opensuse.org/devel:kubic:libcontainers:stable/Raspbian_10
+Label: devel:kubic:libcontainers:stable
+Architectures: armhf
+Date: Wed Mar 16 13:23:56 2022
+Description: Stable Releases of Upstream github.com/containers packages (Raspbian_10)
+MD5Sum:
+ 00da1553977a958c3908af1ba0b53aca 34187 Packages
+ 25f9011747fdc99548ffb82ef6ad910a 8497 Packages.gz
+ 5263d81ae22ea768594b67dda64de11a 21789 Sources
+ d575956d08185c9ae22ffdbc0008926c 6196 Sources.gz
+SHA1:
+ 7a14c49010851925c6d73077b6795c2e1b5ad2e0 34187 Packages
+ 7d3104745bd34fb57b3e8280550a54f51691044f 8497 Packages.gz
+ 51e00b51469e6e8efbef466d137ea8c8350343a9 21789 Sources
+ c606e67b2cb0685a1c82e03932585c57eb5d0d2e 6196 Sources.gz
+SHA256:
+ 47774476bc047c3a515a86a154f8b8a350933c4a584b5dcf116b4ff1b4e00195 34187 Packages
+ 3e9e99a38156473bef2ba321610cb796bcdff0e2c964bad9ee54c6a4e35e0989 8497 Packages.gz
+ 078616e1b3d43cc561a389d0fb4588a3e733e468496d920faf2cf786f4013eb1 21789 Sources
+ a15440ff40420e6b40a6e94fc2a3c3228735e0cbdb08c1ec7bec70aefeb3af62 6196 Sources.gz
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.0.7 (GNU/Linux)
+
+iQEVAwUBYjHk7E1kOQN1BgqkAQg/Ugf/aDxica0mCO/W1xUfw61cVhCgzi5IH9gk
+lF/uCqeM9vVsEaW9oPtwOPrpA81ajkjZi/VvhOBTVYBGhQLLL83tGW5MAwC6CJDC
+QCQPGd+YXlsgb6mR+S2d9zXILi6oEWpTQyTFxbI9GzyAke7uTY+a2vTSR/4YW86F
+UI/PWpehWLUj09BKjOXR4/P5eqqe21ekiPZH+K2IL3ODAjA+6ZXl+X3s6/VFqQ5p
+lO51eIgcekX5lYDiifxVvIcYnOhquWtJLsQxIuWLNokzqdRIPyGIj7uvRjTW6yky
+QogFZ5+il0WLxrBWQmUQ4dxyVdcH4CyVOYGJhy2yn8CdRo+aLEpySQ==
+=tKyt
+-----END PGP SIGNATURE-----
