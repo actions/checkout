@@ -369,6 +369,6 @@ class GitAuthHelper {
         `git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`,
         true
       )
-    )
+    }
   }
 }
