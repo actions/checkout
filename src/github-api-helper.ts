@@ -8,6 +8,7 @@ import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
 import {default as uuid} from 'uuid/v4'
 import {Octokit} from '@octokit/rest'
+import { getAPIUrl } from './url-helper'
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -83,7 +84,9 @@ export async function getDefaultBranch(
 ): Promise<string> {
   return await retryHelper.execute(async () => {
     core.info('Retrieving the default branch name')
-    const octokit = new github.GitHub(authToken)
+    const octokit = new github.GitHub(authToken, {
+      baseUrl: getAPIUrl()
+    })
     let result: string
     try {
       // Get the default branch from the repo info

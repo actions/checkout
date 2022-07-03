@@ -19,11 +19,26 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
   return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`
 }
 
-export function getServerUrl(): URL {
+function getServerUrlFromEnv(): string | undefined {
   // todo: remove GITHUB_URL after support for GHES Alpha is no longer needed
+  return process.env['GITHUB_SERVER_URL'] ||
+    process.env['GITHUB_URL']
+}
+
+export function getServerUrl(): URL {
   return new URL(
-    process.env['GITHUB_SERVER_URL'] ||
-      process.env['GITHUB_URL'] ||
+    getServerUrlFromEnv() ||
       'https://github.com'
+  )
+}
+
+export function getAPIUrl(): URL {
+  const urlFromEnv = getServerUrlFromEnv()
+  if (urlFromEnv) {
+    return new URL(`${urlFromEnv}/api/v3`)
+  }
+  
+  return new URL(
+    'https://api.github.com'
   )
 }
