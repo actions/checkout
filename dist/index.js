@@ -7478,8 +7478,8 @@ function getSource(settings) {
             }
             // Get commit information
             const commitInfo = yield git.log1();
-            // Log commit sha
-            yield git.log1("--format='%H'");
+            // Log commit information
+            yield git.log1("--format=oneline");
             // Check for incorrect pull request merge commit
             yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit);
         }
