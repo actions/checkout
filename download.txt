@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+	xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	
+	xmlns:georss="http://www.georss.org/georss"
+	xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+	>
+
+<channel>
+	<title>api &#8211; The GitHub Blog</title>
+	<atom:link href="https://github.blog/changelog/label/api/feed/" rel="self" type="application/rss+xml" />
+	<link>https://github.blog</link>
+	<description>Updates, ideas, and inspiration from GitHub to help developers build and design software.</description>
+	<lastBuildDate>Mon, 06 Jun 2022 20:48:59 +0000</lastBuildDate>
+	<language>en-US</language>
+	<sy:updatePeriod>
+	hourly	</sy:updatePeriod>
+	<sy:updateFrequency>
+	1	</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=6.0</generator>
+
+<image>
+	<url>https://github.blog/wp-content/uploads/2019/01/cropped-github-favicon-512.png?fit=32%2C32</url>
+	<title>api &#8211; The GitHub Blog</title>
+	<link>https://github.blog</link>
+	<width>32</width>
+	<height>32</height>
+</image> 
+<site xmlns="com-wordpress:feed-additions:1">153214340</site>	<item>
+		<title>Custom repository roles are now GA</title>
+		<link>https://github.blog/changelog/2022-06-06-custom-repository-roles-are-now-ga</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Mon, 06 Jun 2022 20:48:59 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-06-06-custom-repository-roles-are-now-ga</guid>
+
+					<description><![CDATA[Custom repository roles are now GA]]></description>
+										<content:encoded><![CDATA[<p><a href="https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-peoples-access-to-your-organization-with-roles/managing-custom-repository-roles-for-an-organization">Custom repository roles</a> are now GA for GitHub.com and <a href="https://docs.github.com/enterprise-server@3.5/admin/release-notes#custom-repository-roles-are-generally-available">Enterprise Server 3.5</a>.</p>
+<p>Organization admins can create custom repository roles available to all repositories in their organization. Roles can be configured from a set of <a href="https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-peoples-access-to-your-organization-with-roles/managing-custom-repository-roles-for-an-organization#additional-permissions-for-custom-roles">35 fine grained permissions</a> covering discussions, issues, pull requests, repos, and security alerts. Once a role is created, repository admins can assign a custom role to any individual or team in their repository.</p>
+<p>Custom repository roles can be managed in the  Repository roles tab of your Organization settings:</p>
+<p><img src="https://i0.wp.com/user-images.githubusercontent.com/1666363/172208538-271bddc0-f374-4c6c-9c47-e1f246a9235b.png?ssl=1" alt="image" data-recalc-dims="1"></p>
+<p>Custom repository roles are also supported in the GitHub REST APIs. The <a href="https://docs.github.com/en/rest/orgs/custom-roles">Custom Roles API</a> can be used to list all custom repository roles in an organization, and the existing APIs for granting repository access to <a href="https://docs.github.com/en/rest/collaborators/collaborators#add-a-repository-collaborator">individuals</a> and <a href="https://docs.github.com/en/enterprise-cloud@latest/rest/teams/teams#add-or-update-team-repository-permissions">teams</a> support custom repository roles.</p>
+<p>To get started with custom repository roles, <a href="https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-peoples-access-to-your-organization-with-roles/managing-custom-repository-roles-for-an-organization">read the docs</a>.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">65509</post-id>	</item>
+		<item>
+		<title>Increased file size limit when retrieving file contents via REST API</title>
+		<link>https://github.blog/changelog/2022-05-03-increased-file-size-limit-when-retrieving-file-contents-via-rest-api</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Tue, 03 May 2022 23:15:04 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-05-03-increased-file-size-limit-when-retrieving-file-contents-via-rest-api</guid>
+
+					<description><![CDATA[Increased file size limit when retrieving file contents via REST API]]></description>
+										<content:encoded><![CDATA[<p>Previously, the <a href="https://docs.github.com/rest/repos/contents#get-repository-content">Get repository content</a> REST API endpoint had a file size limit of 1 MB. That didn’t correspond to the <a href="https://docs.github.com/rest/repos/contents#create-or-update-file-contents">Create or update file contents</a> endpoint which has a file size limit of 100 MB. Now, both endpoints have a file size limit of 100 MB. However, requests for file contents larger than 1 MB must include the <a href="https://docs.github.com/en/rest/repos/contents#custom-media-types-for-repository-contents"><code>.raw</code> custom media type</a> in the <code>Accept</code> HTTP header, as shown here:</p>
+<pre>
+Accept: application/vnd.github.v3.raw
+</pre>
+<p><a href="https://docs.github.com/en/rest/repos/contents">Read more about GitHub&#039;s REST API endpoints for repository contents</a>.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">64749</post-id>	</item>
+		<item>
+		<title>Enable OAuth Device Authentication Flow for Apps</title>
+		<link>https://github.blog/changelog/2022-03-16-enable-oauth-device-authentication-flow-for-apps</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Thu, 17 Mar 2022 04:40:59 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-03-16-enable-oauth-device-authentication-flow-for-apps</guid>
+
+					<description><![CDATA[Enable OAuth Device Authentication Flow for Apps]]></description>
+										<content:encoded><![CDATA[<p>From today the OAuth Device Authorization flow feature must be manually enabled for all OAuth and GitHub Apps. This change reduces the likelihood of Apps being used in phishing attacks against GitHub users by ensuring integrators are aware of the risks and make a conscious choice to support this form of authentication.</p>
+<p>If you own or manage an OAuth App or GitHub App that makes use of the OAuth Device Authorization flow, you can enable it for your App via its settings page:</p>
+<p><img src="https://i0.wp.com/user-images.githubusercontent.com/75904/155462918-d25c97b8-fe9d-4188-839f-5359c2a85f9f.png?ssl=1" alt="Enable device flow" data-recalc-dims="1"></p>
+<p>The OAuth Device Authorization flow API endpoints will respond with status code 400 to Apps that have not enabled this feature.</p>
+<p><a href="https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#device-flow">Learn more about the OAuth Device Authorization flow.</a></p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">63689</post-id>	</item>
+		<item>
+		<title>Paused&#058; Sunset of Deprecated Teams API Endpoints</title>
+		<link>https://github.blog/changelog/2022-03-04-paused-sunset-of-deprecated-teams-api-endpoints</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Fri, 04 Mar 2022 19:15:19 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-03-04-paused-sunset-of-deprecated-teams-api-endpoints</guid>
+
+					<description><![CDATA[Paused&#058; Sunset of Deprecated Teams API Endpoints]]></description>
+										<content:encoded><![CDATA[<p>We <a href="https://github.blog/changelog/2022-02-22-sunset-notice-deprecated-teams-api-endpoints/">recently announced</a> a plan to sunset deprecated Teams API endpoints over the coming weeks. On March 1, we conducted the first scheduled brownout for 12 hours.</p>
+<p>As we gathered metrics and consumer feedback on the brownout, we formed a new understanding of its impact on our consumers and parallel work. Consequently, we are deciding to <strong>pause the remainder of the sunset</strong>. Instead, we will sunset deprecated Teams API endpoints over a new timeline in the coming months as we invest more deeply into API versioning and our <a href="https://github.com/octokit">Octokit SDKs</a>.</p>
+<p>If you are using a deprecated endpoint under a <code>/teams/:team_id</code> path, we continue to encourage you to switch to the <code>/organizations/:org_id/team/:team_id</code> path. Please refer to the <a href="https://docs.github.com/en/rest/reference/teams">REST API documentation</a> to learn more about supported Teams API endpoints.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">63551</post-id>	</item>
+		<item>
+		<title>Opt in needed to keep OAuth Device Authorization Flow working</title>
+		<link>https://github.blog/changelog/2022-03-02-opt-in-needed-to-keep-oauth-device-authorization-flow-working</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Wed, 02 Mar 2022 22:56:09 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-03-02-opt-in-needed-to-keep-oauth-device-authorization-flow-working</guid>
+
+					<description><![CDATA[Opt in needed to keep OAuth Device Authorization Flow working]]></description>
+										<content:encoded><![CDATA[<p>On March 16 2022 the OAuth Device Authorization flow will become an &quot;opt in&quot; feature for all OAuth and GitHub Apps. This change reduces the likelihood of Apps being used in phishing attacks against GitHub users.</p>
+<p>If you own or manage an OAuth App or GitHub App that makes use of the OAuth Device Authorization flow, you should enable it for your Apps via its settings page:</p>
+<p><img src="https://i0.wp.com/user-images.githubusercontent.com/75904/155462918-d25c97b8-fe9d-4188-839f-5359c2a85f9f.png?ssl=1" alt="Enable device flow" data-recalc-dims="1"></p>
+<p>The OAuth Device Authorization flow API endpoints will respond with status code 400 to Apps that have not opted in to this feature.</p>
+<p><a href="https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#device-flow">Learn more about the OAuth Device Authorization flow.</a></p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">63535</post-id>	</item>
+		<item>
+		<title>Sunset Notice: Deprecated Teams API Endpoints</title>
+		<link>https://github.blog/changelog/2022-02-22-sunset-notice-deprecated-teams-api-endpoints</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Tue, 22 Feb 2022 22:00:25 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-02-22-sunset-notice-deprecated-teams-api-endpoints</guid>
+
+					<description><![CDATA[Sunset Notice&#058; Deprecated Teams API Endpoints]]></description>
+										<content:encoded><![CDATA[<p><em><strong>Update on March 4, 2022:</strong> We have temporarily paused the sunset. Please read the <a href="https://github.blog/changelog/2022-03-04-paused-sunset-of-deprecated-teams-api-endpoints/">official announcement</a> for more information.</em></p>
+<hr>
+<p>In <a href="https://developer.github.com/changes/2020-01-21-moving-the-team-api-endpoints/">early 2020</a>, we moved the Teams API from a top-level path under <code>/teams/:team_id</code> to a scoped path under the organization that owns the team like <code>/organizations/:org_id/team/:team_id</code> and added support to make the API available under a named path like <code>/orgs/:org/teams/:team_slug</code>.</p>
+<p>Over the next few weeks, we will be sunsetting the API endpoints under <code>/teams/:team_id</code>.</p>
+<h3 id="timeline">Timeline</h3>
+<h4 id="brownouts">Brownouts</h4>
+<ul>
+<li><strong>March 1, 2022</strong> for 12 hours starting at 14:00 UTC</li>
+<li><strong>March 8, 2022</strong> for 24 hours starting at 14:00 UTC</li>
+</ul>
+<p>If you make a request to an affected endpoint during the brownouts, GitHub will respond with a client error.</p>
+<h4 id="removal">Removal</h4>
+<ul>
+<li><strong>March 15, 2022</strong> at 14:00 UTC</li>
+</ul>
+<h3 id="affected-endpoints">Affected endpoints</h3>
+<ul>
+<li><code>GET /teams/:team_id</code></li>
+<li><code>PATCH /teams/:team_id</code></li>
+<li><code>DELETE /teams/:team_id</code></li>
+<li><code>GET /teams/:team_id/teams</code></li>
+<li><code>GET /teams/:team_id/repos</code></li>
+<li><code>GET /teams/:team_id/repos/:owner/:repo</code></li>
+<li><code>PUT /teams/:team_id/repos/:owner/:repo</code></li>
+<li><code>DELETE /teams/:team_id/repos/:owner/:repo</code></li>
+<li><code>GET /teams/:team_id/projects</code></li>
+<li><code>GET /teams/:team_id/projects/:project_id</code></li>
+<li><code>PUT /teams/:team_id/projects/:project_id</code></li>
+<li><code>DELETE /teams/:team_id/projects/:project_id</code></li>
+<li><code>GET /teams/:team_id/members</code></li>
+<li><code>GET /teams/:team_id/members/:username</code></li>
+<li><code>PUT /teams/:team_id/members/:username</code></li>
+<li><code>DELETE /teams/:team_id/members/:username</code></li>
+<li><code>GET /teams/:team_id/memberships/:username</code></li>
+<li><code>PUT /teams/:team_id/memberships/:username</code></li>
+<li><code>DELETE /teams/:team_id/memberships/:username</code></li>
+<li><code>GET /teams/:team_id/invitations</code></li>
+</ul>
+<h3 id="steps-to-take">Steps to take</h3>
+<p>The easiest way to update your code is to switch to the <code>/organizations/:org_id/team/:team_id</code> path. If you&#039;re unsure of what <code>org_id</code> to use, you can <code>GET</code> the current team under <code>/teams/:team_id</code> and find the <code>id</code> field inside the <code>organization</code> hash in the response.</p>
+<p>Please refer to the <a href="https://docs.github.com/en/rest/reference/teams">REST API documentation</a> to learn more about supported Teams API endpoints.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">63440</post-id>	</item>
+		<item>
+		<title>Dependabot alerts&#058; access state, fixed alerts, and numeric identifier via GraphQL API</title>
+		<link>https://github.blog/changelog/2022-02-15-dependabot-alerts-access-state-fixed-alerts-and-numeric-identifier-via-graphql-api</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Wed, 16 Feb 2022 00:45:33 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-02-15-dependabot-alerts-access-state-fixed-alerts-and-numeric-identifier-via-graphql-api</guid>
+
+					<description><![CDATA[Dependabot alerts&#058; access state, fixed alerts, and numeric identifier via GraphQL API]]></description>
+										<content:encoded><![CDATA[<p>This release adds support for viewing fixed alerts to the GraphQL API. This update also adds the ability to access and filter by state, as well as access unique numeric identifier.</p>
+<p>The additions include these new fields to a <code>RepositoryVulnerabilityAlert</code>:</p>
+<ul>
+<li><code>number</code></li>
+<li><code>fixed_at</code></li>
+<li><code>fix_reason</code></li>
+<li><code>state</code></li>
+</ul>
+<p>And we&#039;re adding the ability to filter by state on the vulnerability alert object.</p>
+<p>For more information, see Dependabot alerts in the <a href="https://docs.github.com/en/graphql/reference/objects#repositoryvulnerabilityalert">GraphQL API reference</a>.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">63292</post-id>	</item>
+		<item>
+		<title>Legacy Delete reactions REST API removed</title>
+		<link>https://github.blog/changelog/2022-02-11-legacy-delete-reactions-rest-api-removed</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Fri, 11 Feb 2022 16:16:45 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-02-11-legacy-delete-reactions-rest-api-removed</guid>
+
+					<description><![CDATA[Legacy Delete reactions REST API removed]]></description>
+										<content:encoded><![CDATA[<p>In February 2020 we announced the <a href="https://developer.github.com/changes/2020-02-26-new-delete-reactions-endpoints/">deprecation of the general purpose &quot;Delete reactions&quot;</a> REST API in favor of separate REST APIs for each place reactions can be applied. The old endpoint has been removed, which sets us up to scale and support the Reactions API better in the long run.</p>
+<p>Learn more about the supported <a href="https://docs.github.com/en/rest/reference/reactions">REST APIs for deleting reactions</a> for issues, pull request comments, and more.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">63047</post-id>	</item>
+		<item>
+		<title>Code scanning organization-level REST API</title>
+		<link>https://github.blog/changelog/2022-02-07-code-scanning-organization-level-rest-api</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Mon, 07 Feb 2022 17:39:57 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-02-07-code-scanning-organization-level-rest-api</guid>
+
+					<description><![CDATA[Code scanning organization-level REST API]]></description>
+										<content:encoded><![CDATA[<p>Users can now retrieve all their code scanning alerts at the GitHub organization level via the REST API. This new API endpoint supplements the existing <a href="https://docs.github.com/en/rest/reference/code-scanning#list-code-scanning-alerts-for-a-repository">repository level endpoint</a>.</p>
+<p>This API is available on GitHub.com starting today and will also be available to GitHub Enterprise Server users starting version 3.5.</p>
+<p><a href="https://docs.github.com/en/rest/reference/code-scanning">Learn more about the code scanning REST API</a><br />
+<a href="https://github.com/features/security">Learn more about GitHub Advanced Security</a></p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">62897</post-id>	</item>
+		<item>
+		<title>GitHub&#8217;s SSH host keys are now published in the API</title>
+		<link>https://github.blog/changelog/2022-01-18-githubs-ssh-host-keys-are-now-published-in-the-api</link>
+		
+		<dc:creator><![CDATA[Sidi Merzouk]]></dc:creator>
+		<pubDate>Tue, 18 Jan 2022 16:39:58 +0000</pubDate>
+				<guid isPermaLink="false">https://github.blog/changelog/2022-01-18-githubs-ssh-host-keys-are-now-published-in-the-api</guid>
+
+					<description><![CDATA[GitHub's SSH host keys are now published in the API]]></description>
+										<content:encoded><![CDATA[<p>The GitHub <a href="https://api.github.com/meta">metadata endpoint</a> now contains our SSH host keys.<br />
+(We&#039;ll continue offering host key fingerprints as well.)</p>
+<pre><code class="language-jsonc">{
+  // new entry
+  &quot;ssh_keys&quot;: [
+    &quot;ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl&quot;,
+    &quot;ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=&quot;,
+    &quot;ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==&quot;
+  ],
+  // existing entry
+  &quot;ssh_key_fingerprints&quot;: [
+    &quot;SHA256_RSA&quot;: &quot;nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8&quot;,
+    &quot;SHA256_ECDSA&quot;: &quot;p2QAMXNIC1TJYWeIOttrVc98/R1BUFWu3/LiyKgUfQM&quot;,
+    &quot;SHA256_ED25519&quot;: &quot;+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU&quot;
+  ],
+  // ... rest of payload
+}</code></pre>
+<p>These keys are in the OpenSSH <code>known_hosts</code> format for easy inclusion into existing <code>known_hosts</code> files.<br />
+This will make it easier to preconfigure systems which expect to connect via SSH.<br />
+For example, you can prime your CI runners with these keys before starting to fetch from GitHub.</p>
+<p>The keys returned from the API include both SSH host keys that we&#039;re actively using, plus any that we&#039;re advertising via host key rotation for future use.<br />
+Currently, we&#039;re not offering any keys via rotation that aren&#039;t actively in use, but if we announce new host keys in the future, you can find them here as well during the rotation period.</p>
+<p>See <a href="https://docs.github.com/en/rest/reference/meta#get-github-meta-information">the meta API endpoint</a> to learn more.</p>
+]]></content:encoded>
+					
+		
+		
+		<post-id xmlns="com-wordpress:feed-additions:1">62466</post-id>	</item>
+	</channel>
+</rss>
