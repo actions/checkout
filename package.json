@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/actions/checkout#readme",
   "dependencies": {
-    "@actions/core": "^1.2.6",
+    "@actions/core": "^1.9.1",
     "@actions/exec": "^1.0.1",
     "@actions/github": "^2.2.0",
     "@actions/io": "^1.0.1",
