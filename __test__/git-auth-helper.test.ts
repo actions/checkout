@@ -417,7 +417,7 @@ describe('git-auth-helper tests', () => {
           `Did not expect file to exist: '${globalGitConfigPath}'`
         )
       } catch (err) {
-        if (err.code !== 'ENOENT') {
+        if ((err as any)?.code !== 'ENOENT') {
           throw err
         }
       }
@@ -518,12 +518,17 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(4)
       expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
         /unset-all.*insteadOf/
       )
       expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/url.*insteadOf/)
+      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(
+        /url.*insteadOf.*git@github.com:/
+      )
+      expect(mockSubmoduleForeach.mock.calls[3][0]).toMatch(
+        /url.*insteadOf.*org-123456@github.com:/
+      )
     }
   )
 
@@ -601,7 +606,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKeyPath)
       throw new Error('SSH key should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -611,7 +616,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKnownHostsPath)
       throw new Error('SSH known hosts should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -638,10 +643,11 @@ describe('git-auth-helper tests', () => {
     expect(gitConfigContent.indexOf('http.')).toBeLessThan(0)
   })
 
-  const removeGlobalAuth_removesOverride = 'removeGlobalAuth removes override'
-  it(removeGlobalAuth_removesOverride, async () => {
+  const removeGlobalConfig_removesOverride =
+    'removeGlobalConfig removes override'
+  it(removeGlobalConfig_removesOverride, async () => {
     // Arrange
-    await setup(removeGlobalAuth_removesOverride)
+    await setup(removeGlobalConfig_removesOverride)
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
     await authHelper.configureAuth()
     await authHelper.configureGlobalAuth()
@@ -650,7 +656,7 @@ describe('git-auth-helper tests', () => {
     await fs.promises.stat(path.join(git.env['HOME'], '.gitconfig'))
 
     // Act
-    await authHelper.removeGlobalAuth()
+    await authHelper.removeGlobalConfig()
 
     // Assert
     expect(git.env['HOME']).toBeUndefined()
@@ -658,7 +664,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(homeOverride)
       throw new Error(`Should have been deleted '${homeOverride}'`)
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -770,7 +776,9 @@ async function setup(testName: string): Promise<void> {
     repositoryPath: '',
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
-    sshStrict: true
+    sshStrict: true,
+    workflowOrganizationId: 123456,
+    setSafeDirectory: true
   }
 }
 

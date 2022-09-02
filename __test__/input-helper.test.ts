@@ -1,9 +1,9 @@
-import * as assert from 'assert'
 import * as core from '@actions/core'
 import * as fsHelper from '../lib/fs-helper'
 import * as github from '@actions/github'
 import * as inputHelper from '../lib/input-helper'
 import * as path from 'path'
+import * as workflowContextHelper from '../lib/workflow-context-helper'
 import {IGitSourceSettings} from '../lib/git-source-settings'
 
 const originalGitHubWorkspace = process.env['GITHUB_WORKSPACE']
@@ -43,6 +43,11 @@ describe('input-helper tests', () => {
       .spyOn(fsHelper, 'directoryExistsSync')
       .mockImplementation((path: string) => path == gitHubWorkspace)
 
+    // Mock ./workflowContextHelper getOrganizationId()
+    jest
+      .spyOn(workflowContextHelper, 'getOrganizationId')
+      .mockImplementation(() => Promise.resolve(123456))
+
     // GitHub workspace
     process.env['GITHUB_WORKSPACE'] = gitHubWorkspace
   })
@@ -67,8 +72,8 @@ describe('input-helper tests', () => {
     jest.restoreAllMocks()
   })
 
-  it('sets defaults', () => {
-    const settings: IGitSourceSettings = inputHelper.getInputs()
+  it('sets defaults', async () => {
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings).toBeTruthy()
     expect(settings.authToken).toBeFalsy()
     expect(settings.clean).toBe(true)
@@ -80,13 +85,14 @@ describe('input-helper tests', () => {
     expect(settings.repositoryName).toBe('some-repo')
     expect(settings.repositoryOwner).toBe('some-owner')
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
+    expect(settings.setSafeDirectory).toBe(true)
   })
 
-  it('qualifies ref', () => {
+  it('qualifies ref', async () => {
     let originalRef = github.context.ref
     try {
       github.context.ref = 'some-unqualified-ref'
-      const settings: IGitSourceSettings = inputHelper.getInputs()
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
       expect(settings).toBeTruthy()
       expect(settings.commit).toBe('1234567890123456789012345678901234567890')
       expect(settings.ref).toBe('refs/heads/some-unqualified-ref')
@@ -95,32 +101,42 @@ describe('input-helper tests', () => {
     }
   })
 
-  it('requires qualified repo', () => {
+  it('requires qualified repo', async () => {
     inputs.repository = 'some-unqualified-repo'
-    assert.throws(() => {
-      inputHelper.getInputs()
-    }, /Invalid repository 'some-unqualified-repo'/)
+    try {
+      await inputHelper.getInputs()
+      throw 'should not reach here'
+    } catch (err) {
+      expect(`(${(err as any).message}`).toMatch(
+        "Invalid repository 'some-unqualified-repo'"
+      )
+    }
   })
 
-  it('roots path', () => {
+  it('roots path', async () => {
     inputs.path = 'some-directory/some-subdirectory'
-    const settings: IGitSourceSettings = inputHelper.getInputs()
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.repositoryPath).toBe(
       path.join(gitHubWorkspace, 'some-directory', 'some-subdirectory')
     )
   })
 
-  it('sets ref to empty when explicit sha', () => {
+  it('sets ref to empty when explicit sha', async () => {
     inputs.ref = '1111111111222222222233333333334444444444'
-    const settings: IGitSourceSettings = inputHelper.getInputs()
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBeFalsy()
     expect(settings.commit).toBe('1111111111222222222233333333334444444444')
   })
 
-  it('sets sha to empty when explicit ref', () => {
+  it('sets sha to empty when explicit ref', async () => {
     inputs.ref = 'refs/heads/some-other-ref'
-    const settings: IGitSourceSettings = inputHelper.getInputs()
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
+  })
+
+  it('sets workflow organization ID', async () => {
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.workflowOrganizationId).toBe(123456)
   })
 })

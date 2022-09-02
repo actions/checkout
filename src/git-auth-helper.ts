@@ -19,8 +19,9 @@ export interface IGitAuthHelper {
   configureAuth(): Promise<void>
   configureGlobalAuth(): Promise<void>
   configureSubmoduleAuth(): Promise<void>
+  configureTempGlobalConfig(): Promise<string>
   removeAuth(): Promise<void>
-  removeGlobalAuth(): Promise<void>
+  removeGlobalConfig(): Promise<void>
 }
 
 export function createAuthHelper(
@@ -37,7 +38,7 @@ class GitAuthHelper {
   private readonly tokenConfigValue: string
   private readonly tokenPlaceholderConfigValue: string
   private readonly insteadOfKey: string
-  private readonly insteadOfValue: string
+  private readonly insteadOfValues: string[] = []
   private sshCommand = ''
   private sshKeyPath = ''
   private sshKnownHostsPath = ''
@@ -45,7 +46,7 @@ class GitAuthHelper {
 
   constructor(
     gitCommandManager: IGitCommandManager,
-    gitSourceSettings?: IGitSourceSettings
+    gitSourceSettings: IGitSourceSettings | undefined
   ) {
     this.git = gitCommandManager
     this.settings = gitSourceSettings || (({} as unknown) as IGitSourceSettings)
@@ -63,7 +64,12 @@ class GitAuthHelper {
 
     // Instead of SSH URL
     this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf` // "origin" is SCHEME://HOSTNAME[:PORT]
-    this.insteadOfValue = `git@${serverUrl.hostname}:`
+    this.insteadOfValues.push(`git@${serverUrl.hostname}:`)
+    if (this.settings.workflowOrganizationId) {
+      this.insteadOfValues.push(
+        `org-${this.settings.workflowOrganizationId}@github.com:`
+      )
+    }
   }
 
   async configureAuth(): Promise<void> {
@@ -75,7 +81,11 @@ class GitAuthHelper {
     await this.configureToken()
   }
 
-  async configureGlobalAuth(): Promise<void> {
+  async configureTempGlobalConfig(): Promise<string> {
+    // Already setup global config
+    if (this.temporaryHomePath?.length > 0) {
+      return path.join(this.temporaryHomePath, '.gitconfig')
+    }
     // Create a temp home directory
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
@@ -94,7 +104,7 @@ class GitAuthHelper {
       await fs.promises.stat(gitConfigPath)
       configExists = true
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -105,20 +115,28 @@ class GitAuthHelper {
       await fs.promises.writeFile(newGitConfigPath, '')
     }
 
-    try {
-      // Override HOME
-      core.info(
-        `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
-      )
-      this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
+    // Override HOME
+    core.info(
+      `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
+    )
+    this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
 
+    return newGitConfigPath
+  }
+
+  async configureGlobalAuth(): Promise<void> {
+    // 'configureTempGlobalConfig' noops if already set, just returns the path
+    const newGitConfigPath = await this.configureTempGlobalConfig()
+    try {
       // Configure the token
       await this.configureToken(newGitConfigPath, true)
 
       // Configure HTTPS instead of SSH
       await this.git.tryConfigUnset(this.insteadOfKey, true)
       if (!this.settings.sshKey) {
-        await this.git.config(this.insteadOfKey, this.insteadOfValue, true)
+        for (const insteadOfValue of this.insteadOfValues) {
+          await this.git.config(this.insteadOfKey, insteadOfValue, true, true)
+        }
       }
     } catch (err) {
       // Unset in case somehow written to the real global config
@@ -148,7 +166,7 @@ class GitAuthHelper {
         output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || []
       for (const configPath of configPaths) {
         core.debug(`Replacing token placeholder in '${configPath}'`)
-        this.replaceTokenPlaceholder(configPath)
+        await this.replaceTokenPlaceholder(configPath)
       }
 
       if (this.settings.sshKey) {
@@ -159,10 +177,12 @@ class GitAuthHelper {
         )
       } else {
         // Configure HTTPS instead of SSH
-        await this.git.submoduleForeach(
-          `git config --local '${this.insteadOfKey}' '${this.insteadOfValue}'`,
-          this.settings.nestedSubmodules
-        )
+        for (const insteadOfValue of this.insteadOfValues) {
+          await this.git.submoduleForeach(
+            `git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`,
+            this.settings.nestedSubmodules
+          )
+        }
       }
     }
   }
@@ -172,10 +192,12 @@ class GitAuthHelper {
     await this.removeToken()
   }
 
-  async removeGlobalAuth(): Promise<void> {
-    core.debug(`Unsetting HOME override`)
-    this.git.removeEnvironmentVariable('HOME')
-    await io.rmRF(this.temporaryHomePath)
+  async removeGlobalConfig(): Promise<void> {
+    if (this.temporaryHomePath?.length > 0) {
+      core.debug(`Unsetting HOME override`)
+      this.git.removeEnvironmentVariable('HOME')
+      await io.rmRF(this.temporaryHomePath)
+    }
   }
 
   private async configureSsh(): Promise<void> {
@@ -213,7 +235,7 @@ class GitAuthHelper {
         await fs.promises.readFile(userKnownHostsPath)
       ).toString()
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -302,7 +324,7 @@ class GitAuthHelper {
       try {
         await io.rmRF(keyPath)
       } catch (err) {
-        core.debug(err.message)
+        core.debug(`${(err as any)?.message ?? err}`)
         core.warning(`Failed to remove SSH key '${keyPath}'`)
       }
     }
