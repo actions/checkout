@@ -97,6 +97,11 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # config --global --add safe.directory <path>`
     # Default: true
     set-safe-directory: ''
+
+    # The base URL for the GitHub instance that you are trying to clone from, will use
+    # environment defaults to fetch from the same instance that the workflow is
+    # running from unless specified.
+    github-server-url: ''
 ```
 <!-- end usage -->
 

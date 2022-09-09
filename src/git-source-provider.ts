@@ -93,7 +93,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         settings.repositoryName,
         settings.ref,
         settings.commit,
-        settings.repositoryPath
+        settings.repositoryPath,
+        settings.githubServerUrl
       )
       return
     }
@@ -138,7 +139,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         settings.ref = await githubApiHelper.getDefaultBranch(
           settings.authToken,
           settings.repositoryOwner,
-          settings.repositoryName
+          settings.repositoryName,
+          settings.githubServerUrl
         )
       }
       core.endGroup()
@@ -232,7 +234,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       settings.repositoryOwner,
       settings.repositoryName,
       settings.ref,
-      settings.commit
+      settings.commit,
+      settings.githubServerUrl
     )
   } finally {
     // Remove auth

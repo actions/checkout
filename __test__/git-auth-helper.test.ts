@@ -778,7 +778,8 @@ async function setup(testName: string): Promise<void> {
     sshKnownHosts: '',
     sshStrict: true,
     workflowOrganizationId: 123456,
-    setSafeDirectory: true
+    setSafeDirectory: true,
+    githubServerUrl: undefined
   }
 }
 
