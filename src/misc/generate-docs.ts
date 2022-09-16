@@ -10,10 +10,10 @@ import * as yaml from 'js-yaml'
 
 function updateUsage(
   actionReference: string,
-  actionYamlPath: string = 'action.yml',
-  readmePath: string = 'README.md',
-  startToken: string = '<!-- start usage -->',
-  endToken: string = '<!-- end usage -->'
+  actionYamlPath = 'action.yml',
+  readmePath = 'README.md',
+  startToken = '<!-- start usage -->',
+  endToken = '<!-- end usage -->'
 ): void {
   if (!actionReference) {
     throw new Error('Parameter actionReference must not be empty')
@@ -120,7 +120,7 @@ function updateUsage(
 }
 
 updateUsage(
-  'actions/checkout@v2',
+  'actions/checkout@v3',
   path.join(__dirname, '..', '..', 'action.yml'),
   path.join(__dirname, '..', '..', 'README.md')
 )

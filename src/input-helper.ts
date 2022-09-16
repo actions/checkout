@@ -2,9 +2,10 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
+import * as workflowContextHelper from './workflow-context-helper'
 import {IGitSourceSettings} from './git-source-settings'
 
-export function getInputs(): IGitSourceSettings {
+export async function getInputs(): Promise<IGitSourceSettings> {
   const result = ({} as unknown) as IGitSourceSettings
 
   // GitHub workspace
@@ -63,7 +64,7 @@ export function getInputs(): IGitSourceSettings {
       result.commit = github.context.sha
 
       // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
-      // the ref is unqualifed like "master" instead of "refs/heads/master".
+      // the ref is unqualifed like "main" instead of "refs/heads/main".
       if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
         result.ref = `refs/heads/${result.ref}`
       }
@@ -118,5 +119,11 @@ export function getInputs(): IGitSourceSettings {
   result.persistCredentials =
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
+  // Workflow organization ID
+  result.workflowOrganizationId = await workflowContextHelper.getOrganizationId()
+
+  // Set safe.directory in git global config.
+  result.setSafeDirectory =
+    (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE'
   return result
 }

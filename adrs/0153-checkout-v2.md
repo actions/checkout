@@ -24,7 +24,7 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: >
       The branch, tag or SHA to checkout. When checking out the repository that
       triggered a workflow, this defaults to the reference or SHA for that
-      event.  Otherwise, defaults to `master`.
+      event.  Otherwise, uses the default branch.
   token:
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured
@@ -277,7 +277,7 @@ Note:
 ### Branching strategy and release tags
 
 - Create a servicing branch for V1: `releases/v1`
-- Merge the changes into `master`
+- Merge the changes into the default branch
 - Release using a new tag `preview`
 - When stable, release using a new tag `v2`
 
