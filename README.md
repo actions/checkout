@@ -2,7 +2,7 @@
   <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
 </p>
 
-# Checkout V2
+# Checkout V3
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -14,27 +14,14 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # What's new
 
-- Improved performance
-  - Fetches only a single commit by default
-- Script authenticated git commands
-  - Auth token persisted in the local git config
-- Supports SSH
-- Creates a local branch
-  - No longer detached HEAD when checking out a branch
-- Improved layout
-  - The input `path` is always relative to $GITHUB_WORKSPACE
-  - Aligns better with container actions, where $GITHUB_WORKSPACE gets mapped in
-- Fallback to REST API download
-  - When Git 2.18 or higher is not in the PATH, the REST API will be used to download the files
-  - When using a job container, the container's PATH is used
-
-Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
+- Updated to the node16 runtime by default
+  - This requires a minimum [Actions Runner](https://github.com/actions/runner/releases/tag/v2.285.0) version of v2.285.0 to run, which is by default available in GHES 3.4 or later.
 
 # Usage
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -118,11 +105,12 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     fetch-depth: 0
 ```
@@ -130,7 +118,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     ref: my-branch
 ```
@@ -138,7 +126,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -148,12 +136,12 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -163,10 +151,10 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
 
 - name: Checkout tools repo
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -176,15 +164,15 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v2
+  uses: actions/checkout@v3
   with:
     repository: my-org/my-private-tools
-    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
+    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
     path: my-tools
 ```
 
@@ -194,7 +182,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v3
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -204,13 +192,31 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ```yaml
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
     types: [opened, synchronize, closed]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+```
+
+## Push a commit using the built-in token
+
+```yaml
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          date > generated.txt
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generated"
+          git push
 ```
 
 # License

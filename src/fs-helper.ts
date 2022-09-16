@@ -9,7 +9,7 @@ export function directoryExistsSync(path: string, required?: boolean): boolean {
   try {
     stats = fs.statSync(path)
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if ((error as any)?.code === 'ENOENT') {
       if (!required) {
         return false
       }
@@ -18,7 +18,8 @@ export function directoryExistsSync(path: string, required?: boolean): boolean {
     }
 
     throw new Error(
-      `Encountered an error when checking whether path '${path}' exists: ${error.message}`
+      `Encountered an error when checking whether path '${path}' exists: ${(error as any)
+        ?.message ?? error}`
     )
   }
 
@@ -39,12 +40,13 @@ export function existsSync(path: string): boolean {
   try {
     fs.statSync(path)
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if ((error as any)?.code === 'ENOENT') {
       return false
     }
 
     throw new Error(
-      `Encountered an error when checking whether path '${path}' exists: ${error.message}`
+      `Encountered an error when checking whether path '${path}' exists: ${(error as any)
+        ?.message ?? error}`
     )
   }
 
@@ -60,12 +62,13 @@ export function fileExistsSync(path: string): boolean {
   try {
     stats = fs.statSync(path)
   } catch (error) {
-    if (error.code === 'ENOENT') {
+    if ((error as any)?.code === 'ENOENT') {
       return false
     }
 
     throw new Error(
-      `Encountered an error when checking whether path '${path}' exists: ${error.message}`
+      `Encountered an error when checking whether path '${path}' exists: ${(error as any)
+        ?.message ?? error}`
     )
   }
 
