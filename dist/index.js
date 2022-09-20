@@ -1297,51 +1297,6 @@ module.exports._enoent = enoent;
 
 /***/ }),
 
-/***/ 24:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOctokit = exports.Octokit = void 0;
-const github = __importStar(__webpack_require__(469));
-const url_helper_1 = __webpack_require__(81);
-// Centralize all Octokit references by re-exporting
-var rest_1 = __webpack_require__(0);
-Object.defineProperty(exports, "Octokit", { enumerable: true, get: function () { return rest_1.Octokit; } });
-function getOctokit(authToken, opts) {
-    const options = {
-        baseUrl: (0, url_helper_1.getServerApiUrl)(opts.baseUrl)
-    };
-    if (opts.userAgent) {
-        options.userAgent = opts.userAgent;
-    }
-    return new github.GitHub(authToken, options);
-}
-exports.getOctokit = getOctokit;
-
-
-/***/ }),
-
 /***/ 26:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -4127,6 +4082,51 @@ function authenticationPlugin(octokit, options) {
 
 /***/ }),
 
+/***/ 195:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getOctokit = exports.Octokit = void 0;
+const github = __importStar(__webpack_require__(469));
+const url_helper_1 = __webpack_require__(81);
+// Centralize all Octokit references by re-exporting
+var rest_1 = __webpack_require__(0);
+Object.defineProperty(exports, "Octokit", { enumerable: true, get: function () { return rest_1.Octokit; } });
+function getOctokit(authToken, opts) {
+    const options = {
+        baseUrl: (0, url_helper_1.getServerApiUrl)(opts.baseUrl)
+    };
+    if (opts.userAgent) {
+        options.userAgent = opts.userAgent;
+    }
+    return new github.GitHub(authToken, options);
+}
+exports.getOctokit = getOctokit;
+
+
+/***/ }),
+
 /***/ 197:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -4340,7 +4340,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkCommitInfo = exports.testRef = exports.getRefSpec = exports.getRefSpecForAllHistory = exports.getCheckoutInfo = exports.tagsRefSpec = void 0;
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
-const octokit_helper_1 = __webpack_require__(24);
+const octokit_provider_1 = __webpack_require__(195);
 const url_helper_1 = __webpack_require__(81);
 exports.tagsRefSpec = '+refs/tags/*:refs/tags/*';
 function getCheckoutInfo(git, ref, commit) {
@@ -4541,7 +4541,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
             const actualHeadSha = match[1];
             if (actualHeadSha !== expectedHeadSha) {
                 core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
-                const octokit = (0, octokit_helper_1.getOctokit)(token, {
+                const octokit = (0, octokit_provider_1.getOctokit)(token, {
                     baseUrl: baseUrl,
                     userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
                 });
@@ -11028,7 +11028,7 @@ const path = __importStar(__webpack_require__(622));
 const retryHelper = __importStar(__webpack_require__(587));
 const toolCache = __importStar(__webpack_require__(533));
 const v4_1 = __importDefault(__webpack_require__(826));
-const octokit_helper_1 = __webpack_require__(24);
+const octokit_provider_1 = __webpack_require__(195);
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -11089,7 +11089,7 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             var _a;
             core.info('Retrieving the default branch name');
-            const octokit = (0, octokit_helper_1.getOctokit)(authToken, { baseUrl: baseUrl });
+            const octokit = (0, octokit_provider_1.getOctokit)(authToken, { baseUrl: baseUrl });
             let result;
             try {
                 // Get the default branch from the repo info
@@ -11121,7 +11121,7 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
 exports.getDefaultBranch = getDefaultBranch;
 function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = (0, octokit_helper_1.getOctokit)(authToken, { baseUrl: baseUrl });
+        const octokit = (0, octokit_provider_1.getOctokit)(authToken, { baseUrl: baseUrl });
         const params = {
             owner: owner,
             repo: repo,

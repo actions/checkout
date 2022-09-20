@@ -100,7 +100,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
     # The base URL for the GitHub instance that you are trying to clone from, will use
     # environment defaults to fetch from the same instance that the workflow is
-    # running from unless specified.
+    # running from unless specified. Example URLs are https://github.com or
+    # https://my-ghes-server.example.com
     github-server-url: ''
 ```
 <!-- end usage -->

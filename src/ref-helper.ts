@@ -1,7 +1,7 @@
 import {IGitCommandManager} from './git-command-manager'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {getOctokit} from './octokit-helper'
+import {getOctokit} from './octokit-provider'
 import {isGhes} from './url-helper'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'

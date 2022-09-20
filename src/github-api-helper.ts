@@ -6,7 +6,7 @@ import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
 import {default as uuid} from 'uuid/v4'
-import {getOctokit, Octokit} from './octokit-helper'
+import {getOctokit, Octokit} from './octokit-provider'
 
 const IS_WINDOWS = process.platform === 'win32'
 
