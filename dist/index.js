@@ -1935,13 +1935,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServerUrl = exports.getFetchUrl = void 0;
+exports.isGhes = exports.getServerApiUrl = exports.getServerUrl = exports.getFetchUrl = void 0;
 const assert = __importStar(__webpack_require__(357));
 const url_1 = __webpack_require__(835);
 function getFetchUrl(settings) {
     assert.ok(settings.repositoryOwner, 'settings.repositoryOwner must be defined');
     assert.ok(settings.repositoryName, 'settings.repositoryName must be defined');
-    const serviceUrl = getServerUrl();
+    const serviceUrl = getServerUrl(settings.githubServerUrl);
     const encodedOwner = encodeURIComponent(settings.repositoryOwner);
     const encodedName = encodeURIComponent(settings.repositoryName);
     if (settings.sshKey) {
@@ -1951,13 +1951,27 @@ function getFetchUrl(settings) {
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
 }
 exports.getFetchUrl = getFetchUrl;
-function getServerUrl() {
-    // todo: remove GITHUB_URL after support for GHES Alpha is no longer needed
-    return new url_1.URL(process.env['GITHUB_SERVER_URL'] ||
-        process.env['GITHUB_URL'] ||
-        'https://github.com');
+function getServerUrl(url) {
+    let urlValue = url && url.trim().length > 0
+        ? url
+        : process.env['GITHUB_SERVER_URL'] || 'https://github.com';
+    return new url_1.URL(urlValue);
 }
 exports.getServerUrl = getServerUrl;
+function getServerApiUrl(url) {
+    let apiUrl = 'https://api.github.com';
+    if (isGhes(url)) {
+        const serverUrl = getServerUrl(url);
+        apiUrl = new url_1.URL(`${serverUrl.origin}/api/v3`).toString();
+    }
+    return apiUrl;
+}
+exports.getServerApiUrl = getServerApiUrl;
+function isGhes(url) {
+    const ghUrl = getServerUrl(url);
+    return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM';
+}
+exports.isGhes = isGhes;
 
 
 /***/ }),
@@ -4068,6 +4082,51 @@ function authenticationPlugin(octokit, options) {
 
 /***/ }),
 
+/***/ 195:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getOctokit = exports.Octokit = void 0;
+const github = __importStar(__webpack_require__(469));
+const url_helper_1 = __webpack_require__(81);
+// Centralize all Octokit references by re-exporting
+var rest_1 = __webpack_require__(0);
+Object.defineProperty(exports, "Octokit", { enumerable: true, get: function () { return rest_1.Octokit; } });
+function getOctokit(authToken, opts) {
+    const options = {
+        baseUrl: (0, url_helper_1.getServerApiUrl)(opts.baseUrl)
+    };
+    if (opts.userAgent) {
+        options.userAgent = opts.userAgent;
+    }
+    return new github.GitHub(authToken, options);
+}
+exports.getOctokit = getOctokit;
+
+
+/***/ }),
+
 /***/ 197:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -4279,9 +4338,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkCommitInfo = exports.testRef = exports.getRefSpec = exports.getRefSpecForAllHistory = exports.getCheckoutInfo = exports.tagsRefSpec = void 0;
-const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
+const octokit_provider_1 = __webpack_require__(195);
+const url_helper_1 = __webpack_require__(81);
 exports.tagsRefSpec = '+refs/tags/*:refs/tags/*';
 function getCheckoutInfo(git, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -4431,12 +4491,12 @@ function testRef(git, ref, commit) {
     });
 }
 exports.testRef = testRef;
-function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit) {
+function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit, baseUrl) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // GHES?
-            if (isGhes()) {
+            if ((0, url_helper_1.isGhes)(baseUrl)) {
                 return;
             }
             // Auth token?
@@ -4481,7 +4541,8 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
             const actualHeadSha = match[1];
             if (actualHeadSha !== expectedHeadSha) {
                 core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
-                const octokit = new github.GitHub(token, {
+                const octokit = (0, octokit_provider_1.getOctokit)(token, {
+                    baseUrl: baseUrl,
                     userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
                 });
                 yield octokit.repos.get({ owner: repositoryOwner, repo: repositoryName });
@@ -4506,10 +4567,6 @@ function select(obj, path) {
     }
     const key = path.substr(0, i);
     return select(obj[key], path.substr(i + 1));
-}
-function isGhes() {
-    const ghUrl = new url_1.URL(process.env['GITHUB_SERVER_URL'] || 'https://github.com');
-    return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM';
 }
 
 
@@ -6561,7 +6618,7 @@ class GitAuthHelper {
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
         // Token auth header
-        const serverUrl = urlHelper.getServerUrl();
+        const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl);
         this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader`; // "origin" is SCHEME://HOSTNAME[:PORT]
         const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
         core.setSecret(basicCredential);
@@ -7382,7 +7439,7 @@ function getSource(settings) {
                 else if (settings.sshKey) {
                     throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
                 }
-                yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
+                yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath, settings.githubServerUrl);
                 return;
             }
             // Save state for POST action
@@ -7415,7 +7472,7 @@ function getSource(settings) {
                     settings.ref = yield git.getDefaultBranch(repositoryUrl);
                 }
                 else {
-                    settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
+                    settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.githubServerUrl);
                 }
                 core.endGroup();
             }
@@ -7481,7 +7538,7 @@ function getSource(settings) {
             // Log commit sha
             yield git.log1("--format='%H'");
             // Check for incorrect pull request merge commit
-            yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit);
+            yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.githubServerUrl);
         }
         finally {
             // Remove auth
@@ -10966,24 +11023,24 @@ exports.getDefaultBranch = exports.downloadRepository = void 0;
 const assert = __importStar(__webpack_require__(357));
 const core = __importStar(__webpack_require__(470));
 const fs = __importStar(__webpack_require__(747));
-const github = __importStar(__webpack_require__(469));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const retryHelper = __importStar(__webpack_require__(587));
 const toolCache = __importStar(__webpack_require__(533));
 const v4_1 = __importDefault(__webpack_require__(826));
+const octokit_provider_1 = __webpack_require__(195);
 const IS_WINDOWS = process.platform === 'win32';
-function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath) {
+function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         // Determine the default branch
         if (!ref && !commit) {
             core.info('Determining the default branch');
-            ref = yield getDefaultBranch(authToken, owner, repo);
+            ref = yield getDefaultBranch(authToken, owner, repo, baseUrl);
         }
         // Download the archive
         let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Downloading the archive');
-            return yield downloadArchive(authToken, owner, repo, ref, commit);
+            return yield downloadArchive(authToken, owner, repo, ref, commit, baseUrl);
         }));
         // Write archive to disk
         core.info('Writing archive to disk');
@@ -11027,12 +11084,12 @@ exports.downloadRepository = downloadRepository;
 /**
  * Looks up the default branch name
  */
-function getDefaultBranch(authToken, owner, repo) {
+function getDefaultBranch(authToken, owner, repo, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             var _a;
             core.info('Retrieving the default branch name');
-            const octokit = new github.GitHub(authToken);
+            const octokit = (0, octokit_provider_1.getOctokit)(authToken, { baseUrl: baseUrl });
             let result;
             try {
                 // Get the default branch from the repo info
@@ -11062,9 +11119,9 @@ function getDefaultBranch(authToken, owner, repo) {
     });
 }
 exports.getDefaultBranch = getDefaultBranch;
-function downloadArchive(authToken, owner, repo, ref, commit) {
+function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = new github.GitHub(authToken);
+        const octokit = (0, octokit_provider_1.getOctokit)(authToken, { baseUrl: baseUrl });
         const params = {
             owner: owner,
             repo: repo,
@@ -17330,6 +17387,9 @@ function getInputs() {
         // Set safe.directory in git global config.
         result.setSafeDirectory =
             (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
+        // Determine the GitHub URL that the repository is being hosted from
+        result.githubServerUrl = core.getInput('github-server-url');
+        core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
         return result;
     });
 }
