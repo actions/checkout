@@ -7429,7 +7429,7 @@ function getSource(settings) {
             if (isExisting) {
                 yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
             }
-            if (!git) {
+            if (!git || settings.forceApiDownload) {
                 // Downloading using REST API
                 core.info(`The repository will be downloaded using the GitHub REST API`);
                 core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
@@ -17390,6 +17390,9 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Toggle force-api-download
+        result.forceApiDownload =
+            (core.getInput('force-api-download') || 'false').toUpperCase() === 'TRUE';
         return result;
     });
 }

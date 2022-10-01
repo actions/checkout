@@ -71,7 +71,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       )
     }
 
-    if (!git) {
+    if (!git || settings.forceApiDownload) {
       // Downloading using REST API
       core.info(`The repository will be downloaded using the GitHub REST API`)
       core.info(
