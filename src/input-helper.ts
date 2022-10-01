@@ -130,5 +130,8 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // Toggle force-api-download
+  result.forceApiDownload =
+    (core.getInput('force-api-download') || 'false').toUpperCase() === 'TRUE'
   return result
 }

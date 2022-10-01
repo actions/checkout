@@ -74,6 +74,10 @@ inputs:
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false
+  force-api-download:
+    description: Force usage of REST API for downloading ref, even if git is installed locally.
+    required: false
+    default: false
 runs:
   using: node16
   main: dist/index.js

@@ -88,4 +88,9 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * Force the use of API download instead of git commands
+   */
+  forceApiDownload: boolean
 }

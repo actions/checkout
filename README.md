@@ -103,6 +103,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Force usage of REST API for downloading ref, even if git is installed locally.
+    # Default: false
+    force-api-download: ''
 ```
 <!-- end usage -->
 
