@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.1.0
+- [Use @actions/core `saveState` and `getState`](https://github.com/actions/checkout/pull/939)
+- [Add `github-server-url` input](https://github.com/actions/checkout/pull/922)
+
 ## v3.0.2
 - [Add input `set-safe-directory`](https://github.com/actions/checkout/pull/770)
 
