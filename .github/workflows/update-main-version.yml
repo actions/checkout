@@ -10,7 +10,7 @@ on:
       main_version:
         type: choice
         description: The main version to update
-        options: 
+        options:
           - v3
 
 jobs:
