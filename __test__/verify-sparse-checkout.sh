@@ -1,9 +1,5 @@
 #!/bin/bash
 
-## REMOVE THIS
-exit 0
-## REMOVE THIS
-
 if [ ! -f "./sparse-checkout/root.txt" ]; then
   echo "Expected file 'root.txt' to exist"
   exit 1
