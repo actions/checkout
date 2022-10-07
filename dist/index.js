@@ -1935,13 +1935,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getServerUrl = exports.getFetchUrl = void 0;
+exports.isGhes = exports.getServerApiUrl = exports.getServerUrl = exports.getFetchUrl = void 0;
 const assert = __importStar(__webpack_require__(357));
 const url_1 = __webpack_require__(835);
 function getFetchUrl(settings) {
     assert.ok(settings.repositoryOwner, 'settings.repositoryOwner must be defined');
     assert.ok(settings.repositoryName, 'settings.repositoryName must be defined');
-    const serviceUrl = getServerUrl();
+    const serviceUrl = getServerUrl(settings.githubServerUrl);
     const encodedOwner = encodeURIComponent(settings.repositoryOwner);
     const encodedName = encodeURIComponent(settings.repositoryName);
     if (settings.sshKey) {
@@ -1951,13 +1951,27 @@ function getFetchUrl(settings) {
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
 }
 exports.getFetchUrl = getFetchUrl;
-function getServerUrl() {
-    // todo: remove GITHUB_URL after support for GHES Alpha is no longer needed
-    return new url_1.URL(process.env['GITHUB_SERVER_URL'] ||
-        process.env['GITHUB_URL'] ||
-        'https://github.com');
+function getServerUrl(url) {
+    let urlValue = url && url.trim().length > 0
+        ? url
+        : process.env['GITHUB_SERVER_URL'] || 'https://github.com';
+    return new url_1.URL(urlValue);
 }
 exports.getServerUrl = getServerUrl;
+function getServerApiUrl(url) {
+    let apiUrl = 'https://api.github.com';
+    if (isGhes(url)) {
+        const serverUrl = getServerUrl(url);
+        apiUrl = new url_1.URL(`${serverUrl.origin}/api/v3`).toString();
+    }
+    return apiUrl;
+}
+exports.getServerApiUrl = getServerApiUrl;
+function isGhes(url) {
+    const ghUrl = getServerUrl(url);
+    return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM';
+}
+exports.isGhes = isGhes;
 
 
 /***/ }),
@@ -3592,49 +3606,60 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.RepositoryPath = exports.IsPost = void 0;
-const coreCommand = __importStar(__webpack_require__(431));
+exports.setSafeDirectory = exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
+const core = __importStar(__webpack_require__(470));
 /**
  * Indicates whether the POST action is running
  */
-exports.IsPost = !!process.env['STATE_isPost'];
+exports.IsPost = !!core.getState('isPost');
 /**
  * The repository path for the POST action. The value is empty during the MAIN action.
  */
-exports.RepositoryPath = process.env['STATE_repositoryPath'] || '';
+exports.RepositoryPath = core.getState('repositoryPath');
+/**
+ * The set-safe-directory for the POST action. The value is set if input: 'safe-directory' is set during the MAIN action.
+ */
+exports.PostSetSafeDirectory = core.getState('setSafeDirectory') === 'true';
 /**
  * The SSH key path for the POST action. The value is empty during the MAIN action.
  */
-exports.SshKeyPath = process.env['STATE_sshKeyPath'] || '';
+exports.SshKeyPath = core.getState('sshKeyPath');
 /**
  * The SSH known hosts path for the POST action. The value is empty during the MAIN action.
  */
-exports.SshKnownHostsPath = process.env['STATE_sshKnownHostsPath'] || '';
+exports.SshKnownHostsPath = core.getState('sshKnownHostsPath');
 /**
  * Save the repository path so the POST action can retrieve the value.
  */
 function setRepositoryPath(repositoryPath) {
-    coreCommand.issueCommand('save-state', { name: 'repositoryPath' }, repositoryPath);
+    core.saveState('repositoryPath', repositoryPath);
 }
 exports.setRepositoryPath = setRepositoryPath;
 /**
  * Save the SSH key path so the POST action can retrieve the value.
  */
 function setSshKeyPath(sshKeyPath) {
-    coreCommand.issueCommand('save-state', { name: 'sshKeyPath' }, sshKeyPath);
+    core.saveState('sshKeyPath', sshKeyPath);
 }
 exports.setSshKeyPath = setSshKeyPath;
 /**
  * Save the SSH known hosts path so the POST action can retrieve the value.
  */
 function setSshKnownHostsPath(sshKnownHostsPath) {
-    coreCommand.issueCommand('save-state', { name: 'sshKnownHostsPath' }, sshKnownHostsPath);
+    core.saveState('sshKnownHostsPath', sshKnownHostsPath);
 }
 exports.setSshKnownHostsPath = setSshKnownHostsPath;
+/**
+ * Save the sef-safe-directory input so the POST action can retrieve the value.
+ */
+function setSafeDirectory() {
+    core.saveState('setSafeDirectory', 'true');
+}
+exports.setSafeDirectory = setSafeDirectory;
 // Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
 // This is necessary since we don't have a separate entry point.
 if (!exports.IsPost) {
-    coreCommand.issueCommand('save-state', { name: 'isPost' }, 'true');
+    core.saveState('isPost', 'true');
 }
 
 
@@ -4057,6 +4082,51 @@ function authenticationPlugin(octokit, options) {
 
 /***/ }),
 
+/***/ 195:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getOctokit = exports.Octokit = void 0;
+const github = __importStar(__webpack_require__(469));
+const url_helper_1 = __webpack_require__(81);
+// Centralize all Octokit references by re-exporting
+var rest_1 = __webpack_require__(0);
+Object.defineProperty(exports, "Octokit", { enumerable: true, get: function () { return rest_1.Octokit; } });
+function getOctokit(authToken, opts) {
+    const options = {
+        baseUrl: (0, url_helper_1.getServerApiUrl)(opts.baseUrl)
+    };
+    if (opts.userAgent) {
+        options.userAgent = opts.userAgent;
+    }
+    return new github.GitHub(authToken, options);
+}
+exports.getOctokit = getOctokit;
+
+
+/***/ }),
+
 /***/ 197:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -4268,9 +4338,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkCommitInfo = exports.testRef = exports.getRefSpec = exports.getRefSpecForAllHistory = exports.getCheckoutInfo = exports.tagsRefSpec = void 0;
-const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
+const octokit_provider_1 = __webpack_require__(195);
+const url_helper_1 = __webpack_require__(81);
 exports.tagsRefSpec = '+refs/tags/*:refs/tags/*';
 function getCheckoutInfo(git, ref, commit) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -4420,12 +4491,12 @@ function testRef(git, ref, commit) {
     });
 }
 exports.testRef = testRef;
-function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit) {
+function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit, baseUrl) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // GHES?
-            if (isGhes()) {
+            if ((0, url_helper_1.isGhes)(baseUrl)) {
                 return;
             }
             // Auth token?
@@ -4470,7 +4541,8 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
             const actualHeadSha = match[1];
             if (actualHeadSha !== expectedHeadSha) {
                 core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
-                const octokit = new github.GitHub(token, {
+                const octokit = (0, octokit_provider_1.getOctokit)(token, {
+                    baseUrl: baseUrl,
                     userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
                 });
                 yield octokit.repos.get({ owner: repositoryOwner, repo: repositoryName });
@@ -4495,10 +4567,6 @@ function select(obj, path) {
     }
     const key = path.substr(0, i);
     return select(obj[key], path.substr(i + 1));
-}
-function isGhes() {
-    const ghUrl = new url_1.URL(process.env['GITHUB_SERVER_URL'] || 'https://github.com');
-    return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM';
 }
 
 
@@ -6550,7 +6618,7 @@ class GitAuthHelper {
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
         // Token auth header
-        const serverUrl = urlHelper.getServerUrl();
+        const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl);
         this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader`; // "origin" is SCHEME://HOSTNAME[:PORT]
         const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
         core.setSecret(basicCredential);
@@ -6572,9 +6640,13 @@ class GitAuthHelper {
             yield this.configureToken();
         });
     }
-    configureGlobalAuth() {
-        var _a;
+    configureTempGlobalConfig() {
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
+            // Already setup global config
+            if (((_a = this.temporaryHomePath) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                return path.join(this.temporaryHomePath, '.gitconfig');
+            }
             // Create a temp home directory
             const runnerTemp = process.env['RUNNER_TEMP'] || '';
             assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
@@ -6590,7 +6662,7 @@ class GitAuthHelper {
                 configExists = true;
             }
             catch (err) {
-                if (((_a = err) === null || _a === void 0 ? void 0 : _a.code) !== 'ENOENT') {
+                if (((_b = err) === null || _b === void 0 ? void 0 : _b.code) !== 'ENOENT') {
                     throw err;
                 }
             }
@@ -6601,10 +6673,17 @@ class GitAuthHelper {
             else {
                 yield fs.promises.writeFile(newGitConfigPath, '');
             }
+            // Override HOME
+            core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
+            this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
+            return newGitConfigPath;
+        });
+    }
+    configureGlobalAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // 'configureTempGlobalConfig' noops if already set, just returns the path
+            const newGitConfigPath = yield this.configureTempGlobalConfig();
             try {
-                // Override HOME
-                core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
-                this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
                 // Configure the token
                 yield this.configureToken(newGitConfigPath, true);
                 // Configure HTTPS instead of SSH
@@ -6657,11 +6736,14 @@ class GitAuthHelper {
             yield this.removeToken();
         });
     }
-    removeGlobalAuth() {
+    removeGlobalConfig() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            core.debug(`Unsetting HOME override`);
-            this.git.removeEnvironmentVariable('HOME');
-            yield io.rmRF(this.temporaryHomePath);
+            if (((_a = this.temporaryHomePath) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                core.debug(`Unsetting HOME override`);
+                this.git.removeEnvironmentVariable('HOME');
+                yield io.rmRF(this.temporaryHomePath);
+            }
         });
     }
     configureSsh() {
@@ -7337,40 +7419,59 @@ function getSource(settings) {
         core.startGroup('Getting Git version info');
         const git = yield getGitCommandManager(settings);
         core.endGroup();
-        // Prepare existing directory, otherwise recreate
-        if (isExisting) {
-            yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
-        }
-        if (!git) {
-            // Downloading using REST API
-            core.info(`The repository will be downloaded using the GitHub REST API`);
-            core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
-            if (settings.submodules) {
-                throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
-            }
-            else if (settings.sshKey) {
-                throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
-            }
-            yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath);
-            return;
-        }
-        // Save state for POST action
-        stateHelper.setRepositoryPath(settings.repositoryPath);
-        // Initialize the repository
-        if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
-            core.startGroup('Initializing the repository');
-            yield git.init();
-            yield git.remoteAdd('origin', repositoryUrl);
-            core.endGroup();
-        }
-        // Disable automatic garbage collection
-        core.startGroup('Disabling automatic garbage collection');
-        if (!(yield git.tryDisableAutomaticGarbageCollection())) {
-            core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
-        }
-        core.endGroup();
-        const authHelper = gitAuthHelper.createAuthHelper(git, settings);
+        let authHelper = null;
         try {
+            if (git) {
+                authHelper = gitAuthHelper.createAuthHelper(git, settings);
+                if (settings.setSafeDirectory) {
+                    // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+                    // Otherwise all git commands we run in a container fail
+                    yield authHelper.configureTempGlobalConfig();
+                    core.info(`Adding repository directory to the temporary git global config as a safe directory`);
+                    yield git
+                        .config('safe.directory', settings.repositoryPath, true, true)
+                        .catch(error => {
+                        core.info(`Failed to initialize safe directory with error: ${error}`);
+                    });
+                    stateHelper.setSafeDirectory();
+                }
+            }
+            // Prepare existing directory, otherwise recreate
+            if (isExisting) {
+                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
+            }
+            if (!git) {
+                // Downloading using REST API
+                core.info(`The repository will be downloaded using the GitHub REST API`);
+                core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
+                if (settings.submodules) {
+                    throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+                }
+                else if (settings.sshKey) {
+                    throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+                }
+                yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath, settings.githubServerUrl);
+                return;
+            }
+            // Save state for POST action
+            stateHelper.setRepositoryPath(settings.repositoryPath);
+            // Initialize the repository
+            if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
+                core.startGroup('Initializing the repository');
+                yield git.init();
+                yield git.remoteAdd('origin', repositoryUrl);
+                core.endGroup();
+            }
+            // Disable automatic garbage collection
+            core.startGroup('Disabling automatic garbage collection');
+            if (!(yield git.tryDisableAutomaticGarbageCollection())) {
+                core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
+            }
+            core.endGroup();
+            // If we didn't initialize it above, do it now
+            if (!authHelper) {
+                authHelper = gitAuthHelper.createAuthHelper(git, settings);
+            }
             // Configure auth
             core.startGroup('Setting up auth');
             yield authHelper.configureAuth();
@@ -7382,7 +7483,7 @@ function getSource(settings) {
                     settings.ref = yield git.getDefaultBranch(repositoryUrl);
                 }
                 else {
-                    settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
+                    settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.githubServerUrl);
                 }
                 core.endGroup();
             }
@@ -7432,27 +7533,21 @@ function getSource(settings) {
             core.endGroup();
             // Submodules
             if (settings.submodules) {
-                try {
-                    // Temporarily override global config
-                    core.startGroup('Setting up auth for fetching submodules');
-                    yield authHelper.configureGlobalAuth();
+                // Temporarily override global config
+                core.startGroup('Setting up auth for fetching submodules');
+                yield authHelper.configureGlobalAuth();
+                core.endGroup();
+                // Checkout submodules
+                core.startGroup('Fetching submodules');
+                yield git.submoduleSync(settings.nestedSubmodules);
+                yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
+                core.endGroup();
+                // Persist credentials
+                if (settings.persistCredentials) {
+                    core.startGroup('Persisting credentials for submodules');
+                    yield authHelper.configureSubmoduleAuth();
                     core.endGroup();
-                    // Checkout submodules
-                    core.startGroup('Fetching submodules');
-                    yield git.submoduleSync(settings.nestedSubmodules);
-                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
-                    yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
-                    core.endGroup();
-                    // Persist credentials
-                    if (settings.persistCredentials) {
-                        core.startGroup('Persisting credentials for submodules');
-                        yield authHelper.configureSubmoduleAuth();
-                        core.endGroup();
-                    }
-                }
-                finally {
-                    // Remove temporary global config override
-                    yield authHelper.removeGlobalAuth();
                 }
             }
             // Get commit information
@@ -7460,14 +7555,17 @@ function getSource(settings) {
             // Log commit sha
             yield git.log1("--format='%H'");
             // Check for incorrect pull request merge commit
-            yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit);
+            yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.githubServerUrl);
         }
         finally {
             // Remove auth
-            if (!settings.persistCredentials) {
-                core.startGroup('Removing auth');
-                yield authHelper.removeAuth();
-                core.endGroup();
+            if (authHelper) {
+                if (!settings.persistCredentials) {
+                    core.startGroup('Removing auth');
+                    yield authHelper.removeAuth();
+                    core.endGroup();
+                }
+                authHelper.removeGlobalConfig();
             }
         }
     });
@@ -7489,7 +7587,23 @@ function cleanup(repositoryPath) {
         }
         // Remove auth
         const authHelper = gitAuthHelper.createAuthHelper(git);
-        yield authHelper.removeAuth();
+        try {
+            if (stateHelper.PostSetSafeDirectory) {
+                // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+                // Otherwise all git commands we run in a container fail
+                yield authHelper.configureTempGlobalConfig();
+                core.info(`Adding repository directory to the temporary git global config as a safe directory`);
+                yield git
+                    .config('safe.directory', repositoryPath, true, true)
+                    .catch(error => {
+                    core.info(`Failed to initialize safe directory with error: ${error}`);
+                });
+            }
+            yield authHelper.removeAuth();
+        }
+        finally {
+            yield authHelper.removeGlobalConfig();
+        }
     });
 }
 exports.cleanup = cleanup;
@@ -10900,24 +11014,24 @@ exports.getDefaultBranch = exports.downloadRepository = void 0;
 const assert = __importStar(__webpack_require__(357));
 const core = __importStar(__webpack_require__(470));
 const fs = __importStar(__webpack_require__(747));
-const github = __importStar(__webpack_require__(469));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
 const retryHelper = __importStar(__webpack_require__(587));
 const toolCache = __importStar(__webpack_require__(533));
 const v4_1 = __importDefault(__webpack_require__(826));
+const octokit_provider_1 = __webpack_require__(195);
 const IS_WINDOWS = process.platform === 'win32';
-function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath) {
+function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         // Determine the default branch
         if (!ref && !commit) {
             core.info('Determining the default branch');
-            ref = yield getDefaultBranch(authToken, owner, repo);
+            ref = yield getDefaultBranch(authToken, owner, repo, baseUrl);
         }
         // Download the archive
         let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Downloading the archive');
-            return yield downloadArchive(authToken, owner, repo, ref, commit);
+            return yield downloadArchive(authToken, owner, repo, ref, commit, baseUrl);
         }));
         // Write archive to disk
         core.info('Writing archive to disk');
@@ -10961,12 +11075,12 @@ exports.downloadRepository = downloadRepository;
 /**
  * Looks up the default branch name
  */
-function getDefaultBranch(authToken, owner, repo) {
+function getDefaultBranch(authToken, owner, repo, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             var _a;
             core.info('Retrieving the default branch name');
-            const octokit = new github.GitHub(authToken);
+            const octokit = (0, octokit_provider_1.getOctokit)(authToken, { baseUrl: baseUrl });
             let result;
             try {
                 // Get the default branch from the repo info
@@ -10996,9 +11110,9 @@ function getDefaultBranch(authToken, owner, repo) {
     });
 }
 exports.getDefaultBranch = getDefaultBranch;
-function downloadArchive(authToken, owner, repo, ref, commit) {
+function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = new github.GitHub(authToken);
+        const octokit = (0, octokit_provider_1.getOctokit)(authToken, { baseUrl: baseUrl });
         const params = {
             owner: owner,
             repo: repo,
@@ -17271,6 +17385,12 @@ function getInputs() {
             (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
         // Workflow organization ID
         result.workflowOrganizationId = yield workflowContextHelper.getOrganizationId();
+        // Set safe.directory in git global config.
+        result.setSafeDirectory =
+            (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
+        // Determine the GitHub URL that the repository is being hosted from
+        result.githubServerUrl = core.getInput('github-server-url');
+        core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
         return result;
     });
 }

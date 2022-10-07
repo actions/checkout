@@ -80,6 +80,16 @@ export interface IGitSourceSettings {
   workflowOrganizationId: number | undefined
 
   /**
+   * Indicates whether to add repositoryPath as safe.directory in git global config
+   */
+  setSafeDirectory: boolean
+
+  /**
+   * User override on the GitHub Server/Host URL that hosts the repository to be cloned
+   */
+  githubServerUrl: string | undefined
+
+  /**
    * Patterns to do a sparse checkout on
    */
   sparse: string[] | null
