@@ -67,7 +67,7 @@ class GitAuthHelper {
     this.insteadOfValues.push(`git@${serverUrl.hostname}:`)
     if (this.settings.workflowOrganizationId) {
       this.insteadOfValues.push(
-        `org-${this.settings.workflowOrganizationId}@github.com:`
+        `org-${this.settings.workflowOrganizationId}@${serverUrl.hostname}:`
       )
     }
   }
