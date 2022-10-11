@@ -182,6 +182,19 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     )
     core.endGroup()
 
+    // LFS URL
+    if (settings.lfs && settings.lfsurl) {
+        core.startGroup('Setting LFS URL')
+        await git
+          .config('lfs.url', settings.lfsurl, false, false)
+          .catch(error => {
+            core.info(
+              `Failed to initialize safe directory with error: ${error}`
+            )
+          })
+        core.endGroup()
+    }
+
     // LFS fetch
     // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
     // Explicit lfs fetch will fetch lfs objects in parallel.

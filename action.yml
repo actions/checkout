@@ -59,6 +59,9 @@ inputs:
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
+  lfs-url:
+    description: 'URL to use when fetching Git-LFS files'
+    default: 'https://lfscache.office.playeveryware.com/${{ github.repository }}'
   submodules:
     description: >
       Whether to checkout submodules: `true` to checkout submodules or `recursive` to

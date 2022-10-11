@@ -40,6 +40,11 @@ export interface IGitSourceSettings {
   lfs: boolean
 
   /**
+   * The fetch URL to use for LFS objects
+   */
+  lfsurl: string
+
+  /**
    * Indicates whether to checkout submodules
    */
   submodules: boolean

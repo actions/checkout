@@ -18455,6 +18455,7 @@ function getInputs() {
         core.debug(`fetch depth = ${result.fetchDepth}`);
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
+        result.lfsurl = (core.getInput('lfs-url') || '');
         core.debug(`lfs = ${result.lfs}`);
         // Submodules
         result.submodules = false;
@@ -31920,6 +31921,16 @@ function getSource(settings) {
             core.startGroup('Determining the checkout info');
             const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
             core.endGroup();
+            // LFS URL
+            if (settings.lfs && settings.lfsurl) {
+                core.startGroup('Setting LFS URL');
+                yield git
+                    .config('lfs.url', settings.lfsurl, false, false)
+                    .catch(error => {
+                    core.info(`Failed to initialize safe directory with error: ${error}`);
+                });
+                core.endGroup();
+            }
             // LFS fetch
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
             // Explicit lfs fetch will fetch lfs objects in parallel.

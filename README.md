@@ -82,6 +82,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: false
     lfs: ''
 
+    # URL to use when fetching Git-LFS files
+    # Default: https://lfscache.office.playeveryware.com/${{ github.repository }}
+    lfs-url: ''
+
     # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
     # recursively checkout submodules.
     #
