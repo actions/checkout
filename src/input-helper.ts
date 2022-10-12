@@ -92,6 +92,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   result.lfsurl = (core.getInput('lfs-url') || '')
+  result.lfsCredProvider = (core.getInput('lfs-url-cred-provider') || '')
   core.debug(`lfs = ${result.lfs}`)
 
   // Submodules

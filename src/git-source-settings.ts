@@ -45,6 +45,11 @@ export interface IGitSourceSettings {
   lfsurl: string
 
   /**
+   * The credential provider to usse for the Git LFS server
+   */
+  lfsCredProvider: string
+
+  /**
    * Indicates whether to checkout submodules
    */
   submodules: boolean

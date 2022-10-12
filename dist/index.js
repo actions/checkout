@@ -18456,6 +18456,7 @@ function getInputs() {
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
         result.lfsurl = (core.getInput('lfs-url') || '');
+        result.lfsCredProvider = (core.getInput('lfs-url-cred-provider') || '');
         core.debug(`lfs = ${result.lfs}`);
         // Submodules
         result.submodules = false;
@@ -31808,6 +31809,7 @@ const path = __importStar(__webpack_require__(622));
 const refHelper = __importStar(__webpack_require__(227));
 const stateHelper = __importStar(__webpack_require__(153));
 const urlHelper = __importStar(__webpack_require__(81));
+const url_1 = __webpack_require__(835);
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
@@ -31924,12 +31926,25 @@ function getSource(settings) {
             // LFS URL
             if (settings.lfs && settings.lfsurl) {
                 core.startGroup('Setting LFS URL');
+                let remote = new url_1.URL(settings.lfsurl);
+                remote.password = core.getInput('token');
                 yield git
-                    .config('lfs.url', settings.lfsurl, false, false)
+                    .config('lfs.url', remote.href, false, false)
                     .catch(error => {
                     core.info(`Failed to initialize safe directory with error: ${error}`);
                 });
                 core.endGroup();
+                if (settings.lfsCredProvider) {
+                    core.startGroup('Setting LFS credential provider');
+                    let url = new url_1.URL(settings.lfsurl);
+                    let key = 'credential.' + url.host + '.provider';
+                    yield git
+                        .config(key, settings.lfsCredProvider, false, false)
+                        .catch(error => {
+                        core.info(`Failed to initialize safe directory with error: ${error}`);
+                    });
+                    core.endGroup();
+                }
             }
             // LFS fetch
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).

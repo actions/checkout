@@ -62,6 +62,9 @@ inputs:
   lfs-url:
     description: 'URL to use when fetching Git-LFS files'
     default: 'https://lfscache.office.playeveryware.com/${{ github.repository }}'
+  lfs-url-cred-provider:
+    description: 'Credential provider for the Git-LFS server'
+    default: 'github'
   submodules:
     description: >
       Whether to checkout submodules: `true` to checkout submodules or `recursive` to

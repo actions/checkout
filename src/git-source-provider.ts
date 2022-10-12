@@ -11,6 +11,7 @@ import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
+import {URL} from "url";
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
   // Repository URL
@@ -185,14 +186,30 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // LFS URL
     if (settings.lfs && settings.lfsurl) {
         core.startGroup('Setting LFS URL')
+		let remote = new URL(settings.lfsurl)
+		remote.password = core.getInput('token')
         await git
-          .config('lfs.url', settings.lfsurl, false, false)
+          .config('lfs.url', remote.href, false, false)
           .catch(error => {
             core.info(
               `Failed to initialize safe directory with error: ${error}`
             )
           })
         core.endGroup()
+
+        if (settings.lfsCredProvider) {
+            core.startGroup('Setting LFS credential provider')
+            let url = new URL(settings.lfsurl);
+            let key = 'credential.' + url.host + '.provider'
+            await git
+              .config(key, settings.lfsCredProvider, false, false)
+              .catch(error => {
+                core.info(
+                  `Failed to initialize safe directory with error: ${error}`
+                )
+              })
+            core.endGroup()
+        }
     }
 
     // LFS fetch
