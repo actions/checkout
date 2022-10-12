@@ -40,7 +40,7 @@
     "@types/node": "^12.7.12",
     "@types/uuid": "^3.4.6",
     "@typescript-eslint/parser": "^5.1.0",
-    "@zeit/ncc": "^0.20.5",
+    "@zeit/natz": "^0.20.5",
     "eslint": "^7.32.0",
     "eslint-plugin-github": "^4.3.2",
     "eslint-plugin-jest": "^25.2.2",
