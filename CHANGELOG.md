@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.5.0
+- [Bump @actions/core to v1.10.0](https://github.com/actions/checkout/pull/962)
+
 ## v2.4.2
 - [Add input `set-safe-directory`](https://github.com/actions/checkout/pull/776)
 
