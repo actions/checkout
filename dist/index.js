@@ -3975,59 +3975,59 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setSafeDirectory = exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
-const coreCommand = __importStar(__webpack_require__(431));
+const core = __importStar(__webpack_require__(470));
 /**
  * Indicates whether the POST action is running
  */
-exports.IsPost = !!process.env['STATE_isPost'];
+exports.IsPost = !!core.getState('isPost');
 /**
  * The repository path for the POST action. The value is empty during the MAIN action.
  */
-exports.RepositoryPath = process.env['STATE_repositoryPath'] || '';
+exports.RepositoryPath = core.getState('repositoryPath');
 /**
  * The set-safe-directory for the POST action. The value is set if input: 'safe-directory' is set during the MAIN action.
  */
-exports.PostSetSafeDirectory = process.env['STATE_setSafeDirectory'] === 'true';
+exports.PostSetSafeDirectory = core.getState('setSafeDirectory') === 'true';
 /**
  * The SSH key path for the POST action. The value is empty during the MAIN action.
  */
-exports.SshKeyPath = process.env['STATE_sshKeyPath'] || '';
+exports.SshKeyPath = core.getState('sshKeyPath');
 /**
  * The SSH known hosts path for the POST action. The value is empty during the MAIN action.
  */
-exports.SshKnownHostsPath = process.env['STATE_sshKnownHostsPath'] || '';
+exports.SshKnownHostsPath = core.getState('sshKnownHostsPath');
 /**
  * Save the repository path so the POST action can retrieve the value.
  */
 function setRepositoryPath(repositoryPath) {
-    coreCommand.issueCommand('save-state', { name: 'repositoryPath' }, repositoryPath);
+    core.saveState('repositoryPath', repositoryPath);
 }
 exports.setRepositoryPath = setRepositoryPath;
 /**
  * Save the SSH key path so the POST action can retrieve the value.
  */
 function setSshKeyPath(sshKeyPath) {
-    coreCommand.issueCommand('save-state', { name: 'sshKeyPath' }, sshKeyPath);
+    core.saveState('sshKeyPath', sshKeyPath);
 }
 exports.setSshKeyPath = setSshKeyPath;
 /**
  * Save the SSH known hosts path so the POST action can retrieve the value.
  */
 function setSshKnownHostsPath(sshKnownHostsPath) {
-    coreCommand.issueCommand('save-state', { name: 'sshKnownHostsPath' }, sshKnownHostsPath);
+    core.saveState('sshKnownHostsPath', sshKnownHostsPath);
 }
 exports.setSshKnownHostsPath = setSshKnownHostsPath;
 /**
  * Save the sef-safe-directory input so the POST action can retrieve the value.
  */
 function setSafeDirectory() {
-    coreCommand.issueCommand('save-state', { name: 'setSafeDirectory' }, 'true');
+    core.saveState('setSafeDirectory', 'true');
 }
 exports.setSafeDirectory = setSafeDirectory;
 // Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
 // This is necessary since we don't have a separate entry point.
 if (!exports.IsPost) {
-    coreCommand.issueCommand('save-state', { name: 'isPost' }, 'true');
+    core.saveState('isPost', 'true');
 }
 
 
