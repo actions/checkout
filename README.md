@@ -101,7 +101,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
     # Add repository path as safe.directory for Git global config by running `git
     # config --global --add safe.directory <path>`
-    # Default: true
+    # Default: false
     set-safe-directory: ''
 
     # The base URL for the GitHub instance that you are trying to clone from, will use
