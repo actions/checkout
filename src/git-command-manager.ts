@@ -297,7 +297,10 @@ class GitCommandManager {
     if (recursive) {
       args.push('--recursive')
     }
+    # this is an ugly way to add the quotes around the command
+    args.push('"')
     args.push(command)
+    args.push('"')
 
     const output = await this.execGit(args)
     return output.stdout
