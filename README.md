@@ -158,6 +158,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 ## Checkout multiple repos (nested)
 
+Note: the checkout order must be primary _then_ secondary repo checkout.
+
 ```yaml
 - name: Checkout
   uses: actions/checkout@v3
@@ -170,6 +172,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ```
 
 ## Checkout multiple repos (private)
+
+Note: the checkout order must be primary _then_ secondary repo checkout.
 
 ```yaml
 - name: Checkout
