@@ -81,6 +81,8 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // Clean
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
+  result.cleanExclude = (core.getInput('clean-exclude') || '').split(',')
+  core.debug(`cleanExclude = ${JSON.stringify(result.cleanExclude)}`)
 
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))

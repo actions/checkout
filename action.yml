@@ -53,6 +53,9 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  clean-exclude:
+    description: 'Comma separated paths to exclude when executing `git clean -ffdx`'
+    default: ''
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
     default: 1

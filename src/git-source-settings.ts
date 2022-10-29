@@ -30,6 +30,11 @@ export interface IGitSourceSettings {
   clean: boolean
 
   /**
+   * Paths to ignore when cleaning the repository
+   */
+  cleanExclude: string[]
+
+  /**
    * The depth when fetching
    */
   fetchDepth: number

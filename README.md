@@ -74,6 +74,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
+    # Comma separated paths to exclude when executing `git clean -ffdx`
+    # Default: 
+    clean-exclude: ''
+
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
     # Default: 1
     fetch-depth: ''

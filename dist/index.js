@@ -7608,9 +7608,14 @@ class GitCommandManager {
             return !!output.stdout.trim();
         });
     }
-    tryClean() {
+    tryClean(exclude) {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['clean', '-ffdx'], true);
+            var cleanArgs = [];
+            for (const pattern of exclude) {
+                cleanArgs.push('-e');
+                cleanArgs.push(pattern);
+            }
+            const output = yield this.execGit(['clean', '-ffdx', ...cleanArgs], true);
             return output.exitCode === 0;
         });
     }
@@ -9290,7 +9295,7 @@ const fs = __importStar(__webpack_require__(747));
 const fsHelper = __importStar(__webpack_require__(618));
 const io = __importStar(__webpack_require__(1));
 const path = __importStar(__webpack_require__(622));
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref) {
+function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, cleanExclude, ref) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
@@ -9354,7 +9359,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 // Clean
                 if (clean) {
                     core.startGroup('Cleaning the repository');
-                    if (!(yield git.tryClean())) {
+                    if (!(yield git.tryClean(cleanExclude))) {
                         core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
                         remove = true;
                     }
@@ -18447,6 +18452,8 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        result.cleanExclude = (core.getInput('clean-exclude') || '').split(',');
+        core.debug(`cleanExclude = ${JSON.stringify(result.cleanExclude)}`);
         // Fetch depth
         result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
         if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
@@ -31850,7 +31857,7 @@ function getSource(settings) {
             }
             // Prepare existing directory, otherwise recreate
             if (isExisting) {
-                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
+                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.cleanExclude, settings.ref);
             }
             if (!git) {
                 // Downloading using REST API
