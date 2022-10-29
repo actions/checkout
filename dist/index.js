@@ -18489,6 +18489,8 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // config
+        result.longpaths = core.getInput('long-paths').toUpperCase() == 'TRUE';
         return result;
     });
 }
@@ -31919,6 +31921,15 @@ function getSource(settings) {
                 yield git.fetch(refSpec, settings.fetchDepth);
             }
             core.endGroup();
+            if (settings.longpaths) {
+                core.startGroup('Setting core.longpaths to true');
+                yield git
+                    .config('core.longpaths', 'true', false, false)
+                    .catch(error => {
+                    core.warning(`Failed to set core.longpaths with error: ${error}`);
+                });
+                core.endGroup();
+            }
             // Checkout info
             core.startGroup('Determining the checkout info');
             const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);

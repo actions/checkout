@@ -98,4 +98,9 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * Indicates wheter to set core.longpaths in the git config
+   */
+  longpaths: boolean
 }

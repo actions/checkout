@@ -132,5 +132,8 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // config
+  result.longpaths = core.getInput('long-paths').toUpperCase() == 'TRUE'
+
   return result
 }

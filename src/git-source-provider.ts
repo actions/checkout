@@ -174,6 +174,18 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     }
     core.endGroup()
 
+    if (settings.longpaths) {
+      core.startGroup('Setting core.longpaths to true')
+      await git
+        .config('core.longpaths', 'true', false, false)
+        .catch(error => {
+          core.warning(
+            `Failed to set core.longpaths with error: ${error}`
+          )
+        })
+      core.endGroup()
+    }
+
     // Checkout info
     core.startGroup('Determining the checkout info')
     const checkoutInfo = await refHelper.getCheckoutInfo(
