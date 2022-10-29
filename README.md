@@ -87,7 +87,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     lfs: ''
 
     # URL to use when fetching Git-LFS files
-    # Default: https://lfscache.office.playeveryware.com/${{ github.repository }}
+    # Default: 
     lfs-url: ''
 
     # Credential provider for the Git-LFS server

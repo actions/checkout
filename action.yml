@@ -64,7 +64,7 @@ inputs:
     default: false
   lfs-url:
     description: 'URL to use when fetching Git-LFS files'
-    default: 'https://lfscache.office.playeveryware.com/${{ github.repository }}'
+    default: ''
   lfs-url-cred-provider:
     description: 'Credential provider for the Git-LFS server'
     default: 'github'
