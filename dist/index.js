@@ -31942,26 +31942,35 @@ function getSource(settings) {
             const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
             core.endGroup();
             // LFS URL
-            if (settings.lfs && settings.lfsurl) {
-                core.startGroup('Setting LFS URL');
-                let remote = new url_1.URL(settings.lfsurl);
-                remote.password = core.getInput('token');
-                yield git
-                    .config('lfs.url', remote.href, false, false)
-                    .catch(error => {
-                    core.info(`Failed to initialize safe directory with error: ${error}`);
-                });
-                core.endGroup();
-                if (settings.lfsCredProvider) {
-                    core.startGroup('Setting LFS credential provider');
-                    let url = new url_1.URL(settings.lfsurl);
-                    let key = 'credential.' + url.host + '.provider';
+            if (settings.lfs) {
+                if (settings.lfsurl) {
+                    core.startGroup('Setting LFS URL');
+                    let remote = new url_1.URL(settings.lfsurl);
+                    remote.password = core.getInput('token');
                     yield git
-                        .config(key, settings.lfsCredProvider, false, false)
+                        .config('lfs.url', remote.href, false, false)
                         .catch(error => {
                         core.info(`Failed to initialize safe directory with error: ${error}`);
                     });
                     core.endGroup();
+                    if (settings.lfsCredProvider) {
+                        core.startGroup('Setting LFS credential provider');
+                        let url = new url_1.URL(settings.lfsurl);
+                        let key = 'credential.' + url.host + '.provider';
+                        yield git
+                            .config(key, settings.lfsCredProvider, false, false)
+                            .catch(error => {
+                            core.info(`Failed to initialize safe directory with error: ${error}`);
+                        });
+                        core.endGroup();
+                    }
+                }
+                else {
+                    yield git
+                        .tryConfigUnset('lfs.url', false)
+                        .catch(error => {
+                        core.info(`Failed to remove lfs.url with error: ${error}`);
+                    });
                 }
             }
             // LFS fetch

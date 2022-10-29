@@ -197,10 +197,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     core.endGroup()
 
     // LFS URL
-    if (settings.lfs && settings.lfsurl) {
+    if (settings.lfs) {
+      if (settings.lfsurl) {
         core.startGroup('Setting LFS URL')
-		let remote = new URL(settings.lfsurl)
-		remote.password = core.getInput('token')
+        let remote = new URL(settings.lfsurl)
+        remote.password = core.getInput('token')
         await git
           .config('lfs.url', remote.href, false, false)
           .catch(error => {
@@ -223,6 +224,15 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
               })
             core.endGroup()
         }
+      } else {
+        await git
+          .tryConfigUnset('lfs.url', false)
+          .catch(error => {
+            core.info(
+              `Failed to remove lfs.url with error: ${error}`
+            )
+          })
+      }
     }
 
     // LFS fetch
