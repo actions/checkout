@@ -86,6 +86,11 @@ inputs:
   long-paths:
     description: Enable core.longpath support
     default: true
+
+output:
+  ref:
+    description: The SHA1 ref that was checked out
+
 runs:
   using: node16
   main: dist/index.js
