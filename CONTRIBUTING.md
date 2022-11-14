@@ -3,7 +3,7 @@
 ## Submitting a pull request
 
 1. Fork and clone the repository
-1. Configure and install the dependencies: `npm install`
+1. Configure and install the dependencies: `npm ci`
 1. Create a new branch: `git checkout -b my-branch-name`
 1. Make your change, add tests, and make sure the tests still pass: `npm run test`
 1. Make sure your code is correctly formatted: `npm run format`
