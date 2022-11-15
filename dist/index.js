@@ -7123,7 +7123,7 @@ class GitAuthHelper {
                 // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
                 const output = yield this.git.submoduleForeach(
                 // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
-                `"git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`, this.settings.nestedSubmodules);
+                `sh -c "git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`, this.settings.nestedSubmodules);
                 // Replace the placeholder
                 const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
                 for (const configPath of configPaths) {
@@ -7292,7 +7292,7 @@ class GitAuthHelper {
             const pattern = regexpHelper.escape(configKey);
             yield this.git.submoduleForeach(
             // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
-            `"git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`, true);
+            `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`, true);
         });
     }
 }
