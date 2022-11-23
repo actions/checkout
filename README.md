@@ -39,7 +39,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     #
     # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     #
-    # Default: ${{ github.token }}
+    # Default: ${{ github.GITHUB_TOKEN }}
     token: ''
 
     # SSH key used to fetch the repository. The SSH key is configured with the local
@@ -185,7 +185,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     path: my-tools
 ```
 
-> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
+> - `${{ github.GITHUB_TOKEN }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
 
 ## Checkout pull request HEAD commit instead of merge commit
