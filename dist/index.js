@@ -7421,7 +7421,7 @@ class GitCommandManager {
                     result.push(branch);
                 }
             }
-            core.debug(stderr.join('\n'));
+            core.info(stderr.join('\n'));
             return result;
         });
     }
