@@ -108,6 +108,9 @@ class GitCommandManager {
     const listeners = {
       stderr: (data: Buffer) => {
         stderr.push(data.toString())
+      },
+      errline: (line: string) => {
+        stderr.push(line)
       }
     }
     const output = await this.execGit(args, false, false, listeners)

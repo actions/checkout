@@ -7403,6 +7403,9 @@ class GitCommandManager {
             const listeners = {
                 stderr: (data) => {
                     stderr.push(data.toString());
+                },
+                errline: (line) => {
+                    stderr.push(line);
                 }
             };
             const output = yield this.execGit(args, false, false, listeners);
