@@ -7399,7 +7399,7 @@ class GitCommandManager {
             else {
                 args.push('--branches');
             }
-            const output = yield this.execGit(args, false, true);
+            const output = yield this.execGit(args);
             for (let branch of output.stdout.trim().split('\n')) {
                 branch = branch.trim();
                 if (branch) {
@@ -7672,7 +7672,7 @@ class GitCommandManager {
             for (const key of Object.keys(this.gitEnv)) {
                 env[key] = this.gitEnv[key];
             }
-            const stdout = [];
+            const stdout = ['ardvark'];
             const options = {
                 cwd: this.workingDirectory,
                 env,
@@ -7680,6 +7680,9 @@ class GitCommandManager {
                 ignoreReturnCode: allowAllExitCodes,
                 listeners: {
                     stdout: (data) => {
+                        stdout.push(data.toString());
+                    },
+                    stderr: (data) => {
                         stdout.push(data.toString());
                     }
                 }
