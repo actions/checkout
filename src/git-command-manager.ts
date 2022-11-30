@@ -104,7 +104,12 @@ class GitCommandManager {
       args.push('--branches')
     }
 
-    const output = await this.execGit(args)
+    const listeners = {
+      stderr: (data: Buffer) => {
+        core.debug(data.toString())
+      }
+    }
+    const output = await this.execGit(args, false, false, listeners)
 
     for (let branch of output.stdout.trim().split('\n')) {
       branch = branch.trim()
@@ -395,7 +400,8 @@ class GitCommandManager {
   private async execGit(
     args: string[],
     allowAllExitCodes = false,
-    silent = false
+    silent = false,
+    customListeners = {}
   ): Promise<GitOutput> {
     fshelper.directoryExistsSync(this.workingDirectory, true)
 
@@ -408,22 +414,22 @@ class GitCommandManager {
     for (const key of Object.keys(this.gitEnv)) {
       env[key] = this.gitEnv[key]
     }
-
-    const stdout: string[] = ['ardvark']
-
+    const defaultListener = {
+      stdout: (data: Buffer) => {
+        stdout.push(data.toString())
+      }
+    }
+    // const listeners = Object.keys(customListeners) < 0 ? customListeners : {stdout: (data: Buffer) => {
+    //   stdout.push(data.toString())
+    // }}
+    const listenersD = {...customListeners, ...defaultListener}
+    const stdout: string[] = []
     const options = {
       cwd: this.workingDirectory,
       env,
       silent,
       ignoreReturnCode: allowAllExitCodes,
-      listeners: {
-        stdout: (data: Buffer) => {
-          stdout.push(data.toString())
-        },
-        stderr: (data: Buffer) => {
-          stdout.push(data.toString())
-        }
-      }
+      listeners: listenersD
     }
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)

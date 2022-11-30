@@ -7399,7 +7399,12 @@ class GitCommandManager {
             else {
                 args.push('--branches');
             }
-            const output = yield this.execGit(args);
+            const listeners = {
+                stderr: (data) => {
+                    core.debug(data.toString());
+                }
+            };
+            const output = yield this.execGit(args, false, false, listeners);
             for (let branch of output.stdout.trim().split('\n')) {
                 branch = branch.trim();
                 if (branch) {
@@ -7661,7 +7666,7 @@ class GitCommandManager {
             return result;
         });
     }
-    execGit(args, allowAllExitCodes = false, silent = false) {
+    execGit(args, allowAllExitCodes = false, silent = false, customListeners = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             fshelper.directoryExistsSync(this.workingDirectory, true);
             const result = new GitOutput();
@@ -7672,20 +7677,22 @@ class GitCommandManager {
             for (const key of Object.keys(this.gitEnv)) {
                 env[key] = this.gitEnv[key];
             }
-            const stdout = ['ardvark'];
+            const defaultListener = {
+                stdout: (data) => {
+                    stdout.push(data.toString());
+                }
+            };
+            // const listeners = Object.keys(customListeners) < 0 ? customListeners : {stdout: (data: Buffer) => {
+            //   stdout.push(data.toString())
+            // }}
+            const listenersD = Object.assign(Object.assign({}, customListeners), defaultListener);
+            const stdout = [];
             const options = {
                 cwd: this.workingDirectory,
                 env,
                 silent,
                 ignoreReturnCode: allowAllExitCodes,
-                listeners: {
-                    stdout: (data) => {
-                        stdout.push(data.toString());
-                    },
-                    stderr: (data) => {
-                        stdout.push(data.toString());
-                    }
-                }
+                listeners: listenersD
             };
             result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
             result.stdout = stdout.join('');
