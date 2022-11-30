@@ -104,7 +104,7 @@ class GitCommandManager {
       args.push('--branches')
     }
 
-    const output = await this.execGit(args)
+    const output = await this.execGit(args, false, true)
 
     for (let branch of output.stdout.trim().split('\n')) {
       branch = branch.trim()
@@ -409,7 +409,7 @@ class GitCommandManager {
       env[key] = this.gitEnv[key]
     }
 
-    const stdout: string[] = []
+    const stdout: string[] = ['ardvark']
 
     const options = {
       cwd: this.workingDirectory,
@@ -418,6 +418,9 @@ class GitCommandManager {
       ignoreReturnCode: allowAllExitCodes,
       listeners: {
         stdout: (data: Buffer) => {
+          stdout.push(data.toString())
+        },
+        stderr: (data: Buffer) => {
           stdout.push(data.toString())
         }
       }
