@@ -104,7 +104,7 @@ class GitCommandManager {
       args.push('--branches')
     }
 
-    const output = await this.execGit(args, false, true)
+    const output = await this.execGit(args)
 
     for (let branch of output.stdout.trim().split('\n')) {
       branch = branch.trim()
