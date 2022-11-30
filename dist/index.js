@@ -7388,6 +7388,7 @@ class GitCommandManager {
     branchList(remote) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = [];
+            const stderr = [];
             // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
             // "branch --list" is more difficult when in a detached HEAD state.
             // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
@@ -7401,7 +7402,7 @@ class GitCommandManager {
             }
             const listeners = {
                 stderr: (data) => {
-                    core.debug(data.toString());
+                    stderr.push(data.toString());
                 }
             };
             const output = yield this.execGit(args, false, false, listeners);
@@ -7417,6 +7418,7 @@ class GitCommandManager {
                     result.push(branch);
                 }
             }
+            core.debug(stderr.join('\n'));
             return result;
         });
     }
