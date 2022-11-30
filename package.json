@@ -33,6 +33,7 @@
     "@actions/github": "^2.2.0",
     "@actions/io": "^1.1.2",
     "@actions/tool-cache": "^1.1.2",
+    "stream": "0.0.2",
     "uuid": "^3.3.3"
   },
   "devDependencies": {

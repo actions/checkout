@@ -7450,8 +7450,31 @@ class GitCommandManager {
             else {
                 args.push('--branches');
             }
-            const output = yield this.execGit(args);
-            for (let branch of output.stdout.trim().split('\n')) {
+            const stderr = [];
+            const errline = [];
+            const stdout = [];
+            const stdline = [];
+            const listeners = {
+                stderr: (data) => {
+                    stderr.push(data.toString());
+                },
+                errline: (data) => {
+                    errline.push(data.toString());
+                },
+                stdout: (data) => {
+                    stdout.push(data.toString());
+                },
+                stdline: (data) => {
+                    stdline.push(data.toString());
+                }
+            };
+            core.info(`${this.gitPath} ${args.join(' ')}`);
+            yield this.execGit(args, false, true, listeners);
+            core.debug(`stderr callback is: ${stderr}`);
+            core.debug(`errline callback is: ${errline}`);
+            core.debug(`stdout callback is: ${stdout}`);
+            core.debug(`stdline callback is: ${stdline}`);
+            for (let branch of stdline) {
                 branch = branch.trim();
                 if (branch) {
                     if (branch.startsWith('refs/heads/')) {
@@ -7463,6 +7486,7 @@ class GitCommandManager {
                     result.push(branch);
                 }
             }
+            core.info(result.join('\n'));
             return result;
         });
     }
@@ -7712,7 +7736,7 @@ class GitCommandManager {
             return result;
         });
     }
-    execGit(args, allowAllExitCodes = false, silent = false) {
+    execGit(args, allowAllExitCodes = false, silent = false, customListeners = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             fshelper.directoryExistsSync(this.workingDirectory, true);
             const result = new GitOutput();
@@ -7723,17 +7747,19 @@ class GitCommandManager {
             for (const key of Object.keys(this.gitEnv)) {
                 env[key] = this.gitEnv[key];
             }
+            const defaultListener = {
+                stdout: (data) => {
+                    stdout.push(data.toString());
+                }
+            };
+            const mergedListeners = Object.assign(Object.assign({}, defaultListener), customListeners);
             const stdout = [];
             const options = {
                 cwd: this.workingDirectory,
                 env,
                 silent,
                 ignoreReturnCode: allowAllExitCodes,
-                listeners: {
-                    stdout: (data) => {
-                        stdout.push(data.toString());
-                    }
-                }
+                listeners: mergedListeners
             };
             result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
             result.stdout = stdout.join('');
