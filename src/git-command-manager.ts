@@ -429,33 +429,25 @@ class GitCommandManager {
     // }}
     const listenersD = {...customListeners, ...defaultListener}
     const stdout: string[] = []
-    let temp = ''
-    let temp2 = ''
+    // let temp = ''
     const options = {
       cwd: this.workingDirectory,
       env,
       silent,
       ignoreReturnCode: allowAllExitCodes,
-      listeners: listenersD,
-      errStream: new stream.Writable({
-        write(chunk, _, next) {
-          temp += chunk.toString()
-          next()
-        }
-      }),
-
-      outStream: new stream.Writable({
-        write(chunk, _, next) {
-          temp2 += chunk.toString()
-          next()
-        }
-      })
+      listeners: listenersD
+      // ,
+      // errStream: new stream.Writable({
+      //   write(chunk, _, next) {
+      //     temp += chunk.toString()
+      //     next()
+      //   }
+      // })
     }
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
-    core.info(temp.length.toString())
-    core.info(temp2.length.toString())
+    core.info(result.stdout)
     return result
   }
 
