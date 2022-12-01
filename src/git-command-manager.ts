@@ -94,7 +94,6 @@ class GitCommandManager {
     const result: string[] = []
     const stderr: string[] = []
 
-    core.info(this.gitEnv['GIT_HTTP_USER_AGENT'])
     // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
     // "branch --list" is more difficult when in a detached HEAD state.
     // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
@@ -430,25 +429,33 @@ class GitCommandManager {
     // }}
     const listenersD = {...customListeners, ...defaultListener}
     const stdout: string[] = []
-    // let temp = ''
+    let temp = ''
+    let temp2 = ''
     const options = {
       cwd: this.workingDirectory,
       env,
       silent,
       ignoreReturnCode: allowAllExitCodes,
-      listeners: listenersD
-      // ,
-      // errStream: new stream.Writable({
-      //   write(chunk, _, next) {
-      //     temp += chunk.toString()
-      //     next()
-      //   }
-      // })
+      listeners: listenersD,
+      errStream: new stream.Writable({
+        write(chunk, _, next) {
+          temp += chunk.toString()
+          next()
+        }
+      }),
+
+      outStream: new stream.Writable({
+        write(chunk, _, next) {
+          temp2 += chunk.toString()
+          next()
+        }
+      })
     }
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
-    core.info(result.stdout)
+    core.info(temp.length.toString())
+    core.info(temp2.length.toString())
     return result
   }
 
