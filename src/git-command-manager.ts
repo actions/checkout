@@ -430,6 +430,7 @@ class GitCommandManager {
     const listenersD = {...customListeners, ...defaultListener}
     const stdout: string[] = []
     let temp = ''
+    let temp2 = ''
     const options = {
       cwd: this.workingDirectory,
       env,
@@ -441,12 +442,20 @@ class GitCommandManager {
           temp += chunk.toString()
           next()
         }
+      }),
+
+      outStream: new stream.Writable({
+        write(chunk, _, next) {
+          temp2 += chunk.toString()
+          next()
+        }
       })
     }
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
     core.info(temp.length.toString())
+    core.info(temp2.length.toString())
     return result
   }
 
