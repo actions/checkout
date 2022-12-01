@@ -7333,9 +7333,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createCommandManager = exports.MinimumGitVersion = void 0;
 const core = __importStar(__webpack_require__(470));
@@ -7347,7 +7344,6 @@ const refHelper = __importStar(__webpack_require__(227));
 const regexpHelper = __importStar(__webpack_require__(528));
 const retryHelper = __importStar(__webpack_require__(587));
 const git_version_1 = __webpack_require__(559);
-const stream_1 = __importDefault(__webpack_require__(794));
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
@@ -7696,31 +7692,33 @@ class GitCommandManager {
             // }}
             const listenersD = Object.assign(Object.assign({}, customListeners), defaultListener);
             const stdout = [];
-            let temp = '';
-            let temp2 = '';
+            // let temp = ''
+            // let temp2 = ''
             const options = {
                 cwd: this.workingDirectory,
                 env,
                 silent,
                 ignoreReturnCode: allowAllExitCodes,
-                listeners: listenersD,
-                errStream: new stream_1.default.Writable({
-                    write(chunk, _, next) {
-                        temp += chunk.toString();
-                        next();
-                    }
-                }),
-                outStream: new stream_1.default.Writable({
-                    write(chunk, _, next) {
-                        temp2 += chunk.toString();
-                        next();
-                    }
-                })
+                listeners: listenersD
+                // ,
+                // errStream: new stream.Writable({
+                //   write(chunk, _, next) {
+                //     temp += chunk.toString()
+                //     next()
+                //   }
+                // }),
+                // outStream: new stream.Writable({
+                //   write(chunk, _, next) {
+                //     temp2 += chunk.toString()
+                //     next()
+                //   }
+                // })
             };
             result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
             result.stdout = stdout.join('');
-            core.info(temp.length.toString());
-            core.info(temp2.length.toString());
+            // core.info(temp.length.toString())
+            // core.info(temp2.length.toString())
+            core.info(result.stdout);
             return result;
         });
     }
