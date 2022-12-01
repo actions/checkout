@@ -1,0 +1,24 @@
+---
+name: jsonparse
+version: 1.3.1
+type: npm
+summary: This is a pure-js JSON streaming parser for node.js
+homepage: 
+license: mit
+licenses:
+- sources: LICENSE
+  text: "The MIT License\n\nCopyright (c) 2012 Tim Caswell\n\nPermission is hereby
+    granted, free of charge, \nto any person obtaining a copy of this software and
+    \nassociated documentation files (the \"Software\"), to \ndeal in the Software
+    without restriction, including \nwithout limitation the rights to use, copy, modify,
+    \nmerge, publish, distribute, sublicense, and/or sell \ncopies of the Software,
+    and to permit persons to whom \nthe Software is furnished to do so, \nsubject
+    to the following conditions:\n\nThe above copyright notice and this permission
+    notice \nshall be included in all copies or substantial portions of the Software.\n\nTHE
+    SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, \nEXPRESS OR IMPLIED,
+    INCLUDING BUT NOT LIMITED TO THE WARRANTIES \nOF MERCHANTABILITY, FITNESS FOR
+    A PARTICULAR PURPOSE AND NONINFRINGEMENT. \nIN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR \nANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+    OF CONTRACT, \nTORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    \nSOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n"
+notices: []

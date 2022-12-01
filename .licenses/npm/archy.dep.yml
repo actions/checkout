@@ -1,12 +1,12 @@
 ---
-name: atob-lite
-version: 2.0.0
+name: archy
+version: 1.0.0
 type: npm
-summary: Smallest/simplest possible means of using atob with both Node and browserify
-homepage: https://github.com/hughsk/atob-lite
+summary: render nested hierarchies `npm ls` style with unicode pipes
+homepage: 
 license: mit
 licenses:
-- sources: LICENSE.md
+- sources: LICENSE
   text: |
     This software is released under the MIT license:
 
@@ -26,7 +26,4 @@ licenses:
     COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
     IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-- sources: README.md
-  text: MIT. See [LICENSE.md](http://github.com/hughsk/atob-lite/blob/master/LICENSE.md)
-    for details.
 notices: []
