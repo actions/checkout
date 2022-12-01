@@ -7697,6 +7697,7 @@ class GitCommandManager {
             const listenersD = Object.assign(Object.assign({}, customListeners), defaultListener);
             const stdout = [];
             let temp = '';
+            let temp2 = '';
             const options = {
                 cwd: this.workingDirectory,
                 env,
@@ -7708,11 +7709,18 @@ class GitCommandManager {
                         temp += chunk.toString();
                         next();
                     }
+                }),
+                outStream: new stream_1.default.Writable({
+                    write(chunk, _, next) {
+                        temp2 += chunk.toString();
+                        next();
+                    }
                 })
             };
             result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
             result.stdout = stdout.join('');
             core.info(temp.length.toString());
+            core.info(temp2.length.toString());
             return result;
         });
     }
