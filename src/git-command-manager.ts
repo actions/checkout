@@ -7,6 +7,7 @@ import * as refHelper from './ref-helper'
 import * as regexpHelper from './regexp-helper'
 import * as retryHelper from './retry-helper'
 import {GitVersion} from './git-version'
+import stream, {Writable} from 'stream'
 
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
@@ -428,16 +429,24 @@ class GitCommandManager {
     // }}
     const listenersD = {...customListeners, ...defaultListener}
     const stdout: string[] = []
+    let temp = ''
     const options = {
       cwd: this.workingDirectory,
       env,
       silent,
       ignoreReturnCode: allowAllExitCodes,
-      listeners: listenersD
+      listeners: listenersD,
+      errStream: new stream.Writable({
+        write(chunk, _, next) {
+          temp += chunk.toString()
+          next()
+        }
+      })
     }
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
+    core.info(temp.length.toString())
     return result
   }
 
