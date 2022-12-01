@@ -94,6 +94,7 @@ class GitCommandManager {
     const result: string[] = []
     const stderr: string[] = []
 
+    core.info(this.gitEnv['GIT_HTTP_USER_AGENT'])
     // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
     // "branch --list" is more difficult when in a detached HEAD state.
     // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
