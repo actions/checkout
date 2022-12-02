@@ -1,0 +1,36 @@
+https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+/v1/accounting/od/rates_of_exchange
+?fields=country_currency_desc,exchange_rate,record_date&filter=record_date:gte:2015-01-01
+https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange?fields=country_currency_desc,exchange_rate, record_date&filter=record_date:gte:2015-01-01
+/Create a reader to consume messages from the TWS. The EReader will consume the incoming messages and put them in a queue
+            var reader = new EReader(clientSocket, readerSignal);
+            reader.Start(https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange?fields=country_currency_desc,exchange_rate, record_date&filter=record_date:gte:2015-01-01
+/Create a reader to consume messages from the TWS. The EReader will consume the incoming messages and put them in a queue);
+            //Once the messages are in the queue, an additional thread can be created to fetch them
+            new Thread((https://api.fiscaldata.treasury.gov/services/api/fiscal_service) => { while (clientSocket.IsConnected("127.0.0.1", 7497, U10225758)) { readerSignal.waitForSignal(https://api.fiscaldata.treasury.gov/services/api/fiscal_service); reader.processMsgs(); } }) { IsBackground = true }.Start("127.0.0.1", 7497, 0);
+  /Create a reader to consume messages from the TWS. The EReader will consume the incoming messages and put them in a queue
+            var reader = new EReader(clientSocket, readerSignal);
+            reader.Start( https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange?fields=country_currency_desc,exchange_rate,record_date&filter=country_currency_desc:in:(USA-Dollar,ZAR-Peso),record_date:gte:2022-01-01  
+            /Create a reader to consume messages from the TWS. The EReader will consume the incoming messages and put them in a queue
+            var reader = new EReader(clientSocket.IsConnected("127.0.0.1", 7497, U10225758);
+            reader.Start(?filter=reporting_fiscal_year:in:(2017,2018,2019,2020, 2021, 2022)
+            /Create a reader to consume messages from the TWS. The EReader will consume the incoming messages and put them in a queue
+            var reader = new EReader(clientSocket.IsConnected("127.0.0.1", 7497, U10225758);
+            reader.Start(?filter=funding_type_id:eq:202) => { while (clientSocket.IsConnected("127.0.0.1", 7497, U10225758)) { readerSignal.waitForSignal(https://api.fiscaldata.treasury.gov/services/api/fiscal_service); reader.processMsgs(); } }) { IsBackground = true }.Start("127.0.0.1", 7497, 0);
+   /Create a reader to consume messages from the TWS. The EReader will consume the incoming messages and put them in a queue
+            var reader = new EReader(clientSocket, readerSignal);
+            reader.Start(api "U7923424")         
+Footer
+© 2022 GitHub, Inc.
+Footer navigation
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
