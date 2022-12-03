@@ -97,6 +97,11 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.lfsCredProvider = (core.getInput('lfs-url-cred-provider') || '')
   core.debug(`lfs = ${result.lfs}`)
 
+  // Default lfs cache server for PEW repositories
+  if (result.lfsurl == '' && result.repositoryOwner.toLowerCase() == 'playeveryware') {
+    result.lfsurl = `https://lfscache.office.playeveryware.com/${qualifiedRepository}`
+  }
+
   // Submodules
   result.submodules = false
   result.nestedSubmodules = false
