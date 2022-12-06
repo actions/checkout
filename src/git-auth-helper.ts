@@ -197,6 +197,8 @@ class GitAuthHelper {
     if (this.temporaryHomePath?.length > 0) {
       core.debug(`Unsetting HOME override`)
       this.git.removeEnvironmentVariable('HOME')
+
+      core.info(`hi there: $(this.temporaryHomePath)`)
       await io
         .rmRF(this.temporaryHomePath)
         // eslint-disable-next-line github/no-then
