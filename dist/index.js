@@ -133,7 +133,6 @@ const childProcess = __importStar(__webpack_require__(129));
 const path = __importStar(__webpack_require__(622));
 const util_1 = __webpack_require__(669);
 const ioUtil = __importStar(__webpack_require__(672));
-const exec = util_1.promisify(childProcess.exec);
 const execFile = util_1.promisify(childProcess.execFile);
 /**
  * Copies a file or folder.
@@ -224,15 +223,20 @@ function rmRF(inputPath) {
             }
             try {
                 const cmdPath = ioUtil.getCmdPath();
-                // if (await ioUtil.isDirectory(inputPath, true)) {
-                //   await execFile(`${cmdPath} /s /c "rd /s /q "%inputPath%""`, {
-                //     env: {inputPath}
-                //   })
-                // } else {
-                yield execFile(`${cmdPath} /s /c "del /f /a "%inputPath%""`, {
-                    env: { inputPath }
-                });
-                // }
+                if (yield ioUtil.isDirectory(inputPath, true)) {
+                    yield execFile(`${cmdPath} /s /c "rd /s /q "%inputPath%""`, {
+                        env: { inputPath }
+                    }).catch(error => {
+                        throw new Error(`Failed to remove directory: ${error.message}`);
+                    });
+                }
+                else {
+                    yield execFile(`${cmdPath} /s /c "del /f /a "%inputPath%""`, {
+                        env: { inputPath }
+                    }).catch(error => {
+                        throw new Error(`Failed to remove directory: ${error.message}`);
+                    });
+                }
             }
             catch (err) {
                 // if you try to delete a file that doesn't exist, desired result is achieved
@@ -242,7 +246,7 @@ function rmRF(inputPath) {
             }
             // Shelling out fails to remove a symlink folder with missing source, this unlink catches that
             try {
-                yield ioUtil.unlink(inputPath);
+                yield ioUtil.unlink(ioUtil.normalizeSeparators(inputPath));
             }
             catch (err) {
                 // if you try to delete a file that doesn't exist, desired result is achieved
@@ -252,9 +256,9 @@ function rmRF(inputPath) {
             }
         }
         else {
-            // let isDir = false
+            let isDir = false;
             try {
-                // isDir = await ioUtil.isDirectory(inputPath)
+                isDir = yield ioUtil.isDirectory(inputPath);
             }
             catch (err) {
                 // if you try to delete a file that doesn't exist, desired result is achieved
@@ -263,11 +267,12 @@ function rmRF(inputPath) {
                     throw err;
                 return;
             }
-            // if (isDir) {
-            yield execFile(`rm`, [`-rf`, `${inputPath}`]);
-            // } else {
-            // await ioUtil.unlink(inputPath)
-            // }
+            if (isDir) {
+                yield execFile(`rm`, [`-rf`, `${inputPath}`]);
+            }
+            else {
+                yield ioUtil.unlink(inputPath);
+            }
         }
     });
 }
@@ -422,7 +427,7 @@ function copyFile(srcFile, destFile, force) {
                 // Try to override file permission
                 if (e.code === 'EPERM') {
                     yield ioUtil.chmod(destFile, '0666');
-                    yield ioUtil.unlink(destFile);
+                    yield ioUtil.rmdir(destFile);
                 }
                 // other errors = it doesn't exist, no work to do
             }
@@ -16832,7 +16837,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rename = exports.readlink = exports.readdir = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
+exports.getCmdPath = exports.normalizeSeparators = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rename = exports.readlink = exports.readdir = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
 const fs = __importStar(__webpack_require__(747));
 const path = __importStar(__webpack_require__(622));
 _a = fs.promises, exports.chmod = _a.chmod, exports.copyFile = _a.copyFile, exports.lstat = _a.lstat, exports.mkdir = _a.mkdir, exports.readdir = _a.readdir, exports.readlink = _a.readlink, exports.rename = _a.rename, exports.rmdir = _a.rmdir, exports.stat = _a.stat, exports.symlink = _a.symlink, exports.unlink = _a.unlink;
@@ -16963,6 +16968,7 @@ function normalizeSeparators(p) {
     // remove redundant slashes
     return p.replace(/\/\/+/g, '/');
 }
+exports.normalizeSeparators = normalizeSeparators;
 // on Mac/Linux, test the execute bit
 //     R   W  X  R  W X R W X
 //   256 128 64 32 16 8 4 2 1
