@@ -133,6 +133,7 @@ const childProcess = __importStar(__webpack_require__(129));
 const path = __importStar(__webpack_require__(622));
 const util_1 = __webpack_require__(669);
 const ioUtil = __importStar(__webpack_require__(672));
+const exec = util_1.promisify(childProcess.exec);
 const execFile = util_1.promisify(childProcess.execFile);
 /**
  * Copies a file or folder.
@@ -224,17 +225,13 @@ function rmRF(inputPath) {
             try {
                 const cmdPath = ioUtil.getCmdPath();
                 if (yield ioUtil.isDirectory(inputPath, true)) {
-                    yield execFile(`${cmdPath} /s /c "rd /s /q "%inputPath%""`, {
+                    yield exec(`${cmdPath} /s /c "rd /s /q "%inputPath%""`, {
                         env: { inputPath }
-                    }).catch(error => {
-                        throw new Error(`Failed to remove directory: ${error.message}`);
                     });
                 }
                 else {
-                    yield execFile(`${cmdPath} /s /c "del /f /a "%inputPath%""`, {
+                    yield exec(`${cmdPath} /s /c "del /f /a "%inputPath%""`, {
                         env: { inputPath }
-                    }).catch(error => {
-                        throw new Error(`Failed to remove directory: ${error.message}`);
                     });
                 }
             }
@@ -246,7 +243,7 @@ function rmRF(inputPath) {
             }
             // Shelling out fails to remove a symlink folder with missing source, this unlink catches that
             try {
-                yield ioUtil.unlink(ioUtil.normalizeSeparators(inputPath));
+                yield ioUtil.unlink(inputPath);
             }
             catch (err) {
                 // if you try to delete a file that doesn't exist, desired result is achieved
@@ -427,7 +424,7 @@ function copyFile(srcFile, destFile, force) {
                 // Try to override file permission
                 if (e.code === 'EPERM') {
                     yield ioUtil.chmod(destFile, '0666');
-                    yield ioUtil.rmdir(destFile);
+                    yield ioUtil.unlink(destFile);
                 }
                 // other errors = it doesn't exist, no work to do
             }
