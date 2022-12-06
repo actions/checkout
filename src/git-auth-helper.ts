@@ -202,7 +202,7 @@ class GitAuthHelper {
         // eslint-disable-next-line github/no-then
         .catch(err => {
           // eslint-disable-next-line i18n-text/no-en
-          core.warning(`Failed to remove temporary home directory: ${err}`)
+          core.warning(`Failed to remove temporary checkout directory: ${err}`)
         })
     }
   }
