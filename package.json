@@ -4,6 +4,7 @@
   "description": "checkout action",
   "main": "lib/main.js",
   "scripts": {
+    "build-full": "npm run format && npm run build && npm run test",
     "build": "tsc && ncc build && node lib/misc/generate-docs.js",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
