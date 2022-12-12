@@ -16,6 +16,9 @@ on:
 jobs:
   tag:
     runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ github.event.inputs.target }}
+      MAIN_VERSION: ${{ github.event.inputs.main_version }}
     steps:
     - uses: actions/checkout@v3
       with:
@@ -25,6 +28,6 @@ jobs:
         git config user.name github-actions
         git config user.email github-actions@github.com
     - name: Tag new target
-      run: git tag -f ${{ github.event.inputs.main_version }} ${{ github.event.inputs.target }}
+      run: git tag -f "$MAIN_VERSION" "$TARGET"
     - name: Push new tag
-      run: git push origin ${{ github.event.inputs.main_version }} --force
+      run: git push origin "$MAIN_VERSION" --force
