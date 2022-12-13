@@ -128,8 +128,7 @@ class GitCommandManager {
       }
     }
 
-    core.info(`${this.gitPath} ${args.join(' ')}`)
-
+    // Suppress the output in order to avoid flooding annotations with innocuous errors.
     await this.execGit(args, false, true, listeners)
 
     core.debug(`stderr callback is: ${stderr}`)
@@ -139,18 +138,18 @@ class GitCommandManager {
 
     for (let branch of stdline) {
       branch = branch.trim()
-      if (branch) {
-        if (branch.startsWith('refs/heads/')) {
-          branch = branch.substr('refs/heads/'.length)
-        } else if (branch.startsWith('refs/remotes/')) {
-          branch = branch.substr('refs/remotes/'.length)
-        }
-
-        result.push(branch)
+      if (!branch) {
+        continue
       }
-    }
 
-    core.info(result.join('\n'))
+      if (branch.startsWith('refs/heads/')) {
+        branch = branch.substring('refs/heads/'.length)
+      } else if (branch.startsWith('refs/remotes/')) {
+        branch = branch.substring('refs/remotes/'.length)
+      }
+
+      result.push(branch)
+    }
 
     return result
   }
@@ -462,6 +461,10 @@ class GitCommandManager {
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
+
+    core.debug(result.exitCode.toString())
+    core.debug(result.stdout)
+
     return result
   }
 
