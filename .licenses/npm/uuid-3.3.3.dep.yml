@@ -3,7 +3,7 @@ name: uuid
 version: 3.3.3
 type: npm
 summary: RFC4122 (v1, v4, and v5) UUIDs
-homepage: https://github.com/kelektiv/node-uuid#readme
+homepage: 
 license: mit
 licenses:
 - sources: LICENSE.md
