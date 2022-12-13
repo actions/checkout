@@ -7441,8 +7441,10 @@ class GitCommandManager {
             const result = [];
             // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
             // "branch --list" is more difficult when in a detached HEAD state.
-            // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
-            // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names.
+            // TODO(https://github.com/actions/checkout/issues/786): this implementation uses
+            // "rev-parse --symbolic-full-name" because there is a bug
+            // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names. When
+            // 2.18 is no longer supported, we can switch back to --symbolic.
             const args = ['rev-parse', '--symbolic-full-name'];
             if (remote) {
                 args.push('--remotes=origin');
@@ -7450,18 +7452,42 @@ class GitCommandManager {
             else {
                 args.push('--branches');
             }
-            const output = yield this.execGit(args);
-            for (let branch of output.stdout.trim().split('\n')) {
-                branch = branch.trim();
-                if (branch) {
-                    if (branch.startsWith('refs/heads/')) {
-                        branch = branch.substr('refs/heads/'.length);
-                    }
-                    else if (branch.startsWith('refs/remotes/')) {
-                        branch = branch.substr('refs/remotes/'.length);
-                    }
-                    result.push(branch);
+            const stderr = [];
+            const errline = [];
+            const stdout = [];
+            const stdline = [];
+            const listeners = {
+                stderr: (data) => {
+                    stderr.push(data.toString());
+                },
+                errline: (data) => {
+                    errline.push(data.toString());
+                },
+                stdout: (data) => {
+                    stdout.push(data.toString());
+                },
+                stdline: (data) => {
+                    stdline.push(data.toString());
                 }
+            };
+            // Suppress the output in order to avoid flooding annotations with innocuous errors.
+            yield this.execGit(args, false, true, listeners);
+            core.debug(`stderr callback is: ${stderr}`);
+            core.debug(`errline callback is: ${errline}`);
+            core.debug(`stdout callback is: ${stdout}`);
+            core.debug(`stdline callback is: ${stdline}`);
+            for (let branch of stdline) {
+                branch = branch.trim();
+                if (!branch) {
+                    continue;
+                }
+                if (branch.startsWith('refs/heads/')) {
+                    branch = branch.substring('refs/heads/'.length);
+                }
+                else if (branch.startsWith('refs/remotes/')) {
+                    branch = branch.substring('refs/remotes/'.length);
+                }
+                result.push(branch);
             }
             return result;
         });
@@ -7712,7 +7738,7 @@ class GitCommandManager {
             return result;
         });
     }
-    execGit(args, allowAllExitCodes = false, silent = false) {
+    execGit(args, allowAllExitCodes = false, silent = false, customListeners = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             fshelper.directoryExistsSync(this.workingDirectory, true);
             const result = new GitOutput();
@@ -7723,20 +7749,24 @@ class GitCommandManager {
             for (const key of Object.keys(this.gitEnv)) {
                 env[key] = this.gitEnv[key];
             }
+            const defaultListener = {
+                stdout: (data) => {
+                    stdout.push(data.toString());
+                }
+            };
+            const mergedListeners = Object.assign(Object.assign({}, defaultListener), customListeners);
             const stdout = [];
             const options = {
                 cwd: this.workingDirectory,
                 env,
                 silent,
                 ignoreReturnCode: allowAllExitCodes,
-                listeners: {
-                    stdout: (data) => {
-                        stdout.push(data.toString());
-                    }
-                }
+                listeners: mergedListeners
             };
             result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
             result.stdout = stdout.join('');
+            core.debug(result.exitCode.toString());
+            core.debug(result.stdout);
             return result;
         });
     }
