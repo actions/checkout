@@ -94,8 +94,11 @@ class GitCommandManager {
 
     // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
     // "branch --list" is more difficult when in a detached HEAD state.
-    // Note, this implementation uses "rev-parse --symbolic-full-name" because there is a bug
-    // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names.
+
+    // TODO(https://github.com/actions/checkout/issues/786): this implementation uses
+    // "rev-parse --symbolic-full-name" because there is a bug
+    // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names. When
+    // 2.18 is no longer supported, we can switch back to --symbolic.
 
     const args = ['rev-parse', '--symbolic-full-name']
     if (remote) {
@@ -104,19 +107,47 @@ class GitCommandManager {
       args.push('--branches')
     }
 
-    const output = await this.execGit(args)
+    const stderr: string[] = []
+    const errline: string[] = []
+    const stdout: string[] = []
+    const stdline: string[] = []
 
-    for (let branch of output.stdout.trim().split('\n')) {
-      branch = branch.trim()
-      if (branch) {
-        if (branch.startsWith('refs/heads/')) {
-          branch = branch.substr('refs/heads/'.length)
-        } else if (branch.startsWith('refs/remotes/')) {
-          branch = branch.substr('refs/remotes/'.length)
-        }
-
-        result.push(branch)
+    const listeners = {
+      stderr: (data: Buffer) => {
+        stderr.push(data.toString())
+      },
+      errline: (data: Buffer) => {
+        errline.push(data.toString())
+      },
+      stdout: (data: Buffer) => {
+        stdout.push(data.toString())
+      },
+      stdline: (data: Buffer) => {
+        stdline.push(data.toString())
       }
+    }
+
+    // Suppress the output in order to avoid flooding annotations with innocuous errors.
+    await this.execGit(args, false, true, listeners)
+
+    core.debug(`stderr callback is: ${stderr}`)
+    core.debug(`errline callback is: ${errline}`)
+    core.debug(`stdout callback is: ${stdout}`)
+    core.debug(`stdline callback is: ${stdline}`)
+
+    for (let branch of stdline) {
+      branch = branch.trim()
+      if (!branch) {
+        continue
+      }
+
+      if (branch.startsWith('refs/heads/')) {
+        branch = branch.substring('refs/heads/'.length)
+      } else if (branch.startsWith('refs/remotes/')) {
+        branch = branch.substring('refs/remotes/'.length)
+      }
+
+      result.push(branch)
     }
 
     return result
@@ -395,7 +426,8 @@ class GitCommandManager {
   private async execGit(
     args: string[],
     allowAllExitCodes = false,
-    silent = false
+    silent = false,
+    customListeners = {}
   ): Promise<GitOutput> {
     fshelper.directoryExistsSync(this.workingDirectory, true)
 
@@ -409,22 +441,29 @@ class GitCommandManager {
       env[key] = this.gitEnv[key]
     }
 
-    const stdout: string[] = []
+    const defaultListener = {
+      stdout: (data: Buffer) => {
+        stdout.push(data.toString())
+      }
+    }
 
+    const mergedListeners = {...defaultListener, ...customListeners}
+
+    const stdout: string[] = []
     const options = {
       cwd: this.workingDirectory,
       env,
       silent,
       ignoreReturnCode: allowAllExitCodes,
-      listeners: {
-        stdout: (data: Buffer) => {
-          stdout.push(data.toString())
-        }
-      }
+      listeners: mergedListeners
     }
 
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
+
+    core.debug(result.exitCode.toString())
+    core.debug(result.stdout)
+
     return result
   }
 
