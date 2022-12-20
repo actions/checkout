@@ -20,6 +20,7 @@ let tempHomedir: string
 let git: IGitCommandManager & {env: {[key: string]: string}}
 let settings: IGitSourceSettings
 let sshPath: string
+let githubServerUrl: string
 
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {
@@ -67,11 +68,18 @@ describe('git-auth-helper tests', () => {
     }
   })
 
-  const configureAuth_configuresAuthHeader =
-    'configureAuth configures auth header'
-  it(configureAuth_configuresAuthHeader, async () => {
+  async function testAuthHeader(
+    testName: string,
+    serverUrl: string | undefined = undefined
+  ) {
     // Arrange
-    await setup(configureAuth_configuresAuthHeader)
+    let expectedServerUrl = 'https://github.com'
+    if (serverUrl) {
+      githubServerUrl = serverUrl
+      expectedServerUrl = githubServerUrl
+    }
+
+    await setup(testName)
     expect(settings.authToken).toBeTruthy() // sanity check
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
 
@@ -88,9 +96,33 @@ describe('git-auth-helper tests', () => {
     ).toString('base64')
     expect(
       configContent.indexOf(
-        `http.https://github.com/.extraheader AUTHORIZATION: basic ${basicCredential}`
+        `http.${expectedServerUrl}/.extraheader AUTHORIZATION: basic ${basicCredential}`
       )
     ).toBeGreaterThanOrEqual(0)
+  }
+
+  const configureAuth_configuresAuthHeader =
+    'configureAuth configures auth header'
+  it(configureAuth_configuresAuthHeader, async () => {
+    await testAuthHeader(configureAuth_configuresAuthHeader)
+  })
+
+  const configureAuth_AcceptsGitHubServerUrl =
+    'inject https://my-ghes-server.com as github server url'
+  it(configureAuth_AcceptsGitHubServerUrl, async () => {
+    await testAuthHeader(
+      configureAuth_AcceptsGitHubServerUrl,
+      'https://my-ghes-server.com'
+    )
+  })
+
+  const configureAuth_AcceptsGitHubServerUrlSetToGHEC =
+    'inject https://github.com as github server url'
+  it(configureAuth_AcceptsGitHubServerUrlSetToGHEC, async () => {
+    await testAuthHeader(
+      configureAuth_AcceptsGitHubServerUrl,
+      'https://github.com'
+    )
   })
 
   const configureAuth_configuresAuthHeaderEvenWhenPersistCredentialsFalse =
@@ -778,7 +810,8 @@ async function setup(testName: string): Promise<void> {
     sshKnownHosts: '',
     sshStrict: true,
     workflowOrganizationId: 123456,
-    setSafeDirectory: true
+    setSafeDirectory: true,
+    githubServerUrl: githubServerUrl
   }
 }
 
