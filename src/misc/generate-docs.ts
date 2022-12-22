@@ -12,8 +12,8 @@ function updateUsage(
   actionReference: string,
   actionYamlPath = 'action.yml',
   readmePath = 'README.md',
-  startToken = '<!-- start usage -->',
-  endToken = '<!-- end usage -->'
+  startToken = '<!-- start usage -->\n',
+  endToken = '\n<!-- end usage -->'
 ): void {
   if (!actionReference) {
     throw new Error('Parameter actionReference must not be empty')

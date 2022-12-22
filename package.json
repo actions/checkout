@@ -5,8 +5,8 @@
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc && ncc build && node lib/misc/generate-docs.js",
-    "format": "prettier --write '**/*.ts'",
-    "format-check": "prettier --check '**/*.ts'",
+    "format": "prettier --write .",
+    "format-check": "prettier --check .",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
     "licensed-check": "src/misc/licensed-check.sh",
@@ -48,7 +48,7 @@
     "jest": "^27.3.0",
     "jest-circus": "^27.3.0",
     "js-yaml": "^3.13.1",
-    "prettier": "^1.19.1",
+    "prettier": "^2.7.1",
     "ts-jest": "^27.0.7",
     "typescript": "^4.4.4"
   }

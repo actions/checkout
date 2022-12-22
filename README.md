@@ -18,6 +18,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 # Usage
 
 <!-- start usage -->
+
 ```yaml
 - uses: actions/checkout@v3
   with:
@@ -102,6 +103,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # https://my-ghes-server.example.com
     github-server-url: ''
 ```
+
 <!-- end usage -->
 
 # Scenarios
@@ -188,7 +190,6 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ```
 
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
-
 
 ## Checkout pull request HEAD commit instead of merge commit
 

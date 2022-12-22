@@ -205,7 +205,7 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
-    
+
   test-git-container:
     runs-on: ubuntu-latest
     container: bitnami/git:latest
