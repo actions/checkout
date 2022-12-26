@@ -4083,7 +4083,7 @@ function setSshKnownHostsPath(sshKnownHostsPath) {
 }
 exports.setSshKnownHostsPath = setSshKnownHostsPath;
 /**
- * Save the sef-safe-directory input so the POST action can retrieve the value.
+ * Save the set-safe-directory input so the POST action can retrieve the value.
  */
 function setSafeDirectory() {
     core.saveState('setSafeDirectory', 'true');
