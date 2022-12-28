@@ -47,7 +47,7 @@ export function setSshKnownHostsPath(sshKnownHostsPath: string) {
 }
 
 /**
- * Save the sef-safe-directory input so the POST action can retrieve the value.
+ * Save the set-safe-directory input so the POST action can retrieve the value.
  */
 export function setSafeDirectory() {
   core.saveState('setSafeDirectory', 'true')
