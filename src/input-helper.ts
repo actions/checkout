@@ -89,13 +89,6 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
-  // Fetch jobs
-  result.fetchJobs = Math.floor(Number(core.getInput('fetch-jobs') || '-1'))
-  if (isNaN(result.fetchJobs) || result.fetchJobs < -1) {
-    result.fetchJobs = -1
-  }
-  core.debug(`fetch jobs = ${result.fetchJobs}`)
-
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
@@ -112,6 +105,16 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   }
   core.debug(`submodules = ${result.submodules}`)
   core.debug(`recursive submodules = ${result.nestedSubmodules}`)
+
+  // Fetch jobs during submodule update
+  result.fetchJobs = -1
+  if (result.submodules) {
+    result.fetchJobs = Math.floor(Number(core.getInput('fetch-jobs') || '-1'))
+    if (isNaN(result.fetchJobs) || result.fetchJobs < -1) {
+      result.fetchJobs = -1
+    }
+    core.debug(`fetch jobs = ${result.fetchJobs}`)
+  }
 
   // Auth token
   result.authToken = core.getInput('token', {required: true})
