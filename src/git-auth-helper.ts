@@ -19,8 +19,9 @@ export interface IGitAuthHelper {
   configureAuth(): Promise<void>
   configureGlobalAuth(): Promise<void>
   configureSubmoduleAuth(): Promise<void>
+  configureTempGlobalConfig(): Promise<string>
   removeAuth(): Promise<void>
-  removeGlobalAuth(): Promise<void>
+  removeGlobalConfig(): Promise<void>
 }
 
 export function createAuthHelper(
@@ -51,7 +52,7 @@ class GitAuthHelper {
     this.settings = gitSourceSettings || (({} as unknown) as IGitSourceSettings)
 
     // Token auth header
-    const serverUrl = urlHelper.getServerUrl()
+    const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl)
     this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader` // "origin" is SCHEME://HOSTNAME[:PORT]
     const basicCredential = Buffer.from(
       `x-access-token:${this.settings.authToken}`,
@@ -80,7 +81,11 @@ class GitAuthHelper {
     await this.configureToken()
   }
 
-  async configureGlobalAuth(): Promise<void> {
+  async configureTempGlobalConfig(): Promise<string> {
+    // Already setup global config
+    if (this.temporaryHomePath?.length > 0) {
+      return path.join(this.temporaryHomePath, '.gitconfig')
+    }
     // Create a temp home directory
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
@@ -110,13 +115,19 @@ class GitAuthHelper {
       await fs.promises.writeFile(newGitConfigPath, '')
     }
 
-    try {
-      // Override HOME
-      core.info(
-        `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
-      )
-      this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
+    // Override HOME
+    core.info(
+      `Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`
+    )
+    this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
 
+    return newGitConfigPath
+  }
+
+  async configureGlobalAuth(): Promise<void> {
+    // 'configureTempGlobalConfig' noops if already set, just returns the path
+    const newGitConfigPath = await this.configureTempGlobalConfig()
+    try {
       // Configure the token
       await this.configureToken(newGitConfigPath, true)
 
@@ -146,7 +157,8 @@ class GitAuthHelper {
       // by process creation audit events, which are commonly logged. For more information,
       // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
       const output = await this.git.submoduleForeach(
-        `git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url`,
+        // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
+        `sh -c "git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`,
         this.settings.nestedSubmodules
       )
 
@@ -181,10 +193,12 @@ class GitAuthHelper {
     await this.removeToken()
   }
 
-  async removeGlobalAuth(): Promise<void> {
-    core.debug(`Unsetting HOME override`)
-    this.git.removeEnvironmentVariable('HOME')
-    await io.rmRF(this.temporaryHomePath)
+  async removeGlobalConfig(): Promise<void> {
+    if (this.temporaryHomePath?.length > 0) {
+      core.debug(`Unsetting HOME override`)
+      this.git.removeEnvironmentVariable('HOME')
+      await io.rmRF(this.temporaryHomePath)
+    }
   }
 
   private async configureSsh(): Promise<void> {
@@ -352,7 +366,8 @@ class GitAuthHelper {
 
     const pattern = regexpHelper.escape(configKey)
     await this.git.submoduleForeach(
-      `git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :`,
+      // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
+      `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`,
       true
     )
   }

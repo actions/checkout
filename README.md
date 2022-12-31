@@ -1,6 +1,4 @@
-<p align="center">
-  <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
-</p>
+[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
 # Checkout V3
 
@@ -98,6 +96,17 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     #
     # Default: false
     submodules: ''
+
+    # Add repository path as safe.directory for Git global config by running `git
+    # config --global --add safe.directory <path>`
+    # Default: true
+    set-safe-directory: ''
+
+    # The base URL for the GitHub instance that you are trying to clone from, will use
+    # environment defaults to fetch from the same instance that the workflow is
+    # running from unless specified. Example URLs are https://github.com or
+    # https://my-ghes-server.example.com
+    github-server-url: ''
 ```
 <!-- end usage -->
 
@@ -152,6 +161,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-tools
     path: my-tools
 ```
+> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (nested)
 
@@ -165,6 +175,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-tools
     path: my-tools
 ```
+> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (private)
 

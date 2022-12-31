@@ -1,6 +1,6 @@
 ---
 name: qs
-version: 6.10.1
+version: 6.11.0
 type: npm
 summary: A querystring parser that supports nesting and arrays, with a depth limit
 homepage: https://github.com/ljharb/qs
