@@ -56,6 +56,12 @@ inputs:
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
     default: 1
+  fetch-jobs:
+    description: >
+      Number of fetches to perform simultaneously when updating submodules:
+      -1 indicates to use git default (serial updates). 0 uses as many jobs as
+      there are processors.
+    default: -1
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false

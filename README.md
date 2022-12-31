@@ -78,6 +78,12 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: 1
     fetch-depth: ''
 
+    # Number of fetches to perform simultaneously when updating submodules: -1
+    # indicates to use git default (serial updates). 0 uses as many jobs as there are
+    # processors.
+    # Default: -1
+    fetch-jobs: ''
+
     # Whether to download Git-LFS files
     # Default: false
     lfs: ''
