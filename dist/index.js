@@ -7253,7 +7253,9 @@ class GitAuthHelper {
             stateHelper.setSshKnownHostsPath(this.sshKnownHostsPath);
             yield fs.promises.writeFile(this.sshKnownHostsPath, knownHosts);
             // Configure GIT_SSH_COMMAND
-            const sshPath = yield io.which('ssh', true);
+            const sshPath = (yield this.git.configExists(SSH_COMMAND_KEY, true))
+                ? yield this.git.configGet(SSH_COMMAND_KEY, true)
+                : yield io.which('ssh', true);
             this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
             if (this.settings.sshStrict) {
                 this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
@@ -7531,6 +7533,16 @@ class GitCommandManager {
                 pattern
             ], true);
             return output.exitCode === 0;
+        });
+    }
+    configGet(configKey, globalConfig) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const output = yield this.execGit([
+                'config',
+                globalConfig ? '--global' : '--local',
+                configKey
+            ]);
+            return output.stdout.trim();
         });
     }
     fetch(refSpec, fetchDepth) {

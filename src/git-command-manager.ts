@@ -26,6 +26,7 @@ export interface IGitCommandManager {
   ): Promise<void>
   configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
   fetch(refSpec: string[], fetchDepth?: number): Promise<void>
+  configGet(configKey: string, globalConfig?: boolean): Promise<string>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
   init(): Promise<void>
@@ -199,6 +200,15 @@ class GitCommandManager {
       true
     )
     return output.exitCode === 0
+  }
+
+  async configGet(configKey: string, globalConfig?: boolean): Promise<string> {
+    const output = await this.execGit([
+      'config',
+      globalConfig ? '--global' : '--local',
+      configKey
+    ])
+    return output.stdout.trim()
   }
 
   async fetch(refSpec: string[], fetchDepth?: number): Promise<void> {
