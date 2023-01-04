@@ -253,7 +253,9 @@ class GitAuthHelper {
     await fs.promises.writeFile(this.sshKnownHostsPath, knownHosts)
 
     // Configure GIT_SSH_COMMAND
-    const sshPath = await io.which('ssh', true)
+    const sshPath = (await this.git.configExists(SSH_COMMAND_KEY, true))
+      ? await this.git.configGet(SSH_COMMAND_KEY, true)
+      : await io.which('ssh', true)
     this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
       this.sshKeyPath
     )}"`

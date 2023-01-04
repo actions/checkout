@@ -297,6 +297,41 @@ describe('git-auth-helper tests', () => {
     )
   })
 
+  const configureAuth_setsSshCommandWithCustomCommand =
+    'sets SSH command preseving custom command'
+  it(configureAuth_setsSshCommandWithCustomCommand, async () => {
+    // Arrange
+    await setup(configureAuth_setsSshCommandWithCustomCommand)
+    await fs.promises.writeFile(globalGitConfigPath, 'core.sshCommand fakeSsh')
+    expect(await git.configExists('core.sshCommand', true)).toBeTruthy() // sanity check
+    expect(await git.configGet('core.sshCommand', true)).toBe('fakeSsh') // sanity check
+
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+    expect(git.configGet).toHaveBeenCalledWith('core.sshCommand', true)
+
+    // Assert git env var
+    const actualKeyPath = await getActualSshKeyPath()
+    const actualKnownHostsPath = await getActualSshKnownHostsPath()
+    const expectedSshCommand = `"fakeSsh" -i "$RUNNER_TEMP/${path.basename(
+      actualKeyPath
+    )}" -o StrictHostKeyChecking=yes -o CheckHostIP=no -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(
+      actualKnownHostsPath
+    )}"`
+    expect(git.setEnvironmentVariable).toHaveBeenCalledWith(
+      'GIT_SSH_COMMAND',
+      expectedSshCommand
+    )
+
+    // Asserty git config
+    expect(git.config).toHaveBeenCalledWith(
+      'core.sshCommand',
+      expectedSshCommand
+    )
+  })
+
   const configureAuth_writesExplicitKnownHosts = 'writes explicit known hosts'
   it(configureAuth_writesExplicitKnownHosts, async () => {
     if (!sshPath) {
@@ -739,15 +774,47 @@ async function setup(testName: string): Promise<void> {
     ),
     configExists: jest.fn(
       async (key: string, globalConfig?: boolean): Promise<boolean> => {
-        const configPath = globalConfig
-          ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
-          : localGitConfigPath
-        const content = await fs.promises.readFile(configPath)
-        const lines = content
-          .toString()
-          .split('\n')
-          .filter(x => x)
-        return lines.some(x => x.startsWith(key))
+        try {
+          const configPath = globalConfig
+            ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
+            : localGitConfigPath
+          const content = await fs.promises.readFile(configPath)
+          const lines = content
+            .toString()
+            .split('\n')
+            .filter(x => x)
+          return lines.some(x => x.startsWith(key))
+        } catch (error) {
+          if ((error as any)?.code === 'ENOENT') {
+            return false
+          }
+          throw error
+        }
+      }
+    ),
+    configGet: jest.fn(
+      async (key: string, globalConfig?: boolean): Promise<string> => {
+        try {
+          const configPath = globalConfig
+            ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
+            : localGitConfigPath
+          const content = await fs.promises.readFile(configPath)
+          const lines = content
+            .toString()
+            .split('\n')
+            .filter(x => x)
+            .filter(x => x.startsWith(key))
+          if (lines.length) {
+            return lines[0].split(' ')[1]
+          } else {
+            return ''
+          }
+        } catch (error) {
+          if ((error as any)?.code === 'ENOENT') {
+            return ''
+          }
+          throw error
+        }
       }
     ),
     env: {},
