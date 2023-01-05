@@ -1,24 +1,51 @@
-  [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout V3
+comportamiento
+/
+verificar
+Público
+Acción para comprobar un repositorio
 
-This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
+github.com/features/acciones
+Licencia
+ licencia MIT
+ 3,5k estrellas 1,2k horquillas 
+Código
+Cuestiones
+290
+Solicitudes de extracción
+62
+Discusiones
+Comportamiento
+Proyectos
+Seguridad
+Perspectivas
+acciones/pago
+Usa esta acción de GitHub con tu proyecto
+Agregue esta acción a un flujo de trabajo existente o cree uno nuevo.
 
-Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Última confirmación
+@estacada
+estacada
+…
+hace 2 días
+Estadísticas de Git
+archivos
+LÉAME.md
+Construir y probar
 
-The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
+Pago V3
+Esta acción verifica su repositorio en $GITHUB_WORKSPACE, para que su flujo de trabajo pueda acceder a él.
 
-When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
+De forma predeterminada, solo se obtiene una única confirmación para la referencia/SHA que activó el flujo de trabajo. Configúrelo fetch-depth: 0para obtener todo el historial de todas las sucursales y etiquetas. Consulte aquí para saber qué $GITHUB_SHApuntos de compromiso se asignan para diferentes eventos.
 
-# What's new
+El token de autenticación se conserva en la configuración local de git. Esto permite que sus scripts ejecuten comandos git autenticados. El token se elimina durante la limpieza posterior al trabajo. Configurado persist-credentials: falsepara optar por no participar.
 
-- Updated to the node16 runtime by default
-  - This requires a minimum [Actions Runner](https://github.com/actions/runner/releases/tag/v2.285.0) version of v2.285.0 to run, which is by default available in GHES 3.4 or later.
+Cuando Git 2.18 o superior no está en su RUTA, recurra a la API REST para descargar los archivos.
 
-# Usage
-
-<!-- start usage -->
-```yaml
+Qué hay de nuevo
+Actualizado al tiempo de ejecución de node16 por defecto
+Esto requiere una versión mínima de Actions Runner de v2.285.0 para ejecutarse, que está disponible de forma predeterminada en GHES 3.4 o posterior.
+Uso
 - uses: actions/checkout@v3
   with:
     # Repository name with owner. For example, actions/checkout
@@ -101,49 +128,30 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
-```
-<!-- end usage -->
-
-# Scenarios
-
-- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
-- [Checkout a different branch](#Checkout-a-different-branch)
-- [Checkout HEAD^](#Checkout-HEAD)
-- [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
-- [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
-- [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
-
-## Fetch all history for all tags and branches
-
-```yaml
+Escenarios
+Obtener todo el historial de todas las etiquetas y ramas
+Consulta otra sucursal
+Pagar CABEZA^
+Pago de varios repositorios (uno al lado del otro)
+Pago de varios repositorios (anidados)
+Pago de varios repositorios (privado)
+Compromiso HEAD de solicitud de extracción de pago en lugar de compromiso de fusión
+Solicitud de extracción de pago en evento cerrado
+Empuje una confirmación usando el token incorporado
+Obtener todo el historial de todas las etiquetas y ramas
 - uses: actions/checkout@v3
   with:
     fetch-depth: 0
-```
-
-## Checkout a different branch
-
-```yaml
+Consulta otra sucursal
 - uses: actions/checkout@v3
   with:
     ref: my-branch
-```
-
-## Checkout HEAD^
-
-```yaml
+Pagar CABEZA^
 - uses: actions/checkout@v3
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
-```
-
-## Checkout multiple repos (side by side)
-
-```yaml
+Pago de varios repositorios (uno al lado del otro)
 - name: Checkout
   uses: actions/checkout@v3
   with:
@@ -154,12 +162,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
   with:
     repository: my-org/my-tools
     path: my-tools
-```
-> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
-
-## Checkout multiple repos (nested)
-
-```yaml
+Si su repositorio secundario es privado, deberá agregar la opción indicada en Checkout multiple repos (private)
+Pago de varios repositorios (anidados)
 - name: Checkout
   uses: actions/checkout@v3
 
@@ -168,12 +172,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
   with:
     repository: my-org/my-tools
     path: my-tools
-```
-> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
-
-## Checkout multiple repos (private)
-
-```yaml
+Si su repositorio secundario es privado, deberá agregar la opción indicada en Checkout multiple repos (private)
+Pago de varios repositorios (privado)
 - name: Checkout
   uses: actions/checkout@v3
   with:
@@ -185,22 +185,12 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
     path: my-tools
-```
-
-> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
-
-
-## Checkout pull request HEAD commit instead of merge commit
-
-```yaml
+${{ github.token }}está en el ámbito del repositorio actual, por lo que si desea obtener un repositorio diferente que sea privado, deberá proporcionar su propia PAT .
+Compromiso HEAD de solicitud de extracción de pago en lugar de compromiso de fusión
 - uses: actions/checkout@v3
   with:
     ref: ${{ github.event.pull_request.head.sha }}
-```
-
-## Checkout pull request on closed event
-
-```yaml
+Solicitud de extracción de pago en evento cerrado
 on:
   pull_request:
     branches: [main]
@@ -210,11 +200,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-```
-
-## Push a commit using the built-in token
-
-```yaml
+Empuje una confirmación usando el token incorporado
 on: push
 jobs:
   build:
@@ -228,8 +214,10 @@ jobs:
           git add .
           git commit -m "generated"
           git push
-```
+Licencia
+Los scripts y la documentación de este proyecto se publican bajo la licencia MIT.
 
-# License
-
-The scripts and documentation in this project are released under the [MIT License](LICENSE)
+Lanzamientos 22
+v3.2.0
+El último
+hace 3 semanas
