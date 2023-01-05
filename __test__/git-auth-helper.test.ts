@@ -806,6 +806,7 @@ async function setup(testName: string): Promise<void> {
     sparseCheckoutConeMode: true,
     fetchDepth: 1,
     fetchTags: false,
+    showProgress: true,
     lfs: false,
     submodules: false,
     nestedSubmodules: false,

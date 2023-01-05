@@ -50,6 +50,11 @@ export interface IGitSourceSettings {
   fetchTags: boolean
 
   /**
+   * Indicates whether to use the --progress option when fetching
+   */
+  showProgress: boolean
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean

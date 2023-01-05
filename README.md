@@ -91,6 +91,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: false
     fetch-tags: ''
 
+    # Whether to show progress status output when fetching.
+    # Default: true
+    show-progress: ''
+
     # Whether to download Git-LFS files
     # Default: false
     lfs: ''
