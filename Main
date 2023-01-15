@@ -1,0 +1,51 @@
+- uses: actions/checkout@v3
+  with:
+    fetch-depth: 0
+- uses: actions/checkout@v3
+  with:
+    ref: my-branch
+- name: Checkout
+  uses: actions/checkout@v3
+  with:
+    path: main
+
+- name: Checkout tools repo
+  uses: actions/checkout@v3
+  with:
+    repository: my-org/my-tools
+    path: my-tools
+- name: Checkout
+  uses: actions/checkout@v3
+
+- name: Checkout tools repo
+  uses: actions/checkout@v3
+  with:
+    repository: my-org/my-tools
+    path: my-tools
+# Create a folder under the drive root
+mkdir \actions-runner ; cd \actions-runner
+# Download the latest runner package
+Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/v2.285.0/actions-runner-win-x64-2.285.0.zip -OutFile actions-runner-win-x64-2.285.0.zip
+# Extract the installer
+Add-Type -AssemblyName System.IO.Compression.FileSystem ;
+[System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD\actions-runner-win-x64-2.285.0.zip", "$PWD")
+- name: Checkout
+  uses: actions/checkout@v3
+  with:
+    path: main
+
+- name: Checkout private tools
+  uses: actions/checkout@v3
+  with:
+    repository: my-org/my-private-tools
+    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+    path: my-tools 
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, closed]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
