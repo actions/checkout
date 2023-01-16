@@ -109,8 +109,16 @@ class GitAuthHelper {
       }
     }
     if (configExists) {
-      core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`)
-      await io.cp(gitConfigPath, newGitConfigPath)
+      if ((await fs.promises.lstat(gitConfigPath)).isSymbolicLink()) {
+        core.info(`.gitconfig file at ${gitConfigPath} is a symlink, copying the true file instead`)
+        // get true link
+        const symlinkFull: string = await fs.promises.readlink(gitConfigPath)
+        core.info(`Copying '${symlinkFull}' to '${newGitConfigPath}'`)
+        await io.cp(symlinkFull, newGitConfigPath)
+      } else {
+        core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`)
+        await io.cp(gitConfigPath, newGitConfigPath)
+      }
     } else {
       await fs.promises.writeFile(newGitConfigPath, '')
     }

@@ -7129,8 +7129,17 @@ class GitAuthHelper {
                 }
             }
             if (configExists) {
-                core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`);
-                yield io.cp(gitConfigPath, newGitConfigPath);
+                if ((yield fs.promises.lstat(gitConfigPath)).isSymbolicLink()) {
+                    core.info(`.gitconfig file at ${gitConfigPath} is a symlink, copying the true file instead`);
+                    // get true link
+                    const symlinkFull = yield fs.promises.readlink(gitConfigPath);
+                    core.info(`Copying '${symlinkFull}' to '${newGitConfigPath}'`);
+                    yield io.cp(symlinkFull, newGitConfigPath);
+                }
+                else {
+                    core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`);
+                    yield io.cp(gitConfigPath, newGitConfigPath);
+                }
             }
             else {
                 yield fs.promises.writeFile(newGitConfigPath, '');
