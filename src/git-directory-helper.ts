@@ -24,10 +24,10 @@ export async function prepareExistingDirectory(
     remove = true
   }
   // Fetch URL does not match
-  else if (
-    !fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
-    repositoryUrl !== (await git.tryGetFetchUrl())
-  ) {
+  else if (!fsHelper.directoryExistsSync(path.join(repositoryPath, '.git'))) {
+    remove = clean
+  }
+  else if (repositoryUrl !== (await git.tryGetFetchUrl())) {
     remove = true
   } else {
     // Delete any index.lock and shallow.lock left by a previously canceled run or crashed git process
