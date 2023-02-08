@@ -49,7 +49,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # We recommend using a service account with the least permissions necessary.
     #
     # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
-    ssh-key: ''
+    key: ''
 
     # Known hosts in addition to the user and global host key database. The public SSH
     # keys for a host may be obtained using the utility `ssh-keyscan`. For example,
