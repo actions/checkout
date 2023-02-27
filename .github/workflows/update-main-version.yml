@@ -23,7 +23,7 @@ jobs:
     - name: Git config
       run: |
         git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
     - name: Tag new target
       run: git tag -f ${{ github.event.inputs.main_version }} ${{ github.event.inputs.target }}
     - name: Push new tag
