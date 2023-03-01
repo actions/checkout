@@ -7064,6 +7064,7 @@ const regexpHelper = __importStar(__webpack_require__(528));
 const stateHelper = __importStar(__webpack_require__(153));
 const urlHelper = __importStar(__webpack_require__(81));
 const v4_1 = __importDefault(__webpack_require__(826));
+const git_command_manager_1 = __webpack_require__(289);
 const IS_WINDOWS = process.platform === 'win32';
 const SSH_COMMAND_KEY = 'core.sshCommand';
 function createAuthHelper(git, settings) {
@@ -7147,19 +7148,19 @@ class GitAuthHelper {
             const newGitConfigPath = yield this.configureTempGlobalConfig();
             try {
                 // Configure the token
-                yield this.configureToken(newGitConfigPath, true);
+                yield this.configureToken(newGitConfigPath, git_command_manager_1.ConfigScope.System);
                 // Configure HTTPS instead of SSH
-                yield this.git.tryConfigUnset(this.insteadOfKey, true);
+                yield this.git.tryConfigUnset(this.insteadOfKey, git_command_manager_1.ConfigScope.System);
                 if (!this.settings.sshKey) {
                     for (const insteadOfValue of this.insteadOfValues) {
-                        yield this.git.config(this.insteadOfKey, insteadOfValue, true, true);
+                        yield this.git.config(this.insteadOfKey, insteadOfValue, git_command_manager_1.ConfigScope.System, true);
                     }
                 }
             }
             catch (err) {
                 // Unset in case somehow written to the real global config
                 core.info('Encountered an error when attempting to configure token. Attempting unconfigure.');
-                yield this.git.tryConfigUnset(this.tokenConfigKey, true);
+                yield this.git.tryConfigUnset(this.tokenConfigKey, git_command_manager_1.ConfigScope.System);
                 throw err;
             }
         });
@@ -7267,18 +7268,18 @@ class GitAuthHelper {
             }
         });
     }
-    configureToken(configPath, globalConfig) {
+    configureToken(configPath, configScope) {
         return __awaiter(this, void 0, void 0, function* () {
             // Validate args
-            assert.ok((configPath && globalConfig) || (!configPath && !globalConfig), 'Unexpected configureToken parameter combinations');
+            assert.ok((configPath && configScope) || (!configPath && !configScope), 'Unexpected configureToken parameter combinations');
             // Default config path
-            if (!configPath && !globalConfig) {
+            if (!configPath && !configScope) {
                 configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
             }
             // Configure a placeholder value. This approach avoids the credential being captured
             // by process creation audit events, which are commonly logged. For more information,
             // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-            yield this.git.config(this.tokenConfigKey, this.tokenPlaceholderConfigValue, globalConfig);
+            yield this.git.config(this.tokenConfigKey, this.tokenPlaceholderConfigValue, configScope);
             // Replace the placeholder
             yield this.replaceTokenPlaceholder(configPath || '');
         });
@@ -7385,7 +7386,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createCommandManager = exports.MinimumGitVersion = void 0;
+exports.createCommandManager = exports.ConfigScope = exports.MinimumGitVersion = void 0;
 const core = __importStar(__webpack_require__(470));
 const exec = __importStar(__webpack_require__(986));
 const fshelper = __importStar(__webpack_require__(618));
@@ -7398,6 +7399,12 @@ const git_version_1 = __webpack_require__(559);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
+var ConfigScope;
+(function (ConfigScope) {
+    ConfigScope["Local"] = "local";
+    ConfigScope["Global"] = "global";
+    ConfigScope["System"] = "system";
+})(ConfigScope = exports.ConfigScope || (exports.ConfigScope = {}));
 function createCommandManager(workingDirectory, lfs) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs);
@@ -7510,9 +7517,12 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    config(configKey, configValue, globalConfig, add) {
+    config(configKey, configValue, configScope, add) {
         return __awaiter(this, void 0, void 0, function* () {
-            const args = ['config', globalConfig ? '--global' : '--local'];
+            const args = [
+                'config',
+                configScope ? `--${configScope}` : '--local'
+            ];
             if (add) {
                 args.push('--add');
             }
@@ -7520,12 +7530,12 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    configExists(configKey, globalConfig) {
+    configExists(configKey, configScope) {
         return __awaiter(this, void 0, void 0, function* () {
             const pattern = regexpHelper.escape(configKey);
             const output = yield this.execGit([
                 'config',
-                globalConfig ? '--global' : '--local',
+                configScope ? `--${configScope}` : '--local',
                 '--name-only',
                 '--get-regexp',
                 pattern
@@ -7695,11 +7705,11 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    tryConfigUnset(configKey, globalConfig) {
+    tryConfigUnset(configKey, configScope) {
         return __awaiter(this, void 0, void 0, function* () {
             const output = yield this.execGit([
                 'config',
-                globalConfig ? '--global' : '--local',
+                configScope ? `--${configScope}` : '--local',
                 '--unset-all',
                 configKey
             ], true);
@@ -31875,6 +31885,7 @@ const path = __importStar(__webpack_require__(622));
 const refHelper = __importStar(__webpack_require__(227));
 const stateHelper = __importStar(__webpack_require__(153));
 const urlHelper = __importStar(__webpack_require__(81));
+const git_command_manager_1 = __webpack_require__(289);
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
@@ -31904,7 +31915,7 @@ function getSource(settings) {
                     yield authHelper.configureTempGlobalConfig();
                     core.info(`Adding repository directory to the temporary git global config as a safe directory`);
                     yield git
-                        .config('safe.directory', settings.repositoryPath, true, true)
+                        .config('safe.directory', settings.repositoryPath, git_command_manager_1.ConfigScope.System, true)
                         .catch(error => {
                         core.info(`Failed to initialize safe directory with error: ${error}`);
                     });
@@ -32063,7 +32074,7 @@ function cleanup(repositoryPath) {
                 yield authHelper.configureTempGlobalConfig();
                 core.info(`Adding repository directory to the temporary git global config as a safe directory`);
                 yield git
-                    .config('safe.directory', repositoryPath, true, true)
+                    .config('safe.directory', repositoryPath, git_command_manager_1.ConfigScope.System, true)
                     .catch(error => {
                     core.info(`Failed to initialize safe directory with error: ${error}`);
                 });
