@@ -13,9 +13,9 @@ import {GitVersion} from './git-version'
 export const MinimumGitVersion = new GitVersion('2.18')
 
 export enum ConfigScope {
-  Local = "local",
-  Global = "global",
-  System = "system",
+  Local = 'local',
+  Global = 'global',
+  System = 'system'
 }
 
 export interface IGitCommandManager {
@@ -181,7 +181,10 @@ class GitCommandManager {
     configScope?: ConfigScope,
     add?: boolean
   ): Promise<void> {
-    const args: string[] = ['config', configScope ? `--${configScope}` : '--local']
+    const args: string[] = [
+      'config',
+      configScope ? `--${configScope}` : '--local'
+    ]
     if (add) {
       args.push('--add')
     }

@@ -50,7 +50,12 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         )
 
         await git
-          .config('safe.directory', settings.repositoryPath, ConfigScope.System, true)
+          .config(
+            'safe.directory',
+            settings.repositoryPath,
+            ConfigScope.System,
+            true
+          )
           .catch(error => {
             core.info(
               `Failed to initialize safe directory with error: ${error}`

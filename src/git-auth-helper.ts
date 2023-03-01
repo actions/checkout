@@ -136,7 +136,12 @@ class GitAuthHelper {
       await this.git.tryConfigUnset(this.insteadOfKey, ConfigScope.System)
       if (!this.settings.sshKey) {
         for (const insteadOfValue of this.insteadOfValues) {
-          await this.git.config(this.insteadOfKey, insteadOfValue, ConfigScope.System, true)
+          await this.git.config(
+            this.insteadOfKey,
+            insteadOfValue,
+            ConfigScope.System,
+            true
+          )
         }
       }
     } catch (err) {
@@ -294,7 +299,7 @@ class GitAuthHelper {
     await this.git.config(
       this.tokenConfigKey,
       this.tokenPlaceholderConfigValue,
-      configScope,
+      configScope
     )
 
     // Replace the placeholder
