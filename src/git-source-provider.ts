@@ -9,6 +9,7 @@ import * as path from 'path'
 import * as refHelper from './ref-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
+import {ConfigScope} from './git-command-manager'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
@@ -49,7 +50,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         )
 
         await git
-          .config('safe.directory', settings.repositoryPath, true, true)
+          .config('safe.directory', settings.repositoryPath, ConfigScope.System, true)
           .catch(error => {
             core.info(
               `Failed to initialize safe directory with error: ${error}`
@@ -278,7 +279,7 @@ export async function cleanup(repositoryPath: string): Promise<void> {
       )
 
       await git
-        .config('safe.directory', repositoryPath, true, true)
+        .config('safe.directory', repositoryPath, ConfigScope.System, true)
         .catch(error => {
           core.info(`Failed to initialize safe directory with error: ${error}`)
         })

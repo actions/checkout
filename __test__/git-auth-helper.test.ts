@@ -5,6 +5,7 @@ import * as io from '@actions/io'
 import * as os from 'os'
 import * as path from 'path'
 import * as stateHelper from '../lib/state-helper'
+import {ConfigScope} from '../lib/git-command-manager'
 import {IGitCommandManager} from '../lib/git-command-manager'
 import {IGitSourceSettings} from '../lib/git-source-settings'
 
@@ -730,16 +731,16 @@ async function setup(testName: string): Promise<void> {
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(
-      async (key: string, value: string, globalConfig?: boolean) => {
-        const configPath = globalConfig
+      async (key: string, value: string, configScope?: ConfigScope) => {
+        const configPath = configScope
           ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
           : localGitConfigPath
         await fs.promises.appendFile(configPath, `\n${key} ${value}`)
       }
     ),
     configExists: jest.fn(
-      async (key: string, globalConfig?: boolean): Promise<boolean> => {
-        const configPath = globalConfig
+      async (key: string, configScope?: ConfigScope): Promise<boolean> => {
+        const configPath = configScope
           ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
           : localGitConfigPath
         const content = await fs.promises.readFile(configPath)
@@ -774,8 +775,8 @@ async function setup(testName: string): Promise<void> {
     tagExists: jest.fn(),
     tryClean: jest.fn(),
     tryConfigUnset: jest.fn(
-      async (key: string, globalConfig?: boolean): Promise<boolean> => {
-        const configPath = globalConfig
+      async (key: string, configScope?: ConfigScope): Promise<boolean> => {
+        const configPath = configScope
           ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
           : localGitConfigPath
         let content = await fs.promises.readFile(configPath)

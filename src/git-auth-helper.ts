@@ -9,6 +9,7 @@ import * as regexpHelper from './regexp-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
 import {default as uuid} from 'uuid/v4'
+import {ConfigScope} from './git-command-manager'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
@@ -129,13 +130,13 @@ class GitAuthHelper {
     const newGitConfigPath = await this.configureTempGlobalConfig()
     try {
       // Configure the token
-      await this.configureToken(newGitConfigPath, true)
+      await this.configureToken(newGitConfigPath, ConfigScope.System)
 
       // Configure HTTPS instead of SSH
-      await this.git.tryConfigUnset(this.insteadOfKey, true)
+      await this.git.tryConfigUnset(this.insteadOfKey, ConfigScope.System)
       if (!this.settings.sshKey) {
         for (const insteadOfValue of this.insteadOfValues) {
-          await this.git.config(this.insteadOfKey, insteadOfValue, true, true)
+          await this.git.config(this.insteadOfKey, insteadOfValue, ConfigScope.System, true)
         }
       }
     } catch (err) {
@@ -143,7 +144,7 @@ class GitAuthHelper {
       core.info(
         'Encountered an error when attempting to configure token. Attempting unconfigure.'
       )
-      await this.git.tryConfigUnset(this.tokenConfigKey, true)
+      await this.git.tryConfigUnset(this.tokenConfigKey, ConfigScope.System)
       throw err
     }
   }
@@ -274,16 +275,16 @@ class GitAuthHelper {
 
   private async configureToken(
     configPath?: string,
-    globalConfig?: boolean
+    configScope?: ConfigScope
   ): Promise<void> {
     // Validate args
     assert.ok(
-      (configPath && globalConfig) || (!configPath && !globalConfig),
+      (configPath && configScope) || (!configPath && !configScope),
       'Unexpected configureToken parameter combinations'
     )
 
     // Default config path
-    if (!configPath && !globalConfig) {
+    if (!configPath && !configScope) {
       configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config')
     }
 
@@ -293,7 +294,7 @@ class GitAuthHelper {
     await this.git.config(
       this.tokenConfigKey,
       this.tokenPlaceholderConfigValue,
-      globalConfig
+      configScope,
     )
 
     // Replace the placeholder

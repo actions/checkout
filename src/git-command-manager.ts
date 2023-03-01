@@ -12,6 +12,12 @@ import {GitVersion} from './git-version'
 // Wire protocol v2 not supported before 2.18
 export const MinimumGitVersion = new GitVersion('2.18')
 
+export enum ConfigScope {
+  Local = "local",
+  Global = "global",
+  System = "system",
+}
+
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
@@ -21,10 +27,10 @@ export interface IGitCommandManager {
   config(
     configKey: string,
     configValue: string,
-    globalConfig?: boolean,
+    configScope?: ConfigScope,
     add?: boolean
   ): Promise<void>
-  configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
+  configExists(configKey: string, configScope?: ConfigScope): Promise<boolean>
   fetch(refSpec: string[], fetchDepth?: number): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
@@ -43,7 +49,7 @@ export interface IGitCommandManager {
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
-  tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
+  tryConfigUnset(configKey: string, configScope?: ConfigScope): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
@@ -172,10 +178,10 @@ class GitCommandManager {
   async config(
     configKey: string,
     configValue: string,
-    globalConfig?: boolean,
+    configScope?: ConfigScope,
     add?: boolean
   ): Promise<void> {
-    const args: string[] = ['config', globalConfig ? '--global' : '--local']
+    const args: string[] = ['config', configScope ? `--${configScope}` : '--local']
     if (add) {
       args.push('--add')
     }
@@ -185,13 +191,13 @@ class GitCommandManager {
 
   async configExists(
     configKey: string,
-    globalConfig?: boolean
+    configScope?: ConfigScope
   ): Promise<boolean> {
     const pattern = regexpHelper.escape(configKey)
     const output = await this.execGit(
       [
         'config',
-        globalConfig ? '--global' : '--local',
+        configScope ? `--${configScope}` : '--local',
         '--name-only',
         '--get-regexp',
         pattern
@@ -369,12 +375,12 @@ class GitCommandManager {
 
   async tryConfigUnset(
     configKey: string,
-    globalConfig?: boolean
+    configScope?: ConfigScope
   ): Promise<boolean> {
     const output = await this.execGit(
       [
         'config',
-        globalConfig ? '--global' : '--local',
+        configScope ? `--${configScope}` : '--local',
         '--unset-all',
         configKey
       ],
