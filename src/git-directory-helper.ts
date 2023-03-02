@@ -82,7 +82,7 @@ export async function prepareExistingDirectory(
       core.endGroup()
 
       // Check for submodules and delete any existing files if submodules are present
-      if (!(await git.submoduleStatus())){
+      if (!(await git.submoduleStatus())) {
         remove = true
       }
 
