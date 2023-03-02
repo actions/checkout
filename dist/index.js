@@ -7683,6 +7683,12 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
+    submoduleStatus() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const output = yield this.execGit(['submodule', 'status'], true);
+            return output.exitCode === 0;
+        });
+    }
     tagExists(pattern) {
         return __awaiter(this, void 0, void 0, function* () {
             const output = yield this.execGit(['tag', '--list', pattern]);
@@ -9436,6 +9442,10 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                     }
                 }
                 core.endGroup();
+                // Check for submodules and delete any existing files if submodules are present
+                if (!(yield git.submoduleStatus())) {
+                    remove = true;
+                }
                 // Clean
                 if (clean) {
                     core.startGroup('Cleaning the repository');
