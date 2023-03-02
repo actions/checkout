@@ -7686,6 +7686,7 @@ class GitCommandManager {
     submoduleStatus() {
         return __awaiter(this, void 0, void 0, function* () {
             const output = yield this.execGit(['submodule', 'status'], true);
+            core.debug(output.stdout);
             return output.exitCode === 0;
         });
     }
@@ -9445,6 +9446,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 // Check for submodules and delete any existing files if submodules are present
                 if (!(yield git.submoduleStatus())) {
                     remove = true;
+                    core.info('Bad Submodules found, removing existing files');
                 }
                 // Clean
                 if (clean) {

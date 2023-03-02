@@ -423,6 +423,9 @@ async function setup(testName: string): Promise<void> {
     submoduleForeach: jest.fn(),
     submoduleSync: jest.fn(),
     submoduleUpdate: jest.fn(),
+    submoduleStatus: jest.fn(async () => {
+      return true
+    }),
     tagExists: jest.fn(),
     tryClean: jest.fn(async () => {
       return true

@@ -360,6 +360,7 @@ class GitCommandManager {
 
   async submoduleStatus(): Promise<boolean> {
     const output = await this.execGit(['submodule', 'status'], true)
+    core.debug(output.stdout)
     return output.exitCode === 0
   }
 
