@@ -3,7 +3,7 @@
 ## v3.4.0
 - [Upgrade codeql actions to v2](https://github.com/actions/checkout/pull/1209)
 - [Upgrade dependencies](https://github.com/actions/checkout/pull/1210)
-- [Upgrade @actions/io](https://github.com/actions/checkout/pull/)
+- [Upgrade @actions/io](https://github.com/actions/checkout/pull/1225)
 
 ## v3.3.0
 - [Implement branch list using callbacks from exec function](https://github.com/actions/checkout/pull/1045)
