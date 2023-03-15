@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.4.0
+- [Upgrade codeql actions to v2](https://github.com/actions/checkout/pull/1209)
+- [Upgrade dependencies](https://github.com/actions/checkout/pull/1210)
+- [Upgrade @actions/io](https://github.com/actions/checkout/pull/1225)
+
+## v3.3.0
+- [Implement branch list using callbacks from exec function](https://github.com/actions/checkout/pull/1045)
+- [Add in explicit reference to private checkout options](https://github.com/actions/checkout/pull/1050)
+- [Fix comment typos (that got added in #770)](https://github.com/actions/checkout/pull/1057)
+
+## v3.2.0
+- [Add GitHub Action to perform release](https://github.com/actions/checkout/pull/942)
+- [Fix status badge](https://github.com/actions/checkout/pull/967)
+- [Replace datadog/squid with ubuntu/squid Docker image](https://github.com/actions/checkout/pull/1002)
+- [Wrap pipeline commands for submoduleForeach in quotes](https://github.com/actions/checkout/pull/964)
+- [Update @actions/io to 1.1.2](https://github.com/actions/checkout/pull/1029)
+- [Upgrading version to 3.2.0](https://github.com/actions/checkout/pull/1039)
+
 ## v3.1.0
 - [Use @actions/core `saveState` and `getState`](https://github.com/actions/checkout/pull/939)
 - [Add `github-server-url` input](https://github.com/actions/checkout/pull/922)
