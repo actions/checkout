@@ -1,6 +1,6 @@
 ---
 name: "@actions/io"
-version: 1.1.2
+version: 1.1.3
 type: npm
 summary: Actions io lib
 homepage: https://github.com/actions/toolkit/tree/main/packages/io
