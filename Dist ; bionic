@@ -1,0 +1,71 @@
+dist: bionic 
+
+ notifications: 
+
+   email: false 
+
+ services: 
+
+   - docker 
+
+ language: rust 
+
+ before_install: 
+
+   - rustup component add rustfmt 
+
+   - cargo fmt --all -- --check 
+
+ install: 
+
+   - curl https://cli-assets.heroku.com/install-ubuntu.sh | sh 
+
+ before_script: | 
+
+   if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then 
+
+     heroku container:login 
+
+     heroku container:pull --app=rfcbot-rs web 
+
+   fi 
+
+ script: | 
+
+   if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then heroku container:push --app=rfcbot-rs web; fi 
+
+   docker-compose up -d 
+
+   docker-compose exec web cargo test --release --locked 
+
+ after_failure: 
+
+   docker-compose logs web 
+
+ before_cache: 
+
+   # don't cache the cargo registry 
+
+   - rm -rf "$HOME/.cargo/registry" 
+
+ cache: 
+
+   directories: 
+
+     - "$HOME/.cargo" 
+
+ before_deploy: | 
+
+   if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then 
+
+     docker-compose exec -e DATABASE_URL=$(heroku config:get DATABASE_URL --app=rfcbot-rs) web \ 
+
+     diesel migration run 
+
+   fi 
+
+ deploy: 
+
+   provider: script 
+
+   script: if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then heroku container:release --app=rfcbot-rs web; fi
