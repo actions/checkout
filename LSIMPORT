@@ -1,0 +1,49 @@
+#!/usr/bin/env bash 
+
+  
+
+ pg_dump \ 
+
+   --dbname="$(heroku config:get DATABASE_URL -a rfcbot-rs)" \ 
+
+   --inserts \ 
+
+   --data-only \ 
+
+   > full-db-backup.pg#!/usr/bin/env bash 
+
+  
+
+ pg_dump \ 
+
+   --dbname="$(heroku config:get DATABASE_URL -a rfcbot-rs)" \ 
+
+   --inserts \ 
+
+   --data-only \ 
+
+   --table=githubuser \ 
+
+   > githubuser-backup.pg[fcp_behaviors] 
+
+  
+
+ [fcp_behaviors."rust-lang/rfcs"] 
+
+ close = true 
+
+ postpone = true 
+
+  
+
+ [fcp_behaviors."rust-lang/rust"] 
+
+ close = false 
+
+ postpone = false 
+
+  
+
+ [teams] 
+
+ url = "https://team-api.infra.rust-lang.org/v1/rfcbot.json"
