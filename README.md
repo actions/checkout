@@ -114,6 +114,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Checkout pull request on `issue_comment` event](#Checkout-pull-request-on-issue_comment-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 
 ## Fetch all history for all tags and branches
@@ -210,6 +211,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+```
+
+## Checkout pull request on `issue_comment` event
+
+**Note:** The job must check if the issue is a pull request using `if: github.event.issue.pull_request` which skips it otherwise.
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    ref: refs/pull/${{ github.event.issue.number }}/head
 ```
 
 ## Push a commit using the built-in token
