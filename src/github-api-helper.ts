@@ -1,12 +1,12 @@
 import * as assert from 'assert'
 import * as core from '@actions/core'
 import * as fs from 'fs'
+import * as github from '@actions/github'
 import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
 import {default as uuid} from 'uuid/v4'
-import {getOctokit, Octokit} from './octokit-provider'
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -84,11 +84,11 @@ export async function getDefaultBranch(
 ): Promise<string> {
   return await retryHelper.execute(async () => {
     core.info('Retrieving the default branch name')
-    const octokit = getOctokit(authToken, {baseUrl: baseUrl})
+    const octokit = github.getOctokit(authToken, {baseUrl: baseUrl})
     let result: string
     try {
       // Get the default branch from the repo info
-      const response = await octokit.repos.get({owner, repo})
+      const response = await octokit.rest.repos.get({owner, repo})
       result = response.data.default_branch
       assert.ok(result, 'default_branch cannot be empty')
     } catch (err) {
@@ -125,19 +125,14 @@ async function downloadArchive(
   commit: string,
   baseUrl?: string
 ): Promise<Buffer> {
-  const octokit = getOctokit(authToken, {baseUrl: baseUrl})
-  const params: Octokit.ReposGetArchiveLinkParams = {
+  const octokit = github.getOctokit(authToken, {baseUrl: baseUrl})
+  const download = IS_WINDOWS
+    ? octokit.rest.repos.downloadZipballArchive
+    : octokit.rest.repos.downloadTarballArchive
+  const response = await download({
     owner: owner,
     repo: repo,
-    archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
     ref: commit || ref
-  }
-  const response = await octokit.repos.getArchiveLink(params)
-  if (response.status != 200) {
-    throw new Error(
-      `Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`
-    )
-  }
-
-  return Buffer.from(response.data) // response.data is ArrayBuffer
+  })
+  return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer
 }
