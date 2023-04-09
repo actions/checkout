@@ -14,6 +14,7 @@ import {IGitSourceSettings} from './git-source-settings'
 
 const IS_WINDOWS = process.platform === 'win32'
 const SSH_COMMAND_KEY = 'core.sshCommand'
+const SIGNING_KEY = 'user.signingKey'
 
 export interface IGitAuthHelper {
   configureAuth(): Promise<void>
@@ -269,6 +270,7 @@ class GitAuthHelper {
     // Configure core.sshCommand
     if (this.settings.persistCredentials) {
       await this.git.config(SSH_COMMAND_KEY, this.sshCommand)
+      await this.git.config(SIGNING_KEY, this.sshKeyPath)
     }
   }
 

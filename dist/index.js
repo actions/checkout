@@ -148,6 +148,7 @@ const urlHelper = __importStar(__nccwpck_require__(9437));
 const v4_1 = __importDefault(__nccwpck_require__(824));
 const IS_WINDOWS = process.platform === 'win32';
 const SSH_COMMAND_KEY = 'core.sshCommand';
+const SIGNING_KEY = 'user.signingKey';
 function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
 }
@@ -305,7 +306,7 @@ class GitAuthHelper {
             this.sshKeyPath = path.join(runnerTemp, uniqueId);
             stateHelper.setSshKeyPath(this.sshKeyPath);
             yield fs.promises.mkdir(runnerTemp, { recursive: true });
-            yield fs.promises.writeFile(this.sshKeyPath, this.settings.sshKey.trim() + '\n', { mode: 0o600 });
+            yield fs.promises.writeFile(this.sshKeyPath, `${this.settings.sshKey.trim()}\n`, { mode: 0o600 });
             // Remove inherited permissions on Windows
             if (IS_WINDOWS) {
                 const icacls = yield io.which('icacls.exe');
@@ -346,6 +347,7 @@ class GitAuthHelper {
             // Configure core.sshCommand
             if (this.settings.persistCredentials) {
                 yield this.git.config(SSH_COMMAND_KEY, this.sshCommand);
+                yield this.git.config(SIGNING_KEY, this.sshKeyPath);
             }
         });
     }
