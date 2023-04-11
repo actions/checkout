@@ -1554,9 +1554,6 @@ function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
             repo: repo,
             ref: commit || ref
         });
-        if (response.status != 302) {
-            throw new Error(`Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`);
-        }
         return Buffer.from(response.data); // response.data is ArrayBuffer
     });
 }
