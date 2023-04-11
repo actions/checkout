@@ -134,11 +134,6 @@ async function downloadArchive(
     repo: repo,
     ref: commit || ref
   })
-  if (response.status != 200) {
-    throw new Error(
-      `Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`
-    )
-  }
 
   return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer
 }
