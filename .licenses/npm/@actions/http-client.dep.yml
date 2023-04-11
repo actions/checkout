@@ -4,7 +4,7 @@ version: 2.1.0
 type: npm
 summary: Actions Http Client
 homepage: https://github.com/actions/toolkit/tree/main/packages/http-client
-license: other
+license: mit # manually overridden to 'mit' from 'other' until the @actions/http-client license is updatedd to a newer MIT format that licenser can recognize
 licenses:
 - sources: LICENSE
   text: |
