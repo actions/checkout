@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.5.1
+- [Fix slow checkout on Windows](https://github.com/actions/checkout/pull/1246)
+
+## v3.5.0
+* [Add new public key for known_hosts](https://github.com/actions/checkout/pull/1237)
+
 ## v3.4.0
 - [Upgrade codeql actions to v2](https://github.com/actions/checkout/pull/1209)
 - [Upgrade dependencies](https://github.com/actions/checkout/pull/1210)
