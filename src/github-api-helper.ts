@@ -7,6 +7,7 @@ import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
 import {default as uuid} from 'uuid/v4'
+import { RequestError } from '@octokit/request-error';
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -129,11 +130,20 @@ async function downloadArchive(
   const download = IS_WINDOWS
     ? octokit.rest.repos.downloadZipballArchive
     : octokit.rest.repos.downloadTarballArchive
-  const response = await download({
-    owner: owner,
-    repo: repo,
-    ref: commit || ref
-  })
-
-  return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer
+    try {
+      const response = await download({
+        owner: owner,
+        repo: repo,
+        ref: commit || ref
+      });
+      return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer
+    } catch (error) {
+      if (error instanceof RequestError) {
+        throw new Error(
+          `Unexpected response from GitHub API. Status: ${error.status}, Data: ${error.message}`
+        )
+      } else {
+        throw error
+      }
+    }
 }

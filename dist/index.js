@@ -1453,6 +1453,7 @@ const path = __importStar(__nccwpck_require__(1017));
 const retryHelper = __importStar(__nccwpck_require__(2155));
 const toolCache = __importStar(__nccwpck_require__(7784));
 const v4_1 = __importDefault(__nccwpck_require__(824));
+const request_error_1 = __nccwpck_require__(537);
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1549,12 +1550,22 @@ function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
         const download = IS_WINDOWS
             ? octokit.rest.repos.downloadZipballArchive
             : octokit.rest.repos.downloadTarballArchive;
-        const response = yield download({
-            owner: owner,
-            repo: repo,
-            ref: commit || ref
-        });
-        return Buffer.from(response.data); // response.data is ArrayBuffer
+        try {
+            const response = yield download({
+                owner: owner,
+                repo: repo,
+                ref: commit || ref
+            });
+            return Buffer.from(response.data); // response.data is ArrayBuffer
+        }
+        catch (error) {
+            if (error instanceof request_error_1.RequestError) {
+                throw new Error(`Unexpected response from GitHub API. Status: ${error.status}, Data: ${error.message}`);
+            }
+            else {
+                throw error;
+            }
+        }
     });
 }
 
