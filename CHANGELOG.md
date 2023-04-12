@@ -4,7 +4,6 @@
 - [Fix slow checkout on Windows](https://github.com/actions/checkout/pull/1246)
 
 ## v3.5.0
-
 * [Add new public key for known_hosts](https://github.com/actions/checkout/pull/1237)
 
 ## v3.4.0
