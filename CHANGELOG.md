@@ -1,7 +1,7 @@
 # Changelog
 
 ## v3.5.2
-- [Fix slow checkout on Windows](https://github.com/actions/checkout/pull/1289)
+- [Fix api endpoint for GHES](https://github.com/actions/checkout/pull/1289)
 
 ## v3.5.1
 - [Fix slow checkout on Windows](https://github.com/actions/checkout/pull/1246)
