@@ -1514,7 +1514,9 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             var _a;
             core.info('Retrieving the default branch name');
-            const octokit = github.getOctokit(authToken, { baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl) });
+            const octokit = github.getOctokit(authToken, {
+                baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
+            });
             let result;
             try {
                 // Get the default branch from the repo info
@@ -1546,7 +1548,9 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
 exports.getDefaultBranch = getDefaultBranch;
 function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = github.getOctokit(authToken, { baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl) });
+        const octokit = github.getOctokit(authToken, {
+            baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
+        });
         const download = IS_WINDOWS
             ? octokit.rest.repos.downloadZipballArchive
             : octokit.rest.repos.downloadTarballArchive;
