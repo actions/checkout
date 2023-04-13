@@ -1,7 +1,7 @@
 import {IGitCommandManager} from './git-command-manager'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {isGhes} from './url-helper'
+import {getServerApiUrl, isGhes} from './url-helper'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'
 
@@ -245,7 +245,7 @@ export async function checkCommitInfo(
         `Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`
       )
       const octokit = github.getOctokit(token, {
-        baseUrl: baseUrl,
+        baseUrl: getServerApiUrl(baseUrl),
         userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload(
           'number'
         )};run_id=${
