@@ -1453,6 +1453,7 @@ const path = __importStar(__nccwpck_require__(1017));
 const retryHelper = __importStar(__nccwpck_require__(2155));
 const toolCache = __importStar(__nccwpck_require__(7784));
 const v4_1 = __importDefault(__nccwpck_require__(824));
+const url_helper_1 = __nccwpck_require__(9437);
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1513,7 +1514,9 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             var _a;
             core.info('Retrieving the default branch name');
-            const octokit = github.getOctokit(authToken, { baseUrl: baseUrl });
+            const octokit = github.getOctokit(authToken, {
+                baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
+            });
             let result;
             try {
                 // Get the default branch from the repo info
@@ -1545,7 +1548,9 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
 exports.getDefaultBranch = getDefaultBranch;
 function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = github.getOctokit(authToken, { baseUrl: baseUrl });
+        const octokit = github.getOctokit(authToken, {
+            baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
+        });
         const download = IS_WINDOWS
             ? octokit.rest.repos.downloadZipballArchive
             : octokit.rest.repos.downloadTarballArchive;
@@ -2026,7 +2031,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
             if (actualHeadSha !== expectedHeadSha) {
                 core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
                 const octokit = github.getOctokit(token, {
-                    baseUrl: baseUrl,
+                    baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl),
                     userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
                 });
                 yield octokit.rest.repos.get({
