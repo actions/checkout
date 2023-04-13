@@ -6,6 +6,7 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
+import {getServerApiUrl} from './url-helper'
 import {default as uuid} from 'uuid/v4'
 
 const IS_WINDOWS = process.platform === 'win32'
@@ -84,7 +85,9 @@ export async function getDefaultBranch(
 ): Promise<string> {
   return await retryHelper.execute(async () => {
     core.info('Retrieving the default branch name')
-    const octokit = github.getOctokit(authToken, {baseUrl: baseUrl})
+    const octokit = github.getOctokit(authToken, {
+      baseUrl: getServerApiUrl(baseUrl)
+    })
     let result: string
     try {
       // Get the default branch from the repo info
@@ -125,7 +128,9 @@ async function downloadArchive(
   commit: string,
   baseUrl?: string
 ): Promise<Buffer> {
-  const octokit = github.getOctokit(authToken, {baseUrl: baseUrl})
+  const octokit = github.getOctokit(authToken, {
+    baseUrl: getServerApiUrl(baseUrl)
+  })
   const download = IS_WINDOWS
     ? octokit.rest.repos.downloadZipballArchive
     : octokit.rest.repos.downloadTarballArchive
