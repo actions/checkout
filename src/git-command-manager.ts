@@ -41,6 +41,7 @@ export interface IGitCommandManager {
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
+  submoduleStatus(): Promise<boolean>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
@@ -355,6 +356,12 @@ class GitCommandManager {
     }
 
     await this.execGit(args)
+  }
+
+  async submoduleStatus(): Promise<boolean> {
+    const output = await this.execGit(['submodule', 'status'], true)
+    core.debug(output.stdout)
+    return output.exitCode === 0
   }
 
   async tagExists(pattern: string): Promise<boolean> {
