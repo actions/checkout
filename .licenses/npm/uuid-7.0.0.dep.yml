@@ -1,9 +1,9 @@
 ---
 name: uuid
-version: 3.3.3
+version: 7.0.0
 type: npm
 summary: RFC4122 (v1, v4, and v5) UUIDs
-homepage: https://github.com/kelektiv/node-uuid#readme
+homepage: 
 license: mit
 licenses:
 - sources: LICENSE.md
@@ -29,11 +29,4 @@ licenses:
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-notices:
-- sources: AUTHORS
-  text: |-
-    Robert Kieffer <robert@broofa.com>
-    Christoph Tavan <dev@tavan.de>
-    AJ ONeal <coolaj86@gmail.com>
-    Vincent Voyer <vincent@zeroload.net>
-    Roman Shtylman <shtylman@gmail.com>
+notices: []

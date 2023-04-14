@@ -6,7 +6,7 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
-import {default as uuid} from 'uuid/v4'
+import {v4 as uuid} from 'uuid'
 import {getServerApiUrl} from './url-helper'
 
 const IS_WINDOWS = process.platform === 'win32'
