@@ -28,8 +28,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fileExistsSync = exports.existsSync = exports.directoryExistsSync = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
+function isErrorObject(error) {
+    return typeof error === 'object' && error !== null;
+}
 function directoryExistsSync(path, required) {
-    var _a, _b, _c;
     if (!path) {
         throw new Error("Arg 'path' must not be empty");
     }
@@ -38,13 +40,18 @@ function directoryExistsSync(path, required) {
         stats = fs.statSync(path);
     }
     catch (error) {
-        if (((_a = error) === null || _a === void 0 ? void 0 : _a.code) === 'ENOENT') {
-            if (!required) {
-                return false;
+        if (isErrorObject(error)) {
+            if (error.code === 'ENOENT') {
+                if (!required) {
+                    return false;
+                }
+                throw new Error(`Directory '${path}' does not exist`);
             }
-            throw new Error(`Directory '${path}' does not exist`);
+            if (error.message) {
+                throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error.message}`);
+            }
         }
-        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${(_c = (_b = error) === null || _b === void 0 ? void 0 : _b.message) !== null && _c !== void 0 ? _c : error}`);
+        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error}`);
     }
     if (stats.isDirectory()) {
         return true;
@@ -56,7 +63,6 @@ function directoryExistsSync(path, required) {
 }
 exports.directoryExistsSync = directoryExistsSync;
 function existsSync(path) {
-    var _a, _b, _c;
     if (!path) {
         throw new Error("Arg 'path' must not be empty");
     }
@@ -64,16 +70,20 @@ function existsSync(path) {
         fs.statSync(path);
     }
     catch (error) {
-        if (((_a = error) === null || _a === void 0 ? void 0 : _a.code) === 'ENOENT') {
-            return false;
+        if (isErrorObject(error)) {
+            if (error.code === 'ENOENT') {
+                return false;
+            }
+            if (error.message) {
+                throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error.message}`);
+            }
         }
-        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${(_c = (_b = error) === null || _b === void 0 ? void 0 : _b.message) !== null && _c !== void 0 ? _c : error}`);
+        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error}`);
     }
     return true;
 }
 exports.existsSync = existsSync;
 function fileExistsSync(path) {
-    var _a, _b, _c;
     if (!path) {
         throw new Error("Arg 'path' must not be empty");
     }
@@ -82,10 +92,15 @@ function fileExistsSync(path) {
         stats = fs.statSync(path);
     }
     catch (error) {
-        if (((_a = error) === null || _a === void 0 ? void 0 : _a.code) === 'ENOENT') {
-            return false;
+        if (isErrorObject(error)) {
+            if (error.code === 'ENOENT') {
+                return false;
+            }
+            if (error.message) {
+                throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error.message}`);
+            }
         }
-        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${(_c = (_b = error) === null || _b === void 0 ? void 0 : _b.message) !== null && _c !== void 0 ? _c : error}`);
+        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error}`);
     }
     if (!stats.isDirectory()) {
         return true;
