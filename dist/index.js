@@ -1039,7 +1039,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 if (clean) {
                     core.startGroup('Cleaning the repository');
                     if (!(yield git.tryClean())) {
-                        core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
+                        core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
                         remove = true;
                     }
                     else if (!(yield git.tryReset())) {
