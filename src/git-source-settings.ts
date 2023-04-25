@@ -35,6 +35,11 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
+   * Fetch tags, even if fetchDepth > 0 (default: false)
+   */
+  fetchTags: boolean
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean

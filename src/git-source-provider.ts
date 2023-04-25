@@ -169,7 +169,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       }
     } else {
       const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-      await git.fetch(refSpec, settings.fetchDepth)
+      await git.fetch(refSpec, settings.fetchDepth, settings.fetchTags)
     }
     core.endGroup()
 
