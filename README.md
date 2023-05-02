@@ -74,7 +74,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
-    # Do a sparse checkout on given patterns (each pattern should be sepparated with new lines).
+    # Do a sparse checkout on given patterns
+    # Each pattern should be sepparated with new lines
     # Default: null
     sparse-checkout: ''
 
@@ -110,17 +111,22 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # Scenarios
 
-- [Fetch only the root files](#fetch-only-the-root-files)
-- [Fetch only the root files and `.github` and `src` folder](#fetch-only-the-root-files-and-github-and-src-folder)
-- [Fetch all history for all tags and branches](#fetch-all-history-for-all-tags-and-branches)
-- [Checkout a different branch](#checkout-a-different-branch)
-- [Checkout HEAD^](#checkout-head)
-- [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
-- [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
-- [Checkout multiple repos (private)](#checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
+- [Checkout V3](#checkout-v3)
+- [What's new](#whats-new)
+- [Usage](#usage)
+- [Scenarios](#scenarios)
+  - [Fetch only the root files](#fetch-only-the-root-files)
+  - [Fetch only the root files and `.github` and `src` folder](#fetch-only-the-root-files-and-github-and-src-folder)
+  - [Fetch all history for all tags and branches](#fetch-all-history-for-all-tags-and-branches)
+  - [Checkout a different branch](#checkout-a-different-branch)
+  - [Checkout HEAD^](#checkout-head)
+  - [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
+  - [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
+  - [Checkout multiple repos (private)](#checkout-multiple-repos-private)
+  - [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
+  - [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
+  - [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
+- [License](#license)
 
 ## Fetch only the root files
 
