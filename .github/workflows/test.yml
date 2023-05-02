@@ -72,6 +72,20 @@ jobs:
         shell: bash
         run: __test__/verify-side-by-side.sh
 
+     # Sparse checkout
+      - name: Sparse checkout
+        uses: ./
+        with:
+          sparse-checkout: |
+            __test__
+            .github
+            dist
+
+      - name: Verify sparse checkout basic
+        run: __test__/verify-sparse-checkout-basic.sh
+      - name: Verify sparse checkout example
+        run: __test__/verify-sparse-checkout.sh
+
       # LFS
       - name: Checkout LFS
         uses: ./
@@ -112,19 +126,6 @@ jobs:
           submodules: recursive
       - name: Verify submodules recursive
         run: __test__/verify-submodules-recursive.sh
-
-     # Sparse checkout
-      - name: Sparse checkout
-        uses: ./
-        with:
-          sparse-checkout: |
-            __test__
-            .github
-            dist
-      - name: Verify sparse checkout basic
-        run: __test__/verify-sparse-checkout-basic.sh
-      - name: Verify sparse checkout example
-        run: __test__/verify-sparse-checkout.sh
 
       # Basic checkout using REST API
       - name: Remove basic
