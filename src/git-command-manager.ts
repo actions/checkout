@@ -16,6 +16,7 @@ export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
   branchList(remote: boolean): Promise<string[]>
+  sparseCheckout(sparseCheckout: string[]): Promise<void>
   checkout(ref: string, startPoint: string): Promise<void>
   checkoutDetach(): Promise<void>
   config(
@@ -25,7 +26,13 @@ export interface IGitCommandManager {
     add?: boolean
   ): Promise<void>
   configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
-  fetch(refSpec: string[], fetchDepth?: number): Promise<void>
+  fetch(
+    refSpec: string[],
+    options: {
+      filter?: string
+      fetchDepth?: number
+    }
+  ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
   init(): Promise<void>
@@ -154,6 +161,10 @@ class GitCommandManager {
     return result
   }
 
+  async sparseCheckout(sparseCheckout: string[]): Promise<void> {
+    await this.execGit(['sparse-checkout', 'set', ...sparseCheckout])
+  }
+
   async checkout(ref: string, startPoint: string): Promise<void> {
     const args = ['checkout', '--progress', '--force']
     if (startPoint) {
@@ -202,15 +213,23 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
-  async fetch(refSpec: string[], fetchDepth?: number): Promise<void> {
+  async fetch(
+    refSpec: string[],
+    options: {filter?: string; fetchDepth?: number}
+  ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
     if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
       args.push('--no-tags')
     }
 
     args.push('--prune', '--progress', '--no-recurse-submodules')
-    if (fetchDepth && fetchDepth > 0) {
-      args.push(`--depth=${fetchDepth}`)
+
+    if (options.filter) {
+      args.push(`--filter=${options.filter}`)
+    }
+
+    if (options.fetchDepth && options.fetchDepth > 0) {
+      args.push(`--depth=${options.fetchDepth}`)
     } else if (
       fshelper.fileExistsSync(
         path.join(this.workingDirectory, '.git', 'shallow')

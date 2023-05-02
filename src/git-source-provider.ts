@@ -153,23 +153,26 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fetch
     core.startGroup('Fetching the repository')
+    const fetchOptions: {filter?: string; fetchDepth?: number} = {}
+    if (settings.sparseCheckout) fetchOptions.filter = 'blob:none'
     if (settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
         settings.commit
       )
-      await git.fetch(refSpec)
+      await git.fetch(refSpec, fetchOptions)
 
       // When all history is fetched, the ref we're interested in may have moved to a different
       // commit (push or force push). If so, fetch again with a targeted refspec.
       if (!(await refHelper.testRef(git, settings.ref, settings.commit))) {
         refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-        await git.fetch(refSpec)
+        await git.fetch(refSpec, fetchOptions)
       }
     } else {
+      fetchOptions.fetchDepth = settings.fetchDepth
       const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-      await git.fetch(refSpec, settings.fetchDepth)
+      await git.fetch(refSpec, fetchOptions)
     }
     core.endGroup()
 
@@ -188,6 +191,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     if (settings.lfs) {
       core.startGroup('Fetching LFS objects')
       await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
+      core.endGroup()
+    }
+
+    // Sparse checkout
+    if (settings.sparseCheckout) {
+      core.startGroup('Setting up sparse checkout')
+      await git.sparseCheckout(settings.sparseCheckout)
       core.endGroup()
     }
 

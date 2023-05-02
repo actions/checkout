@@ -74,6 +74,11 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
+    # Do a sparse checkout on given patterns. Each pattern should be separated with
+    # new lines
+    # Default: null
+    sparse-checkout: ''
+
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
     # Default: 1
     fetch-depth: ''
@@ -106,6 +111,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # Scenarios
 
+- [Fetch only the root files](#Fetch-only-the-root-files)
+- [Fetch only the root files and `.github` and `src` folder](#Fetch-only-the-root-files-and-github-and-src-folder)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
 - [Checkout a different branch](#Checkout-a-different-branch)
 - [Checkout HEAD^](#Checkout-HEAD)
@@ -115,6 +122,24 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
+
+## Fetch only the root files
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    sparse-checkout: .
+```
+
+## Fetch only the root files and `.github` and `src` folder
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    sparse-checkout: |
+      .github
+      src
+```
 
 ## Fetch all history for all tags and branches
 

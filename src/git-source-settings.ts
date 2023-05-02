@@ -30,6 +30,11 @@ export interface IGitSourceSettings {
   clean: boolean
 
   /**
+   * The array of folders to make the sparse checkout
+   */
+  sparseCheckout: string[]
+
+  /**
    * The depth when fetching
    */
   fetchDepth: number
