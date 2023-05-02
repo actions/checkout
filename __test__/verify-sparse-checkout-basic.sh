@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Verify .git folder
+if [ ! -d "./sparse-checkout/.git" ]; then
+  echo "Expected ./sparse-checkout/.git folder to exist"
+  exit 1
+fi
+
+# Verify sparse-checkout basic
+cd sparse-checkout
+
 SPARSE=$(git sparse-checkout list)
 
 if [ "$?" != "0" ]; then
