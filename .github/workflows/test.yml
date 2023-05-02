@@ -117,7 +117,7 @@ jobs:
       - name: Sparse checkout basic example
         uses: ./
         with:
-          sparse-checkout: .
+          sparse-checkout: __test__
       - name: Verify sparse checkout basic
         run: __test__/verify-sparse-checkout-basic.sh
 
@@ -126,6 +126,7 @@ jobs:
         uses: ./
         with:
           sparse-checkout: |
+            __test__
             .github
             src
       - name: Verify sparse checkout basic
