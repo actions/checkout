@@ -80,6 +80,7 @@ jobs:
             __test__
             .github
             dist
+          path: sparse-checkout
 
       - name: Verify sparse checkout basic
         run: __test__/verify-sparse-checkout-basic.sh
