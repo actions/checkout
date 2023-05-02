@@ -113,22 +113,14 @@ jobs:
       - name: Verify submodules recursive
         run: __test__/verify-submodules-recursive.sh
 
-      # Sparse checkout basic example
-      - name: Sparse checkout basic example
-        uses: ./
-        with:
-          sparse-checkout: __test__
-      - name: Verify sparse checkout basic
-        run: __test__/verify-sparse-checkout-basic.sh
-
-     # Sparse checkout example
-      - name: Sparse checkout example
+     # Sparse checkout
+      - name: Sparse checkout
         uses: ./
         with:
           sparse-checkout: |
             __test__
             .github
-            src
+            dist
       - name: Verify sparse checkout basic
         run: __test__/verify-sparse-checkout-basic.sh
       - name: Verify sparse checkout example
