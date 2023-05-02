@@ -574,6 +574,11 @@ class GitCommandManager {
             return result;
         });
     }
+    sparseCheckout(sparseCheckout) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execGit(['sparse-checkout', 'set', ...sparseCheckout]);
+        });
+    }
     checkout(ref, startPoint) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['checkout', '--progress', '--force'];
@@ -615,15 +620,18 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    fetch(refSpec, fetchDepth) {
+    fetch(refSpec, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['-c', 'protocol.version=2', 'fetch'];
             if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
                 args.push('--no-tags');
             }
             args.push('--prune', '--progress', '--no-recurse-submodules');
-            if (fetchDepth && fetchDepth > 0) {
-                args.push(`--depth=${fetchDepth}`);
+            if (options.filter) {
+                args.push(`--filter=${options.filter}`);
+            }
+            if (options.fetchDepth && options.fetchDepth > 0) {
+                args.push(`--depth=${options.fetchDepth}`);
             }
             else if (fshelper.fileExistsSync(path.join(this.workingDirectory, '.git', 'shallow'))) {
                 args.push('--unshallow');
@@ -696,8 +704,8 @@ class GitCommandManager {
     }
     log1(format) {
         return __awaiter(this, void 0, void 0, function* () {
-            var args = format ? ['log', '-1', format] : ['log', '-1'];
-            var silent = format ? false : true;
+            const args = format ? ['log', '-1', format] : ['log', '-1'];
+            const silent = format ? false : true;
             const output = yield this.execGit(args, false, silent);
             return output.stdout;
         });
@@ -1210,20 +1218,24 @@ function getSource(settings) {
             }
             // Fetch
             core.startGroup('Fetching the repository');
+            const fetchOptions = {};
+            if (settings.sparseCheckout)
+                fetchOptions.filter = 'blob:none';
             if (settings.fetchDepth <= 0) {
                 // Fetch all branches and tags
                 let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
-                yield git.fetch(refSpec);
+                yield git.fetch(refSpec, fetchOptions);
                 // When all history is fetched, the ref we're interested in may have moved to a different
                 // commit (push or force push). If so, fetch again with a targeted refspec.
                 if (!(yield refHelper.testRef(git, settings.ref, settings.commit))) {
                     refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                    yield git.fetch(refSpec);
+                    yield git.fetch(refSpec, fetchOptions);
                 }
             }
             else {
+                fetchOptions.fetchDepth = settings.fetchDepth;
                 const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                yield git.fetch(refSpec, settings.fetchDepth);
+                yield git.fetch(refSpec, fetchOptions);
             }
             core.endGroup();
             // Checkout info
@@ -1236,6 +1248,12 @@ function getSource(settings) {
             if (settings.lfs) {
                 core.startGroup('Fetching LFS objects');
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+                core.endGroup();
+            }
+            // Sparse checkout
+            if (settings.sparseCheckout) {
+                core.startGroup('Setting up sparse checkout');
+                yield git.sparseCheckout(settings.sparseCheckout);
                 core.endGroup();
             }
             // Checkout
@@ -1673,6 +1691,12 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        // Sparse checkout
+        const sparseCheckout = core.getMultilineInput('sparse-checkout');
+        if (sparseCheckout.length) {
+            result.sparseCheckout = sparseCheckout;
+            core.debug(`sparse checkout = ${result.sparseCheckout}`);
+        }
         // Fetch depth
         result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
         if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
