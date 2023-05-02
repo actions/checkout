@@ -462,6 +462,7 @@ async function setup(testName: string): Promise<void> {
     branchList: jest.fn(async () => {
       return []
     }),
+    sparseCheckout: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(),
