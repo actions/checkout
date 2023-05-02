@@ -113,6 +113,26 @@ jobs:
       - name: Verify submodules recursive
         run: __test__/verify-submodules-recursive.sh
 
+      # Sparse checkout basic example
+      - name: Sparse checkout basic example
+        uses: ./
+        with:
+          sparse-checkout: .
+      - name: Verify sparse checkout basic
+        run: __test__/verify-sparse-checkout-basic.sh
+
+     # Sparse checkout example
+      - name: Sparse checkout example
+        uses: ./
+        with:
+          sparse-checkout: |
+            .github
+            src
+      - name: Verify sparse checkout basic
+        run: __test__/verify-sparse-checkout-basic.sh
+      - name: Verify sparse checkout example
+        run: __test__/verify-sparse-checkout.sh
+
       # Basic checkout using REST API
       - name: Remove basic
         if: runner.os != 'windows'
@@ -205,7 +225,7 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
-    
+
   test-git-container:
     runs-on: ubuntu-latest
     container: bitnami/git:latest
