@@ -74,8 +74,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
-    # Do a sparse checkout on given patterns
-    # Each pattern should be sepparated with new lines
+    # Do a sparse checkout on given patterns. Each pattern should be sepparated with
+    # new lines
     # Default: null
     sparse-checkout: ''
 
