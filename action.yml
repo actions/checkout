@@ -53,6 +53,9 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  sparse-checkout:
+    description: 'Do a sparse checkout on given patterns'
+    default: null
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
     default: 1
