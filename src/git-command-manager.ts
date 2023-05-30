@@ -35,6 +35,7 @@ export interface IGitCommandManager {
   log1(format?: string): Promise<string>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   removeEnvironmentVariable(name: string): void
+  revList(ref: string, numberOfRefs: number): Promise<string>
   revParse(ref: string): Promise<string>
   setEnvironmentVariable(name: string, value: string): void
   shaExists(sha: string): Promise<boolean>
@@ -311,6 +312,17 @@ class GitCommandManager {
    */
   async revParse(ref: string): Promise<string> {
     const output = await this.execGit(['rev-parse', ref])
+    return output.stdout.trim()
+  }
+
+  /**
+   * Lists SHAs pointed to by a revision.
+   * @param {string} ref  For example: 'refs/heads/main' or '/refs/tags/v1'
+   * @param {number} numberOfRefs
+   * @param value
+   */
+  async revList(ref: string, numberOfRefs: number): Promise<string> {
+    const output = await this.execGit(['rev-list', ref, `-${numberOfRefs}`])
     return output.stdout.trim()
   }
 

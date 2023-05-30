@@ -167,7 +167,7 @@ export async function testRef(
   else if (upperRef.startsWith('REFS/TAGS/')) {
     const tagName = ref.substring('refs/tags/'.length)
     return (
-      (await git.tagExists(tagName)) && commit === (await git.revParse(ref))
+      (await git.tagExists(tagName)) && commit === (await git.revList(ref, 1))
     )
   }
   // Unexpected

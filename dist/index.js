@@ -722,6 +722,18 @@ class GitCommandManager {
             return output.stdout.trim();
         });
     }
+    /**
+     * Lists SHAs pointed to by a revision.
+     * @param {string} ref  For example: 'refs/heads/main' or '/refs/tags/v1'
+     * @param {number} numberOfRefs
+     * @param value
+     */
+    revList(ref, numberOfRefs) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const output = yield this.execGit(['rev-list', ref, `-${numberOfRefs}`]);
+            return output.stdout.trim();
+        });
+    }
     setEnvironmentVariable(name, value) {
         this.gitEnv[name] = value;
     }
@@ -1982,7 +1994,7 @@ function testRef(git, ref, commit) {
         // refs/tags/
         else if (upperRef.startsWith('REFS/TAGS/')) {
             const tagName = ref.substring('refs/tags/'.length);
-            return ((yield git.tagExists(tagName)) && commit === (yield git.revParse(ref)));
+            return ((yield git.tagExists(tagName)) && commit === (yield git.revList(ref, 1)));
         }
         // Unexpected
         else {
