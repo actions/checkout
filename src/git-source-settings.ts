@@ -35,6 +35,11 @@ export interface IGitSourceSettings {
   sparseCheckout: string[]
 
   /**
+   * Indicates whether to use cone mode in the sparse checkout (if any)
+   */
+  sparseCheckoutConeMode: boolean
+
+  /**
    * The depth when fetching
    */
   fetchDepth: number

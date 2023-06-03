@@ -470,6 +470,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCommandManager = exports.MinimumGitVersion = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
+const fs = __importStar(__nccwpck_require__(7147));
 const fshelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
@@ -577,6 +578,18 @@ class GitCommandManager {
     sparseCheckout(sparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.execGit(['sparse-checkout', 'set', ...sparseCheckout]);
+        });
+    }
+    sparseCheckoutNonConeMode(sparseCheckout) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execGit(['config', 'core.sparseCheckout', 'true']);
+            const output = yield this.execGit([
+                'rev-parse',
+                '--git-path',
+                'info/sparse-checkout'
+            ]);
+            const sparseCheckoutPath = path.join(this.workingDirectory, output.stdout.trimRight());
+            yield fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
         });
     }
     checkout(ref, startPoint) {
@@ -1253,7 +1266,12 @@ function getSource(settings) {
             // Sparse checkout
             if (settings.sparseCheckout) {
                 core.startGroup('Setting up sparse checkout');
-                yield git.sparseCheckout(settings.sparseCheckout);
+                if (settings.sparseCheckoutConeMode) {
+                    yield git.sparseCheckout(settings.sparseCheckout);
+                }
+                else {
+                    yield git.sparseCheckoutNonConeMode(settings.sparseCheckout);
+                }
                 core.endGroup();
             }
             // Checkout
@@ -1697,6 +1715,9 @@ function getInputs() {
             result.sparseCheckout = sparseCheckout;
             core.debug(`sparse checkout = ${result.sparseCheckout}`);
         }
+        result.sparseCheckoutConeMode =
+            (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+                'TRUE';
         // Fetch depth
         result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
         if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {

@@ -197,7 +197,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // Sparse checkout
     if (settings.sparseCheckout) {
       core.startGroup('Setting up sparse checkout')
-      await git.sparseCheckout(settings.sparseCheckout)
+      if (settings.sparseCheckoutConeMode) {
+        await git.sparseCheckout(settings.sparseCheckout)
+      } else {
+        await git.sparseCheckoutNonConeMode(settings.sparseCheckout)
+      }
       core.endGroup()
     }
 

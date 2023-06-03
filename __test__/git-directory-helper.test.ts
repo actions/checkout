@@ -463,6 +463,7 @@ async function setup(testName: string): Promise<void> {
       return []
     }),
     sparseCheckout: jest.fn(),
+    sparseCheckoutNonConeMode: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(),

@@ -89,6 +89,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     core.debug(`sparse checkout = ${result.sparseCheckout}`)
   }
 
+  result.sparseCheckoutConeMode =
+    (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+    'TRUE'
+
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {

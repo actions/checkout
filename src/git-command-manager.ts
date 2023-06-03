@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import * as fs from 'fs'
 import * as fshelper from './fs-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
@@ -17,6 +18,7 @@ export interface IGitCommandManager {
   branchExists(remote: boolean, pattern: string): Promise<boolean>
   branchList(remote: boolean): Promise<string[]>
   sparseCheckout(sparseCheckout: string[]): Promise<void>
+  sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void>
   checkout(ref: string, startPoint: string): Promise<void>
   checkoutDetach(): Promise<void>
   config(
@@ -163,6 +165,23 @@ class GitCommandManager {
 
   async sparseCheckout(sparseCheckout: string[]): Promise<void> {
     await this.execGit(['sparse-checkout', 'set', ...sparseCheckout])
+  }
+
+  async sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void> {
+    await this.execGit(['config', 'core.sparseCheckout', 'true'])
+    const output = await this.execGit([
+      'rev-parse',
+      '--git-path',
+      'info/sparse-checkout'
+    ])
+    const sparseCheckoutPath = path.join(
+      this.workingDirectory,
+      output.stdout.trimRight()
+    )
+    await fs.promises.appendFile(
+      sparseCheckoutPath,
+      `\n${sparseCheckout.join('\n')}\n`
+    )
   }
 
   async checkout(ref: string, startPoint: string): Promise<void> {

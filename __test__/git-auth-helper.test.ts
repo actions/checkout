@@ -728,6 +728,7 @@ async function setup(testName: string): Promise<void> {
     branchExists: jest.fn(),
     branchList: jest.fn(),
     sparseCheckout: jest.fn(),
+    sparseCheckoutNonConeMode: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(
@@ -802,6 +803,7 @@ async function setup(testName: string): Promise<void> {
     clean: true,
     commit: '',
     sparseCheckout: [],
+    sparseCheckoutConeMode: true,
     fetchDepth: 1,
     lfs: false,
     submodules: false,
