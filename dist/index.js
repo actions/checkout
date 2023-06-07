@@ -481,9 +481,9 @@ const git_version_1 = __nccwpck_require__(3142);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
-function createCommandManager(workingDirectory, lfs) {
+function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield GitCommandManager.createCommandManager(workingDirectory, lfs);
+        return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
     });
 }
 exports.createCommandManager = createCommandManager;
@@ -496,6 +496,7 @@ class GitCommandManager {
         };
         this.gitPath = '';
         this.lfs = false;
+        this.doSparseCheckout = false;
         this.workingDirectory = '';
     }
     branchDelete(remote, branch) {
@@ -841,10 +842,10 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    static createCommandManager(workingDirectory, lfs) {
+    static createCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = new GitCommandManager();
-            yield result.initializeCommandManager(workingDirectory, lfs);
+            yield result.initializeCommandManager(workingDirectory, lfs, doSparseCheckout);
             return result;
         });
     }
@@ -880,7 +881,7 @@ class GitCommandManager {
             return result;
         });
     }
-    initializeCommandManager(workingDirectory, lfs) {
+    initializeCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             this.workingDirectory = workingDirectory;
             // Git-lfs will try to pull down assets if any of the local/user/system setting exist.
@@ -930,6 +931,14 @@ class GitCommandManager {
                 const minimumGitLfsVersion = new git_version_1.GitVersion('2.1');
                 if (!gitLfsVersion.checkMinimum(minimumGitLfsVersion)) {
                     throw new Error(`Minimum required git-lfs version is ${minimumGitLfsVersion}. Your git-lfs ('${gitLfsPath}') is ${gitLfsVersion}`);
+                }
+            }
+            this.doSparseCheckout = doSparseCheckout;
+            if (this.doSparseCheckout) {
+                // The `git sparse-checkout` command was introduced in Git v2.25.0
+                const minimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.25');
+                if (!gitVersion.checkMinimum(minimumGitSparseCheckoutVersion)) {
+                    throw new Error(`Minimum Git version required for sparse checkout is ${minimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
                 }
             }
             // Set the user agent
@@ -1327,7 +1336,7 @@ function cleanup(repositoryPath) {
         }
         let git;
         try {
-            git = yield gitCommandManager.createCommandManager(repositoryPath, false);
+            git = yield gitCommandManager.createCommandManager(repositoryPath, false, false);
         }
         catch (_a) {
             return;
@@ -1358,7 +1367,7 @@ function getGitCommandManager(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`Working directory is '${settings.repositoryPath}'`);
         try {
-            return yield gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs);
+            return yield gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null);
         }
         catch (err) {
             // Git is required for LFS
