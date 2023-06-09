@@ -53,6 +53,15 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  sparse-checkout:
+    description: >
+      Do a sparse checkout on given patterns.
+      Each pattern should be separated with new lines
+    default: null
+  sparse-checkout-cone-mode:
+    description: >
+      Specifies whether to use cone-mode when doing a sparse checkout.
+    default: true
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
     default: 1

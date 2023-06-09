@@ -470,6 +470,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCommandManager = exports.MinimumGitVersion = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
+const fs = __importStar(__nccwpck_require__(7147));
 const fshelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
@@ -480,9 +481,9 @@ const git_version_1 = __nccwpck_require__(3142);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
-function createCommandManager(workingDirectory, lfs) {
+function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
-        return yield GitCommandManager.createCommandManager(workingDirectory, lfs);
+        return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
     });
 }
 exports.createCommandManager = createCommandManager;
@@ -495,6 +496,7 @@ class GitCommandManager {
         };
         this.gitPath = '';
         this.lfs = false;
+        this.doSparseCheckout = false;
         this.workingDirectory = '';
     }
     branchDelete(remote, branch) {
@@ -574,6 +576,23 @@ class GitCommandManager {
             return result;
         });
     }
+    sparseCheckout(sparseCheckout) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execGit(['sparse-checkout', 'set', ...sparseCheckout]);
+        });
+    }
+    sparseCheckoutNonConeMode(sparseCheckout) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execGit(['config', 'core.sparseCheckout', 'true']);
+            const output = yield this.execGit([
+                'rev-parse',
+                '--git-path',
+                'info/sparse-checkout'
+            ]);
+            const sparseCheckoutPath = path.join(this.workingDirectory, output.stdout.trimRight());
+            yield fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
+        });
+    }
     checkout(ref, startPoint) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['checkout', '--progress', '--force'];
@@ -615,15 +634,18 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    fetch(refSpec, fetchDepth) {
+    fetch(refSpec, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['-c', 'protocol.version=2', 'fetch'];
             if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
                 args.push('--no-tags');
             }
             args.push('--prune', '--progress', '--no-recurse-submodules');
-            if (fetchDepth && fetchDepth > 0) {
-                args.push(`--depth=${fetchDepth}`);
+            if (options.filter) {
+                args.push(`--filter=${options.filter}`);
+            }
+            if (options.fetchDepth && options.fetchDepth > 0) {
+                args.push(`--depth=${options.fetchDepth}`);
             }
             else if (fshelper.fileExistsSync(path.join(this.workingDirectory, '.git', 'shallow'))) {
                 args.push('--unshallow');
@@ -820,10 +842,10 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
-    static createCommandManager(workingDirectory, lfs) {
+    static createCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = new GitCommandManager();
-            yield result.initializeCommandManager(workingDirectory, lfs);
+            yield result.initializeCommandManager(workingDirectory, lfs, doSparseCheckout);
             return result;
         });
     }
@@ -859,7 +881,7 @@ class GitCommandManager {
             return result;
         });
     }
-    initializeCommandManager(workingDirectory, lfs) {
+    initializeCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             this.workingDirectory = workingDirectory;
             // Git-lfs will try to pull down assets if any of the local/user/system setting exist.
@@ -909,6 +931,14 @@ class GitCommandManager {
                 const minimumGitLfsVersion = new git_version_1.GitVersion('2.1');
                 if (!gitLfsVersion.checkMinimum(minimumGitLfsVersion)) {
                     throw new Error(`Minimum required git-lfs version is ${minimumGitLfsVersion}. Your git-lfs ('${gitLfsPath}') is ${gitLfsVersion}`);
+                }
+            }
+            this.doSparseCheckout = doSparseCheckout;
+            if (this.doSparseCheckout) {
+                // The `git sparse-checkout` command was introduced in Git v2.25.0
+                const minimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.25');
+                if (!gitVersion.checkMinimum(minimumGitSparseCheckoutVersion)) {
+                    throw new Error(`Minimum Git version required for sparse checkout is ${minimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
                 }
             }
             // Set the user agent
@@ -1210,20 +1240,24 @@ function getSource(settings) {
             }
             // Fetch
             core.startGroup('Fetching the repository');
+            const fetchOptions = {};
+            if (settings.sparseCheckout)
+                fetchOptions.filter = 'blob:none';
             if (settings.fetchDepth <= 0) {
                 // Fetch all branches and tags
                 let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
-                yield git.fetch(refSpec);
+                yield git.fetch(refSpec, fetchOptions);
                 // When all history is fetched, the ref we're interested in may have moved to a different
                 // commit (push or force push). If so, fetch again with a targeted refspec.
                 if (!(yield refHelper.testRef(git, settings.ref, settings.commit))) {
                     refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                    yield git.fetch(refSpec);
+                    yield git.fetch(refSpec, fetchOptions);
                 }
             }
             else {
+                fetchOptions.fetchDepth = settings.fetchDepth;
                 const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                yield git.fetch(refSpec, settings.fetchDepth);
+                yield git.fetch(refSpec, fetchOptions);
             }
             core.endGroup();
             // Checkout info
@@ -1233,9 +1267,21 @@ function getSource(settings) {
             // LFS fetch
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
             // Explicit lfs fetch will fetch lfs objects in parallel.
-            if (settings.lfs) {
+            // For sparse checkouts, let `checkout` fetch the needed objects lazily.
+            if (settings.lfs && !settings.sparseCheckout) {
                 core.startGroup('Fetching LFS objects');
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+                core.endGroup();
+            }
+            // Sparse checkout
+            if (settings.sparseCheckout) {
+                core.startGroup('Setting up sparse checkout');
+                if (settings.sparseCheckoutConeMode) {
+                    yield git.sparseCheckout(settings.sparseCheckout);
+                }
+                else {
+                    yield git.sparseCheckoutNonConeMode(settings.sparseCheckout);
+                }
                 core.endGroup();
             }
             // Checkout
@@ -1291,7 +1337,7 @@ function cleanup(repositoryPath) {
         }
         let git;
         try {
-            git = yield gitCommandManager.createCommandManager(repositoryPath, false);
+            git = yield gitCommandManager.createCommandManager(repositoryPath, false, false);
         }
         catch (_a) {
             return;
@@ -1322,7 +1368,7 @@ function getGitCommandManager(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`Working directory is '${settings.repositoryPath}'`);
         try {
-            return yield gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs);
+            return yield gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null);
         }
         catch (err) {
             // Git is required for LFS
@@ -1673,6 +1719,15 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        // Sparse checkout
+        const sparseCheckout = core.getMultilineInput('sparse-checkout');
+        if (sparseCheckout.length) {
+            result.sparseCheckout = sparseCheckout;
+            core.debug(`sparse checkout = ${result.sparseCheckout}`);
+        }
+        result.sparseCheckoutConeMode =
+            (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+                'TRUE';
         // Fetch depth
         result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
         if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {

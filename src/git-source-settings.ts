@@ -30,6 +30,16 @@ export interface IGitSourceSettings {
   clean: boolean
 
   /**
+   * The array of folders to make the sparse checkout
+   */
+  sparseCheckout: string[]
+
+  /**
+   * Indicates whether to use cone mode in the sparse checkout (if any)
+   */
+  sparseCheckoutConeMode: boolean
+
+  /**
    * The depth when fetching
    */
   fetchDepth: number

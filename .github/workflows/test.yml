@@ -72,6 +72,33 @@ jobs:
         shell: bash
         run: __test__/verify-side-by-side.sh
 
+      # Sparse checkout
+      - name: Sparse checkout
+        uses: ./
+        with:
+          sparse-checkout: |
+            __test__
+            .github
+            dist
+          path: sparse-checkout
+
+      - name: Verify sparse checkout
+        run: __test__/verify-sparse-checkout.sh
+
+      # Sparse checkout (non-cone mode)
+      - name: Sparse checkout (non-cone mode)
+        uses: ./
+        with:
+          sparse-checkout: |
+            /__test__/
+            /.github/
+            /dist/
+          sparse-checkout-cone-mode: false
+          path: sparse-checkout-non-cone-mode
+
+      - name: Verify sparse checkout (non-cone mode)
+        run: __test__/verify-sparse-checkout-non-cone-mode.sh
+
       # LFS
       - name: Checkout LFS
         uses: ./
