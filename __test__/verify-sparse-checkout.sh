@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Verify .git folder
 if [ ! -d "./sparse-checkout/.git" ]; then
