@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.5.3
+- [Fix: Checkout fail in self-hosted runners when faulty submodule are checked-in](https://github.com/actions/checkout/pull/1196)
+- [Fix typos found by codespell](https://github.com/actions/checkout/pull/1287)
+- [Add support for sparse checkouts](https://github.com/actions/checkout/pull/1369)
+
 ## v3.5.2
 - [Fix api endpoint for GHES](https://github.com/actions/checkout/pull/1289)
 
