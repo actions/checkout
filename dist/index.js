@@ -1241,8 +1241,12 @@ function getSource(settings) {
             // Fetch
             core.startGroup('Fetching the repository');
             const fetchOptions = {};
-            if (settings.sparseCheckout)
+            if (settings.filter) {
+                fetchOptions.filter = settings.filter;
+            }
+            else if (settings.sparseCheckout) {
                 fetchOptions.filter = 'blob:none';
+            }
             if (settings.fetchDepth <= 0) {
                 // Fetch all branches and tags
                 let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
@@ -1719,6 +1723,9 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        // Filter
+        result.filter = core.getInput('filter');
+        core.debug(`filter = ${result.filter}`);
         // Sparse checkout
         const sparseCheckout = core.getMultilineInput('sparse-checkout');
         if (sparseCheckout.length) {
