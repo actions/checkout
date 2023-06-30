@@ -45,6 +45,11 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
+   * The local reference repository
+   */
+  reference: string | undefined
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean
