@@ -87,6 +87,11 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: 1
     fetch-depth: ''
 
+    # Path to a local bare git [reference repository to minimize network
+    # usage](https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---reference-if-ableltrepositorygt).
+    # If the directory doesn't exists this option will ignore it and log a message.
+    reference: ''
+
     # Whether to download Git-LFS files
     # Default: false
     lfs: ''
