@@ -195,7 +195,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-tools
     path: my-tools
 ```
-> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#checkout-multiple-repos-private)
 
 ## Checkout multiple repos (nested)
 
@@ -209,7 +209,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-tools
     path: my-tools
 ```
-> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#checkout-multiple-repos-private)
 
 ## Checkout multiple repos (private)
 
