@@ -12,4 +12,5 @@ CLONE_FILTER=$(git config --local --get remote.origin.partialclonefilter)
 
 if [ "$CLONE_FILTER" != "blob:none" ]; then
   echo "Expected ./fetch-filter/.git/config to have 'remote.origin.partialclonefilter' set to 'blob:none'"
+  exit 1
 fi
