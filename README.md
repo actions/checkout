@@ -124,8 +124,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 - [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
 - [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
 - [Checkout multiple repos (private)](#checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-HEAD-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#checkout-pull-request-head-commit-instead-of-merge-commit)
+- [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
+- [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
 - [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
 
 ## Fetch only the root files
