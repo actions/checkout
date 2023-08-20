@@ -119,18 +119,18 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # Scenarios
 
-- [Fetch only the root files](#user-content-Fetch-only-the-root-files)
-- [Fetch only the root files and `.github` and `src` folder](#user-content-Fetch-only-the-root-files-and-github-and-src-folder)
-- [Fetch only a single file](#user-content-Fetch-only-a-single-file)
-- [Fetch all history for all tags and branches](#user-content-Fetch-all-history-for-all-tags-and-branches)
-- [Checkout a different branch](#user-content-Checkout-a-different-branch)
-- [Checkout HEAD^](#user-content-Checkout-HEAD)
-- [Checkout multiple repos (side by side)](#user-content-Checkout-multiple-repos-side-by-side)
-- [Checkout multiple repos (nested)](#user-content-Checkout-multiple-repos-nested)
-- [Checkout multiple repos (private)](#user-content-Checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#user-content-Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#user-content-Checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#user-content-Push-a-commit-using-the-built-in-token)
+- [Fetch only the root files](#user-content-fetch-only-the-root-files)
+- [Fetch only the root files and `.github` and `src` folder](#user-content-fetch-only-the-root-files-and-github-and-src-folder)
+- [Fetch only a single file](#user-content-fetch-only-a-single-file)
+- [Fetch all history for all tags and branches](#user-content-fetch-all-history-for-all-tags-and-branches)
+- [Checkout a different branch](#user-content-checkout-a-different-branch)
+- [Checkout HEAD^](#user-content-checkout-HEAD)
+- [Checkout multiple repos (side by side)](#user-content-checkout-multiple-repos-side-by-side)
+- [Checkout multiple repos (nested)](#user-content-checkout-multiple-repos-nested)
+- [Checkout multiple repos (private)](#user-content-checkout-multiple-repos-private)
+- [Checkout pull request HEAD commit instead of merge commit](#user-content-checkout-pull-request-HEAD-commit-instead-of-merge-commit)
+- [Checkout pull request on closed event](#user-content-checkout-pull-request-on-closed-event)
+- [Push a commit using the built-in token](#user-content-push-a-commit-using-the-built-in-token)
 
 ## Fetch only the root files
 
