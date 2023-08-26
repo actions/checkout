@@ -1,9 +1,9 @@
 ---
 name: "@octokit/auth-token"
-version: 2.4.0
+version: 2.5.0
 type: npm
 summary: GitHub API token authentication for browsers and Node.js
-homepage: https://github.com/octokit/auth-token.js#readme
+homepage: 
 license: mit
 licenses:
 - sources: LICENSE

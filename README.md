@@ -1,6 +1,4 @@
-<p align="center">
-  <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
-</p>
+[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
 # Checkout V3
 
@@ -76,9 +74,22 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
+    # Do a sparse checkout on given patterns. Each pattern should be separated with
+    # new lines
+    # Default: null
+    sparse-checkout: ''
+
+    # Specifies whether to use cone-mode when doing a sparse checkout.
+    # Default: true
+    sparse-checkout-cone-mode: ''
+
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
     # Default: 1
     fetch-depth: ''
+
+    # Whether to fetch tags, even if fetch-depth > 0.
+    # Default: false
+    fetch-tags: ''
 
     # Whether to download Git-LFS files
     # Default: false
@@ -92,11 +103,25 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     #
     # Default: false
     submodules: ''
+
+    # Add repository path as safe.directory for Git global config by running `git
+    # config --global --add safe.directory <path>`
+    # Default: true
+    set-safe-directory: ''
+
+    # The base URL for the GitHub instance that you are trying to clone from, will use
+    # environment defaults to fetch from the same instance that the workflow is
+    # running from unless specified. Example URLs are https://github.com or
+    # https://my-ghes-server.example.com
+    github-server-url: ''
 ```
 <!-- end usage -->
 
 # Scenarios
 
+- [Fetch only the root files](#Fetch-only-the-root-files)
+- [Fetch only the root files and `.github` and `src` folder](#Fetch-only-the-root-files-and-github-and-src-folder)
+- [Fetch only a single file](#Fetch-only-a-single-file)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
 - [Checkout a different branch](#Checkout-a-different-branch)
 - [Checkout HEAD^](#Checkout-HEAD)
@@ -106,6 +131,34 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
+
+## Fetch only the root files
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    sparse-checkout: .
+```
+
+## Fetch only the root files and `.github` and `src` folder
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    sparse-checkout: |
+      .github
+      src
+```
+
+## Fetch only a single file
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    sparse-checkout: |
+      README.md
+    sparse-checkout-cone-mode: false
+```
 
 ## Fetch all history for all tags and branches
 
@@ -146,6 +199,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-tools
     path: my-tools
 ```
+> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (nested)
 
@@ -159,6 +213,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     repository: my-org/my-tools
     path: my-tools
 ```
+> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (private)
 

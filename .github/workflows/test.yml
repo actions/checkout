@@ -72,6 +72,33 @@ jobs:
         shell: bash
         run: __test__/verify-side-by-side.sh
 
+      # Sparse checkout
+      - name: Sparse checkout
+        uses: ./
+        with:
+          sparse-checkout: |
+            __test__
+            .github
+            dist
+          path: sparse-checkout
+
+      - name: Verify sparse checkout
+        run: __test__/verify-sparse-checkout.sh
+
+      # Sparse checkout (non-cone mode)
+      - name: Sparse checkout (non-cone mode)
+        uses: ./
+        with:
+          sparse-checkout: |
+            /__test__/
+            /.github/
+            /dist/
+          sparse-checkout-cone-mode: false
+          path: sparse-checkout-non-cone-mode
+
+      - name: Verify sparse checkout (non-cone mode)
+        run: __test__/verify-sparse-checkout-non-cone-mode.sh
+
       # LFS
       - name: Checkout LFS
         uses: ./
@@ -142,7 +169,7 @@ jobs:
       options: --dns 127.0.0.1
     services:
       squid-proxy:
-        image: datadog/squid:latest
+        image: ubuntu/squid:latest
         ports:
           - 3128:3128
     env:
@@ -205,3 +232,41 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
+    
+  test-git-container:
+    runs-on: ubuntu-latest
+    container: bitnami/git:latest
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: v3
+
+      # Basic checkout using git
+      - name: Checkout basic
+        uses: ./v3
+        with:
+          ref: test-data/v2/basic
+      - name: Verify basic
+        run: |
+          if [ ! -f "./basic-file.txt" ]; then
+              echo "Expected basic file does not exist"
+              exit 1
+          fi
+
+          # Verify .git folder
+          if [ ! -d "./.git" ]; then
+            echo "Expected ./.git folder to exist"
+            exit 1
+          fi
+
+          # Verify auth token
+          git config --global --add safe.directory "*"
+          git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+
+      # needed to make checkout post cleanup succeed
+      - name: Fix Checkout v3
+        uses: actions/checkout@v3
+        with:
+          path: v3

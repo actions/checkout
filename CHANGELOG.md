@@ -1,9 +1,59 @@
 # Changelog
 
+## v3.6.0
+- [Fix: Mark test scripts with Bash'isms to be run via Bash](https://github.com/actions/checkout/pull/1377)
+- [Add option to fetch tags even if fetch-depth > 0](https://github.com/actions/checkout/pull/579)
+
+## v3.5.3
+- [Fix: Checkout fail in self-hosted runners when faulty submodule are checked-in](https://github.com/actions/checkout/pull/1196)
+- [Fix typos found by codespell](https://github.com/actions/checkout/pull/1287)
+- [Add support for sparse checkouts](https://github.com/actions/checkout/pull/1369)
+
+## v3.5.2
+- [Fix api endpoint for GHES](https://github.com/actions/checkout/pull/1289)
+
+## v3.5.1
+- [Fix slow checkout on Windows](https://github.com/actions/checkout/pull/1246)
+
+## v3.5.0
+* [Add new public key for known_hosts](https://github.com/actions/checkout/pull/1237)
+
+## v3.4.0
+- [Upgrade codeql actions to v2](https://github.com/actions/checkout/pull/1209)
+- [Upgrade dependencies](https://github.com/actions/checkout/pull/1210)
+- [Upgrade @actions/io](https://github.com/actions/checkout/pull/1225)
+
+## v3.3.0
+- [Implement branch list using callbacks from exec function](https://github.com/actions/checkout/pull/1045)
+- [Add in explicit reference to private checkout options](https://github.com/actions/checkout/pull/1050)
+- [Fix comment typos (that got added in #770)](https://github.com/actions/checkout/pull/1057)
+
+## v3.2.0
+- [Add GitHub Action to perform release](https://github.com/actions/checkout/pull/942)
+- [Fix status badge](https://github.com/actions/checkout/pull/967)
+- [Replace datadog/squid with ubuntu/squid Docker image](https://github.com/actions/checkout/pull/1002)
+- [Wrap pipeline commands for submoduleForeach in quotes](https://github.com/actions/checkout/pull/964)
+- [Update @actions/io to 1.1.2](https://github.com/actions/checkout/pull/1029)
+- [Upgrading version to 3.2.0](https://github.com/actions/checkout/pull/1039)
+
+## v3.1.0
+- [Use @actions/core `saveState` and `getState`](https://github.com/actions/checkout/pull/939)
+- [Add `github-server-url` input](https://github.com/actions/checkout/pull/922)
+
+## v3.0.2
+- [Add input `set-safe-directory`](https://github.com/actions/checkout/pull/770)
+
+## v3.0.1
+- [Fixed an issue where checkout failed to run in container jobs due to the new git setting `safe.directory`](https://github.com/actions/checkout/pull/762)
+- [Bumped various npm package versions](https://github.com/actions/checkout/pull/744)
+
+## v3.0.0
+
+- [Update to node 16](https://github.com/actions/checkout/pull/689)
+
 ## v2.3.1
 
 - [Fix default branch resolution for .wiki and when using SSH](https://github.com/actions/checkout/pull/284)
-
 
 ## v2.3.0
 

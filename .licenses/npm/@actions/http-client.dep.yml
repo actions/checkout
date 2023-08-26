@@ -1,9 +1,9 @@
 ---
 name: "@actions/http-client"
-version: 1.0.8
+version: 2.1.0
 type: npm
 summary: Actions Http Client
-homepage: https://github.com/actions/http-client#readme
+homepage: https://github.com/actions/toolkit/tree/main/packages/http-client
 license: mit
 licenses:
 - sources: LICENSE

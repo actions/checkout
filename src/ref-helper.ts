@@ -1,7 +1,7 @@
-import {URL} from 'url'
 import {IGitCommandManager} from './git-command-manager'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
+import {getServerApiUrl, isGhes} from './url-helper'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'
 
@@ -183,11 +183,12 @@ export async function checkCommitInfo(
   repositoryOwner: string,
   repositoryName: string,
   ref: string,
-  commit: string
+  commit: string,
+  baseUrl?: string
 ): Promise<void> {
   try {
     // GHES?
-    if (isGhes()) {
+    if (isGhes(baseUrl)) {
       return
     }
 
@@ -243,14 +244,18 @@ export async function checkCommitInfo(
       core.debug(
         `Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`
       )
-      const octokit = new github.GitHub(token, {
+      const octokit = github.getOctokit(token, {
+        baseUrl: getServerApiUrl(baseUrl),
         userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload(
           'number'
         )};run_id=${
           process.env['GITHUB_RUN_ID']
         };expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
       })
-      await octokit.repos.get({owner: repositoryOwner, repo: repositoryName})
+      await octokit.rest.repos.get({
+        owner: repositoryOwner,
+        repo: repositoryName
+      })
     }
   } catch (err) {
     core.debug(
@@ -275,11 +280,4 @@ function select(obj: any, path: string): any {
 
   const key = path.slice(0, i)
   return select(obj[key], path.slice(i + 1))
-}
-
-function isGhes(): boolean {
-  const ghUrl = new URL(
-    process.env['GITHUB_SERVER_URL'] || 'https://github.com'
-  )
-  return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM'
 }

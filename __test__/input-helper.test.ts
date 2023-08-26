@@ -79,12 +79,16 @@ describe('input-helper tests', () => {
     expect(settings.clean).toBe(true)
     expect(settings.commit).toBeTruthy()
     expect(settings.commit).toBe('1234567890123456789012345678901234567890')
+    expect(settings.sparseCheckout).toBe(undefined)
+    expect(settings.sparseCheckoutConeMode).toBe(true)
     expect(settings.fetchDepth).toBe(1)
+    expect(settings.fetchTags).toBe(false)
     expect(settings.lfs).toBe(false)
     expect(settings.ref).toBe('refs/heads/some-ref')
     expect(settings.repositoryName).toBe('some-repo')
     expect(settings.repositoryOwner).toBe('some-owner')
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
+    expect(settings.setSafeDirectory).toBe(true)
   })
 
   it('qualifies ref', async () => {

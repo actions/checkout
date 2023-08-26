@@ -82,12 +82,28 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
+  // Sparse checkout
+  const sparseCheckout = core.getMultilineInput('sparse-checkout')
+  if (sparseCheckout.length) {
+    result.sparseCheckout = sparseCheckout
+    core.debug(`sparse checkout = ${result.sparseCheckout}`)
+  }
+
+  result.sparseCheckoutConeMode =
+    (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+    'TRUE'
+
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
     result.fetchDepth = 0
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
+
+  // Fetch tags
+  result.fetchTags =
+    (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
+  core.debug(`fetch tags = ${result.fetchTags}`)
 
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
@@ -121,6 +137,14 @@ export async function getInputs(): Promise<IGitSourceSettings> {
 
   // Workflow organization ID
   result.workflowOrganizationId = await workflowContextHelper.getOrganizationId()
+
+  // Set safe.directory in git global config.
+  result.setSafeDirectory =
+    (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE'
+
+  // Determine the GitHub URL that the repository is being hosted from
+  result.githubServerUrl = core.getInput('github-server-url')
+  core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
   return result
 }
