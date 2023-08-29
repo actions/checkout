@@ -4,7 +4,7 @@
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://docs.github.com/en/actions/learn-github-actions/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
@@ -37,7 +37,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # We recommend using a service account with the least permissions necessary. Also
     # when generating a new PAT, select the least scopes necessary.
     #
-    # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    # [Learn more about creating and using encrypted secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
     #
     # Default: ${{ github.token }}
     token: ''
@@ -48,7 +48,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     #
     # We recommend using a service account with the least permissions necessary.
     #
-    # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    # [Learn more about creating and using encrypted secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
     ssh-key: ''
 
     # Known hosts in addition to the user and global host key database. The public SSH
@@ -231,7 +231,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     path: my-tools
 ```
 
-> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
+> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
 
 ## Checkout pull request HEAD commit instead of merge commit
