@@ -1,5 +1,8 @@
 # Changelog
 
+## v3.7.0
+- [Support fetching without the --progress option](https://github.com/actions/checkout/pull/1067)
+
 ## v3.6.0
 - [Fix: Mark test scripts with Bash'isms to be run via Bash](https://github.com/actions/checkout/pull/1377)
 - [Add option to fetch tags even if fetch-depth > 0](https://github.com/actions/checkout/pull/579)
