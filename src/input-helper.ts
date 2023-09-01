@@ -105,6 +105,11 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
   core.debug(`fetch tags = ${result.fetchTags}`)
 
+  // Show fetch progress
+  result.showProgress =
+    (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
+  core.debug(`show progress = ${result.showProgress}`)
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)

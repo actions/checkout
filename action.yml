@@ -68,6 +68,9 @@ inputs:
   fetch-tags:
     description: 'Whether to fetch tags, even if fetch-depth > 0.'
     default: false
+  show-progress:
+    description: 'Whether to show progress status output when fetching.'
+    default: true
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false

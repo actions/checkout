@@ -640,7 +640,10 @@ class GitCommandManager {
             if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
                 args.push('--no-tags');
             }
-            args.push('--prune', '--progress', '--no-recurse-submodules');
+            args.push('--prune', '--no-recurse-submodules');
+            if (options.showProgress) {
+                args.push('--progress');
+            }
             if (options.filter) {
                 args.push(`--filter=${options.filter}`);
             }
@@ -1739,6 +1742,10 @@ function getInputs() {
         result.fetchTags =
             (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE';
         core.debug(`fetch tags = ${result.fetchTags}`);
+        // Show fetch progress
+        result.showProgress =
+            (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
+        core.debug(`show progress = ${result.showProgress}`);
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
         core.debug(`lfs = ${result.lfs}`);

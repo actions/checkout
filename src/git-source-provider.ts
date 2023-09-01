@@ -157,6 +157,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       filter?: string
       fetchDepth?: number
       fetchTags?: boolean
+      showProgress?: boolean
     } = {}
     if (settings.sparseCheckout) fetchOptions.filter = 'blob:none'
     if (settings.fetchDepth <= 0) {
