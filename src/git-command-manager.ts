@@ -255,6 +255,7 @@ class GitCommandManager {
     }
 
     args.push('--prune', '--no-recurse-submodules')
+    console.log(`options show progress = ${options.showProgress}`)
     if (options.showProgress) {
       args.push('--progress')
     }

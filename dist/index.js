@@ -641,6 +641,7 @@ class GitCommandManager {
                 args.push('--no-tags');
             }
             args.push('--prune', '--no-recurse-submodules');
+            console.log(`options show progress = ${options.showProgress}`);
             if (options.showProgress) {
                 args.push('--progress');
             }
@@ -1746,6 +1747,7 @@ function getInputs() {
         result.showProgress =
             (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
         core.debug(`show progress = ${result.showProgress}`);
+        console.log(`show progress = ${result.showProgress}`);
         // LFS
         result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
         core.debug(`lfs = ${result.lfs}`);
