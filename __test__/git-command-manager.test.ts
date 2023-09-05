@@ -88,3 +88,291 @@ describe('git-auth-helper tests', () => {
     expect(branches.sort()).toEqual(['foo'].sort())
   })
 })
+
+describe('Test fetchDepth and fetchTags options', () => {
+  beforeEach(async () => {
+    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
+    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+    mockExec.mockImplementation((path, args, options) => {
+      console.log(args, options.listeners.stdout)
+
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should call execGit with the correct arguments when fetchDepth is 0 and fetchTags is true', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      fetchDepth: 0,
+      fetchTags: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--prune',
+        '--no-recurse-submodules',
+        '--filter=filterValue',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when fetchDepth is 0 and fetchTags is false', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      fetchDepth: 0,
+      fetchTags: false
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--filter=filterValue',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when fetchDepth is 1 and fetchTags is false', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      fetchDepth: 1,
+      fetchTags: false
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--filter=filterValue',
+        '--depth=1',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when fetchDepth is 1 and fetchTags is true', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      fetchDepth: 1,
+      fetchTags: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--prune',
+        '--no-recurse-submodules',
+        '--filter=filterValue',
+        '--depth=1',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when showProgress is true', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      showProgress: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--progress',
+        '--filter=filterValue',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when fetchDepth is 42 and showProgress is true', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      fetchDepth: 42,
+      showProgress: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--progress',
+        '--filter=filterValue',
+        '--depth=42',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when fetchTags is true and showProgress is true', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      fetchTags: true,
+      showProgress: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--prune',
+        '--no-recurse-submodules',
+        '--progress',
+        '--filter=filterValue',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
+})

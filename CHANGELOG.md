@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.0.0
+- [Support fetching without the --progress option](https://github.com/actions/checkout/pull/1067)
+- [Update to node20](https://github.com/actions/checkout/pull/1436)
+
+## v3.6.0
+- [Fix: Mark test scripts with Bash'isms to be run via Bash](https://github.com/actions/checkout/pull/1377)
+- [Add option to fetch tags even if fetch-depth > 0](https://github.com/actions/checkout/pull/579)
+
 ## v3.5.3
 - [Fix: Checkout fail in self-hosted runners when faulty submodule are checked-in](https://github.com/actions/checkout/pull/1196)
 - [Fix typos found by codespell](https://github.com/actions/checkout/pull/1287)

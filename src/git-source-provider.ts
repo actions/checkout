@@ -153,7 +153,12 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fetch
     core.startGroup('Fetching the repository')
-    const fetchOptions: {filter?: string; fetchDepth?: number} = {}
+    const fetchOptions: {
+      filter?: string
+      fetchDepth?: number
+      fetchTags?: boolean
+      showProgress?: boolean
+    } = {}
 
     if (settings.filter) {
       fetchOptions.filter = settings.filter
@@ -177,6 +182,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       }
     } else {
       fetchOptions.fetchDepth = settings.fetchDepth
+      fetchOptions.fetchTags = settings.fetchTags
       const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
       await git.fetch(refSpec, fetchOptions)
     }

@@ -33,6 +33,8 @@ export interface IGitCommandManager {
     options: {
       filter?: string
       fetchDepth?: number
+      fetchTags?: boolean
+      showProgress?: boolean
     }
   ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
@@ -240,14 +242,22 @@ class GitCommandManager {
 
   async fetch(
     refSpec: string[],
-    options: {filter?: string; fetchDepth?: number}
+    options: {
+      filter?: string
+      fetchDepth?: number
+      fetchTags?: boolean
+      showProgress?: boolean
+    }
   ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
-    if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
+    if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
       args.push('--no-tags')
     }
 
-    args.push('--prune', '--progress', '--no-recurse-submodules')
+    args.push('--prune', '--no-recurse-submodules')
+    if (options.showProgress) {
+      args.push('--progress')
+    }
 
     if (options.filter) {
       args.push(`--filter=${options.filter}`)
@@ -333,8 +343,8 @@ class GitCommandManager {
   }
 
   async log1(format?: string): Promise<string> {
-    var args = format ? ['log', '-1', format] : ['log', '-1']
-    var silent = format ? false : true
+    const args = format ? ['log', '-1', format] : ['log', '-1']
+    const silent = format ? false : true
     const output = await this.execGit(args, false, silent)
     return output.stdout
   }

@@ -1,6 +1,6 @@
 {
   "name": "checkout",
-  "version": "3.5.3",
+  "version": "4.0.0",
   "description": "checkout action",
   "main": "lib/main.js",
   "scripts": {
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
-    "@types/node": "^12.7.12",
+    "@types/node": "^20.5.3",
     "@types/uuid": "^3.4.6",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
