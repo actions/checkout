@@ -1,6 +1,6 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout V3
+# Checkout V4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -12,14 +12,15 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # What's new
 
-- Updated to the node16 runtime by default
-  - This requires a minimum [Actions Runner](https://github.com/actions/runner/releases/tag/v2.285.0) version of v2.285.0 to run, which is by default available in GHES 3.4 or later.
+- Updated default runtime to node20
+  - This requires a minimum Actions Runner version of [v2.308.0](https://github.com/actions/runner/releases/tag/v2.308.0).
+- Added support for fetching without the `--progress` option
 
 # Usage
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -139,7 +140,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Fetch only the root files
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     sparse-checkout: .
 ```
@@ -147,7 +148,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Fetch only the root files and `.github` and `src` folder
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     sparse-checkout: |
       .github
@@ -157,7 +158,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Fetch only a single file
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     sparse-checkout: |
       README.md
@@ -167,7 +168,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     fetch-depth: 0
 ```
@@ -175,7 +176,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     ref: my-branch
 ```
@@ -183,7 +184,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -193,12 +194,12 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v3
+  uses: actions/checkout@v4
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v3
+  uses: actions/checkout@v4
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -209,10 +210,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v3
+  uses: actions/checkout@v4
 
 - name: Checkout tools repo
-  uses: actions/checkout@v3
+  uses: actions/checkout@v4
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -223,12 +224,12 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v3
+  uses: actions/checkout@v4
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v3
+  uses: actions/checkout@v4
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -241,7 +242,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -257,7 +258,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 ```
 
 ## Push a commit using the built-in token
@@ -268,7 +269,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: |
           date > generated.txt
           git config user.name github-actions
