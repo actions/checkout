@@ -2371,14 +2371,16 @@ function getFetchUrl(settings) {
     const encodedOwner = encodeURIComponent(settings.repositoryOwner);
     const encodedName = encodeURIComponent(settings.repositoryName);
     if (settings.sshKey) {
-        return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
+        return serviceUrl.port === ''
+            ? `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`
+            : `ssh://git@${serviceUrl.hostname}:${serviceUrl.port}/${encodedOwner}/${encodedName}.git`;
     }
     // "origin" is SCHEME://HOSTNAME[:PORT]
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
 }
 exports.getFetchUrl = getFetchUrl;
 function getServerUrl(url) {
-    let urlValue = url && url.trim().length > 0
+    const urlValue = url && url.trim().length > 0
         ? url
         : process.env['GITHUB_SERVER_URL'] || 'https://github.com';
     return new url_1.URL(urlValue);
