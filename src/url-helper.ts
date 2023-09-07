@@ -1,6 +1,6 @@
 import * as assert from 'assert'
-import {URL} from 'url'
 import {IGitSourceSettings} from './git-source-settings'
+import {URL} from 'url'
 
 export function getFetchUrl(settings: IGitSourceSettings): string {
   assert.ok(
@@ -11,8 +11,11 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
   const serviceUrl = getServerUrl(settings.githubServerUrl)
   const encodedOwner = encodeURIComponent(settings.repositoryOwner)
   const encodedName = encodeURIComponent(settings.repositoryName)
+
   if (settings.sshKey) {
-    return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`
+    return serviceUrl.port === ''
+      ? `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`
+      : `ssh://git@${serviceUrl.hostname}:${serviceUrl.port}/${encodedOwner}/${encodedName}.git`
   }
 
   // "origin" is SCHEME://HOSTNAME[:PORT]
@@ -20,7 +23,7 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
 }
 
 export function getServerUrl(url?: string): URL {
-  let urlValue =
+  const urlValue =
     url && url.trim().length > 0
       ? url
       : process.env['GITHUB_SERVER_URL'] || 'https://github.com'
