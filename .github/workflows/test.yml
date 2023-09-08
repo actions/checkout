@@ -81,7 +81,6 @@ jobs:
 
       - name: Verify fetch filter
         run: __test__/verify-fetch-filter.sh
-    
 
       # Sparse checkout
       - name: Sparse checkout
