@@ -83,7 +83,11 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   core.debug(`clean = ${result.clean}`)
 
   // Filter
-  result.filter = core.getInput('filter')
+  const filter = core.getInput('filter')
+  if (filter) {
+    result.filter = filter
+  }
+
   core.debug(`filter = ${result.filter}`)
 
   // Sparse checkout
