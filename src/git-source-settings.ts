@@ -118,4 +118,9 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * User override of the working directory (default is $GITHUB_WORKSPACE)
+   */
+  workingDirectory: string | undefined
 }
