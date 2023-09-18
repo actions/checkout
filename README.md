@@ -77,7 +77,6 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
     # Do a sparse checkout on given patterns. Each pattern should be separated with
     # new lines
-    # Default: null
     sparse-checkout: ''
 
     # Specifies whether to use cone-mode when doing a sparse checkout.
