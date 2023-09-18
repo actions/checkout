@@ -6,8 +6,8 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
-import {default as uuid} from 'uuid/v4'
 import {getServerApiUrl} from './url-helper'
+import {default as uuid} from 'uuid/v4'
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -54,7 +54,7 @@ export async function downloadRepository(
   // a top-level folder and the repository content is inside.
   const archiveFileNames = await fs.promises.readdir(extractPath)
   assert.ok(
-    archiveFileNames.length == 1,
+    archiveFileNames.length === 1,
     'Expected exactly one directory inside archive'
   )
   const archiveVersion = archiveFileNames[0] // The top-level folder name includes the short SHA
@@ -135,8 +135,8 @@ async function downloadArchive(
     ? octokit.rest.repos.downloadZipballArchive
     : octokit.rest.repos.downloadTarballArchive
   const response = await download({
-    owner: owner,
-    repo: repo,
+    owner,
+    repo,
     ref: commit || ref
   })
   return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer

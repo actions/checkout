@@ -38,9 +38,9 @@ async function cleanup(): Promise<void> {
 
 // Main
 if (!stateHelper.IsPost) {
-  run()
+  void run()
 }
 // Post
 else {
-  cleanup()
+  void cleanup()
 }

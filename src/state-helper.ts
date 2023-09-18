@@ -28,28 +28,28 @@ export const SshKnownHostsPath = core.getState('sshKnownHostsPath')
 /**
  * Save the repository path so the POST action can retrieve the value.
  */
-export function setRepositoryPath(repositoryPath: string) {
+export function setRepositoryPath(repositoryPath: string): void {
   core.saveState('repositoryPath', repositoryPath)
 }
 
 /**
  * Save the SSH key path so the POST action can retrieve the value.
  */
-export function setSshKeyPath(sshKeyPath: string) {
+export function setSshKeyPath(sshKeyPath: string): void {
   core.saveState('sshKeyPath', sshKeyPath)
 }
 
 /**
  * Save the SSH known hosts path so the POST action can retrieve the value.
  */
-export function setSshKnownHostsPath(sshKnownHostsPath: string) {
+export function setSshKnownHostsPath(sshKnownHostsPath: string): void {
   core.saveState('sshKnownHostsPath', sshKnownHostsPath)
 }
 
 /**
  * Save the set-safe-directory input so the POST action can retrieve the value.
  */
-export function setSafeDirectory() {
+export function setSafeDirectory(): void {
   core.saveState('setSafeDirectory', 'true')
 }
 

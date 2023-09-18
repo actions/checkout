@@ -118,10 +118,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.submodules = false
   result.nestedSubmodules = false
   const submodulesString = (core.getInput('submodules') || '').toUpperCase()
-  if (submodulesString == 'RECURSIVE') {
+  if (submodulesString === 'RECURSIVE') {
     result.submodules = true
     result.nestedSubmodules = true
-  } else if (submodulesString == 'TRUE') {
+  } else if (submodulesString === 'TRUE') {
     result.submodules = true
   }
   core.debug(`submodules = ${result.submodules}`)

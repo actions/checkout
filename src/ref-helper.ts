@@ -1,7 +1,7 @@
-import {IGitCommandManager} from './git-command-manager'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {getServerApiUrl, isGhes} from './url-helper'
+import {IGitCommandManager} from './git-command-manager'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'
 
@@ -227,7 +227,7 @@ export async function checkCommitInfo(
 
     // Expected message?
     const expectedMessage = `Merge ${expectedHeadSha} into ${expectedBaseSha}`
-    if (commitInfo.indexOf(expectedMessage) >= 0) {
+    if (commitInfo.includes(expectedMessage)) {
       return
     }
 

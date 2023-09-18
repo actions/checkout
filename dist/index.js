@@ -305,7 +305,7 @@ class GitAuthHelper {
             this.sshKeyPath = path.join(runnerTemp, uniqueId);
             stateHelper.setSshKeyPath(this.sshKeyPath);
             yield fs.promises.mkdir(runnerTemp, { recursive: true });
-            yield fs.promises.writeFile(this.sshKeyPath, this.settings.sshKey.trim() + '\n', { mode: 0o600 });
+            yield fs.promises.writeFile(this.sshKeyPath, `${this.settings.sshKey.trim()}\n`, { mode: 0o600 });
             // Remove inherited permissions on Windows
             if (IS_WINDOWS) {
                 const icacls = yield io.which('icacls.exe');
@@ -371,7 +371,7 @@ class GitAuthHelper {
             let content = (yield fs.promises.readFile(configPath)).toString();
             const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue);
             if (placeholderIndex < 0 ||
-                placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)) {
+                placeholderIndex !== content.lastIndexOf(this.tokenPlaceholderConfigValue)) {
                 throw new Error(`Unable to replace auth placeholder in ${configPath}`);
             }
             assert.ok(this.tokenConfigValue, 'tokenConfigValue is not defined');
@@ -1326,7 +1326,7 @@ function getSource(settings) {
                     yield authHelper.removeAuth();
                     core.endGroup();
                 }
-                authHelper.removeGlobalConfig();
+                yield authHelper.removeGlobalConfig();
             }
         }
     });
@@ -1514,8 +1514,8 @@ const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
 const retryHelper = __importStar(__nccwpck_require__(2155));
 const toolCache = __importStar(__nccwpck_require__(7784));
-const v4_1 = __importDefault(__nccwpck_require__(824));
 const url_helper_1 = __nccwpck_require__(9437);
+const v4_1 = __importDefault(__nccwpck_require__(824));
 const IS_WINDOWS = process.platform === 'win32';
 function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -1549,7 +1549,7 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath,
         // Determine the path of the repository content. The archive contains
         // a top-level folder and the repository content is inside.
         const archiveFileNames = yield fs.promises.readdir(extractPath);
-        assert.ok(archiveFileNames.length == 1, 'Expected exactly one directory inside archive');
+        assert.ok(archiveFileNames.length === 1, 'Expected exactly one directory inside archive');
         const archiveVersion = archiveFileNames[0]; // The top-level folder name includes the short SHA
         core.info(`Resolved version ${archiveVersion}`);
         const tempRepositoryPath = path.join(extractPath, archiveVersion);
@@ -1617,8 +1617,8 @@ function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
             ? octokit.rest.repos.downloadZipballArchive
             : octokit.rest.repos.downloadTarballArchive;
         const response = yield download({
-            owner: owner,
-            repo: repo,
+            owner,
+            repo,
             ref: commit || ref
         });
         return Buffer.from(response.data); // response.data is ArrayBuffer
@@ -1753,11 +1753,11 @@ function getInputs() {
         result.submodules = false;
         result.nestedSubmodules = false;
         const submodulesString = (core.getInput('submodules') || '').toUpperCase();
-        if (submodulesString == 'RECURSIVE') {
+        if (submodulesString === 'RECURSIVE') {
             result.submodules = true;
             result.nestedSubmodules = true;
         }
-        else if (submodulesString == 'TRUE') {
+        else if (submodulesString === 'TRUE') {
             result.submodules = true;
         }
         core.debug(`submodules = ${result.submodules}`);
@@ -1862,11 +1862,11 @@ function cleanup() {
 }
 // Main
 if (!stateHelper.IsPost) {
-    run();
+    void run();
 }
 // Post
 else {
-    cleanup();
+    void cleanup();
 }
 
 
@@ -2096,7 +2096,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
             }
             // Expected message?
             const expectedMessage = `Merge ${expectedHeadSha} into ${expectedBaseSha}`;
-            if (commitInfo.indexOf(expectedMessage) >= 0) {
+            if (commitInfo.includes(expectedMessage)) {
                 return;
             }
             // Extract details from message
@@ -2378,7 +2378,7 @@ function getFetchUrl(settings) {
 }
 exports.getFetchUrl = getFetchUrl;
 function getServerUrl(url) {
-    let urlValue = url && url.trim().length > 0
+    const urlValue = url && url.trim().length > 0
         ? url
         : process.env['GITHUB_SERVER_URL'] || 'https://github.com';
     return new url_1.URL(urlValue);

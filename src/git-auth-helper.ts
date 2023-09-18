@@ -8,9 +8,9 @@ import * as path from 'path'
 import * as regexpHelper from './regexp-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
-import {default as uuid} from 'uuid/v4'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
+import {default as uuid} from 'uuid/v4'
 
 const IS_WINDOWS = process.platform === 'win32'
 const SSH_COMMAND_KEY = 'core.sshCommand'
@@ -215,7 +215,7 @@ class GitAuthHelper {
     await fs.promises.mkdir(runnerTemp, {recursive: true})
     await fs.promises.writeFile(
       this.sshKeyPath,
-      this.settings.sshKey.trim() + '\n',
+      `${this.settings.sshKey.trim()}\n`,
       {mode: 0o600}
     )
 
@@ -306,7 +306,7 @@ class GitAuthHelper {
     const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue)
     if (
       placeholderIndex < 0 ||
-      placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)
+      placeholderIndex !== content.lastIndexOf(this.tokenPlaceholderConfigValue)
     ) {
       throw new Error(`Unable to replace auth placeholder in ${configPath}`)
     }
@@ -352,7 +352,7 @@ class GitAuthHelper {
 
   private async removeGitConfig(
     configKey: string,
-    submoduleOnly: boolean = false
+    submoduleOnly = false
   ): Promise<void> {
     if (!submoduleOnly) {
       if (

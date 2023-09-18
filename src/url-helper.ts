@@ -1,6 +1,6 @@
 import * as assert from 'assert'
-import {URL} from 'url'
 import {IGitSourceSettings} from './git-source-settings'
+import {URL} from 'url'
 
 export function getFetchUrl(settings: IGitSourceSettings): string {
   assert.ok(
@@ -20,7 +20,7 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
 }
 
 export function getServerUrl(url?: string): URL {
-  let urlValue =
+  const urlValue =
     url && url.trim().length > 0
       ? url
       : process.env['GITHUB_SERVER_URL'] || 'https://github.com'
