@@ -9,7 +9,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   const result = {} as unknown as IGitSourceSettings
 
   // Working directory
-  let workingDirectory = core.getInput('workingDirectory') || process.env['GITHUB_WORKSPACE']
+  let workingDirectory = core.getInput('working-directory') || process.env['GITHUB_WORKSPACE']
   if (!workingDirectory) {
     throw new Error('working dir not defined')
   }
