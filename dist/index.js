@@ -1672,7 +1672,7 @@ function getInputs() {
     return __awaiter(this, void 0, void 0, function* () {
         const result = {};
         // Working directory
-        let workingDirectory = core.getInput('workingDirectory') || process.env['GITHUB_WORKSPACE'];
+        let workingDirectory = core.getInput('working-directory') || process.env['GITHUB_WORKSPACE'];
         if (!workingDirectory) {
             throw new Error('working dir not defined');
         }
@@ -1694,8 +1694,8 @@ function getInputs() {
         // Repository path
         result.repositoryPath = core.getInput('path') || '.';
         result.repositoryPath = path.resolve(workingDirectory, result.repositoryPath);
-        if (!(result.repositoryPath + path.sep).startsWith(workingDirectory + path.sep)) {
-            throw new Error(`Repository path '${result.repositoryPath}' is not under '${workingDirectory}'`);
+        if (!(result.repositoryPath + path.sep).startsWith(workingDirectory)) {
+            throw new Error(`Repository path '${result.repositoryPath + path.sep}' is not under '${workingDirectory}'`);
         }
         // Workflow repository?
         const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
