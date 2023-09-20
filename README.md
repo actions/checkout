@@ -68,7 +68,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     persist-credentials: ''
 
-    # Relative path under $GITHUB_WORKSPACE to place the repository
+    # Relative path under $GITHUB_WORKSPACE/working-directory to place the repository
     path: ''
 
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
@@ -119,6 +119,10 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Provide the working directory for the git commands to execute into, defaults to
+    # $GITHUB_WORKSPACE
+    working-directory: ''
 ```
 <!-- end usage -->
 
