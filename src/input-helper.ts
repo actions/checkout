@@ -43,11 +43,11 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   )
   if (
     !(result.repositoryPath + path.sep).startsWith(
-      workingDirectory + path.sep
+      workingDirectory
     )
   ) {
     throw new Error(
-      `Repository path '${result.repositoryPath}' is not under '${workingDirectory}'`
+      `Repository path '${result.repositoryPath + path.sep}' is not under '${workingDirectory}'`
     )
   }
 
