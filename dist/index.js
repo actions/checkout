@@ -3232,7 +3232,7 @@ class Summary {
     /**
      * If the summary buffer is empty
      *
-     * @returns {boolen} true if the buffer is empty
+     * @returns {boolean} true if the buffer is empty
      */
     isEmptyBuffer() {
         return this._buffer.length === 0;
@@ -3321,10 +3321,10 @@ class Summary {
         return this.addRaw(element).addEOL();
     }
     /**
-     * Adds a collapsable HTML details element to the summary buffer
+     * Adds a collapsible HTML details element to the summary buffer
      *
      * @param {string} label text for the closed state
-     * @param {string} content collapsable content
+     * @param {string} content collapsible content
      *
      * @returns {Summary} summary instance
      */
@@ -4932,7 +4932,7 @@ exports.defaults = {
 };
 exports.GitHub = core_1.Octokit.plugin(plugin_rest_endpoint_methods_1.restEndpointMethods, plugin_paginate_rest_1.paginateRest).defaults(exports.defaults);
 /**
- * Convience function to correctly format Octokit Options to pass into the constructor.
+ * Convenience function to correctly format Octokit Options to pass into the constructor.
  *
  * @param     token    the repo PAT or GITHUB_TOKEN
  * @param     options  other options to set
@@ -6816,7 +6816,7 @@ tok('GTLT')
 src[t.GTLT] = '((?:<|>)?=?)'
 
 // Something like "2.*" or "1.2.x".
-// Note that "x.x" is a valid xRange identifer, meaning "any version"
+// Note that "x.x" is a valid xRange identifier, meaning "any version"
 // Only the first item is strictly required.
 tok('XRANGEIDENTIFIERLOOSE')
 src[t.XRANGEIDENTIFIERLOOSE] = src[t.NUMERICIDENTIFIERLOOSE] + '|x|X|\\*'
@@ -8166,7 +8166,7 @@ function outside (version, range, hilo, options) {
       throw new TypeError('Must provide a hilo val of "<" or ">"')
   }
 
-  // If it satisifes the range it is not outside
+  // If it satisfies the range it is not outside
   if (satisfies(version, range, options)) {
     return false
   }
@@ -9109,7 +9109,7 @@ function _defineProperty(obj, key, value) {
  *
  * Octokit normalizes these responses so that paginated results are always returned following
  * the same structure. One challenge is that if the list response has only one page, no Link
- * header is provided, so this header alone is not sufficient to check wether a response is
+ * header is provided, so this header alone is not sufficient to check whether a response is
  * paginated or not.
  *
  * We check if a "total_count" key is present in the response data, but also make sure that
@@ -13035,7 +13035,7 @@ function fetch(url, opts) {
 				} catch (err) {
 					// error here can only be invalid URL in Location: header
 					// do not throw when options.redirect == manual
-					// let the user extract the errorneous redirect URL
+					// let the user extract the erroneous redirect URL
 					if (request.redirect !== 'manual') {
 						reject(new FetchError(`uri requested responds with an invalid redirect URL: ${location}`, 'invalid-redirect'));
 						finalize();
@@ -17901,7 +17901,7 @@ function decompressGzippedContent(buffer, charset) {
 exports.decompressGzippedContent = decompressGzippedContent;
 /**
  * Builds a RegExp to test urls against for deciding
- * wether to bypass proxy from an entry of the
+ * whether to bypass proxy from an entry of the
  * environment variable setting NO_PROXY
  *
  * @param {string} bypass
