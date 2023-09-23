@@ -75,8 +75,12 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
+    # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Default: null
+    filter: ''
+
     # Do a sparse checkout on given patterns. Each pattern should be separated with
-    # new lines
+    # new lines.
     # Default: null
     sparse-checkout: ''
 

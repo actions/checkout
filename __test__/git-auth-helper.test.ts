@@ -802,6 +802,7 @@ async function setup(testName: string): Promise<void> {
     authToken: 'some auth token',
     clean: true,
     commit: '',
+    filter: undefined,
     sparseCheckout: [],
     sparseCheckoutConeMode: true,
     fetchDepth: 1,

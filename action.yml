@@ -53,10 +53,15 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  filter:
+    description: >
+      Partially clone against a given filter.
+      Overrides sparse-checkout if set.
+    default: null
   sparse-checkout:
     description: >
       Do a sparse checkout on given patterns.
-      Each pattern should be separated with new lines
+      Each pattern should be separated with new lines.
     default: null
   sparse-checkout-cone-mode:
     description: >

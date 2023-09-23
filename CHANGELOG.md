@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.1.0
+- [Add support for partial checkout filters](https://github.com/actions/checkout/pull/1396)
+
 ## v4.0.0
 - [Support fetching without the --progress option](https://github.com/actions/checkout/pull/1067)
 - [Update to node20](https://github.com/actions/checkout/pull/1436)

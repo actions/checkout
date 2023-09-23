@@ -82,6 +82,14 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
+  // Filter
+  const filter = core.getInput('filter')
+  if (filter) {
+    result.filter = filter
+  }
+
+  core.debug(`filter = ${result.filter}`)
+
   // Sparse checkout
   const sparseCheckout = core.getMultilineInput('sparse-checkout')
   if (sparseCheckout.length) {

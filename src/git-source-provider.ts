@@ -159,7 +159,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       fetchTags?: boolean
       showProgress?: boolean
     } = {}
-    if (settings.sparseCheckout) fetchOptions.filter = 'blob:none'
+
+    if (settings.filter) {
+      fetchOptions.filter = settings.filter
+    } else if (settings.sparseCheckout) {
+      fetchOptions.filter = 'blob:none'
+    }
+
     if (settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(

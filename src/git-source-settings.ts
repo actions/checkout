@@ -30,6 +30,11 @@ export interface IGitSourceSettings {
   clean: boolean
 
   /**
+   * The filter determining which objects to include
+   */
+  filter: string | undefined
+
+  /**
    * The array of folders to make the sparse checkout
    */
   sparseCheckout: string[]
