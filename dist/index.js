@@ -5608,7 +5608,7 @@ class HttpClient {
             return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
         }
         else {
-            return this._getAgentDispatcher(parsedUrl);
+            return;
         }
     }
     _prepareRequest(method, requestUrl, headers) {
