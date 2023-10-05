@@ -1,6 +1,6 @@
 ---
 name: "@actions/core"
-version: 1.10.0
+version: 1.10.1
 type: npm
 summary: Actions core lib
 homepage: https://github.com/actions/toolkit/tree/main/packages/core

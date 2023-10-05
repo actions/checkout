@@ -4,7 +4,7 @@ version: 2.1.0
 type: npm
 summary: Actions Http Client
 homepage: https://github.com/actions/toolkit/tree/main/packages/http-client
-license: mit
+license: other
 licenses:
 - sources: LICENSE
   text: |
