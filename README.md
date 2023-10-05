@@ -76,6 +76,8 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     clean: ''
 
     # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Note that when a filter is provided, fetch-depth is still respected; you
+    # may want to specify `fetch-depth: 0` to ensure the full history is fetched.
     # Default: null
     filter: ''
 
