@@ -1809,7 +1809,8 @@ function getInputs() {
         result.persistCredentials =
             (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
         // Workflow organization ID
-        result.workflowOrganizationId = yield workflowContextHelper.getOrganizationId();
+        result.workflowOrganizationId =
+            yield workflowContextHelper.getOrganizationId();
         // Set safe.directory in git global config.
         result.setSafeDirectory =
             (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
@@ -2520,8 +2521,7 @@ function getOrganizationId() {
             return id;
         }
         catch (err) {
-            core.debug(`Unable to load organization ID from GITHUB_EVENT_PATH: ${err
-                .message || err}`);
+            core.debug(`Unable to load organization ID from GITHUB_EVENT_PATH: ${err.message || err}`);
         }
     });
 }
