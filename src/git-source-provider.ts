@@ -219,10 +219,10 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     )
 
     // Set default author
-    if (!await git.configExists('user.name', true) {
+    if (!await git.configExists('user.name', true)) {
       await git.config('user.name', github.context.workflow, true)
     }
-    if (!await git.configExists('user.email', true) {
+    if (!await git.configExists('user.email', true)) {
       await git.config('user.email', 'github-actions@github.com', true)
     }
   } finally {
