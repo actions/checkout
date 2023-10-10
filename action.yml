@@ -72,6 +72,6 @@ inputs:
     description: Add repository path as safe.directory for Git global config by running `git config --global --add safe.directory <path>`
     default: true
 runs:
-  using: node12
+  using: node16
   main: dist/index.js
   post: dist/index.js
