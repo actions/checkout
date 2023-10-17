@@ -12,9 +12,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # What's new
 
-- Updated default runtime to node20
-  - This requires a minimum Actions Runner version of [v2.308.0](https://github.com/actions/runner/releases/tag/v2.308.0).
-- Added support for fetching without the `--progress` option
+Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
 
 # Usage
 
