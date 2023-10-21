@@ -7,8 +7,8 @@
 name: Check dist
 
 on:
-  push:
-    branches:
+push:
+  branches:
       - main
     paths-ignore:
       - '**.md'
