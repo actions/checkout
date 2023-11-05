@@ -295,6 +295,10 @@ describe('git-auth-helper tests', () => {
       'core.sshCommand',
       expectedSshCommand
     )
+    expect(git.config).toHaveBeenCalledWith(
+      'user.signingKey',
+      actualKeyPath
+    )
   })
 
   const configureAuth_writesExplicitKnownHosts = 'writes explicit known hosts'
