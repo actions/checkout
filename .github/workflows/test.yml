@@ -150,6 +150,17 @@ jobs:
       - name: Verify submodules recursive
         run: __test__/verify-submodules-recursive.sh
 
+      # Submodules fetchJobs
+      - name: Checkout submodules true
+        uses: ./
+        with:
+          ref: test-data/v2/submodule-ssh-url
+          path: submodules-true
+          submodules: recursive
+          submodulesFetchJobs: "10"
+      - name: Verify submodules true
+        run: __test__/verify-submodules-with-jobs.sh
+
       # Basic checkout using REST API
       - name: Remove basic
         if: runner.os != 'windows'
@@ -242,7 +253,7 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
-    
+
   test-git-container:
     runs-on: ubuntu-latest
     container: bitnami/git:latest

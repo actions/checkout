@@ -111,6 +111,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: false
     submodules: ''
 
+    # Specifies how many submodules are fetched/cloned at the same time. A positive
+    # integer allows up to that number of submodules fetched in parallel. A value of 0
+    # will give some reasonable default. If unset, it defaults to 1.
+    # Default: 1
+    submodulesFetchJobs: ''
+
     # Add repository path as safe.directory for Git global config by running `git
     # config --global --add safe.directory <path>`
     # Default: true

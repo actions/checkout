@@ -132,8 +132,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   } else if (submodulesString == 'TRUE') {
     result.submodules = true
   }
+  result.submodulesFetchJobs = core.getInput('submodulesFetchJobs') || '1'
   core.debug(`submodules = ${result.submodules}`)
   core.debug(`recursive submodules = ${result.nestedSubmodules}`)
+  core.debug(`submodules fetchJobs= ${result.submodulesFetchJobs}`)
 
   // Auth token
   result.authToken = core.getInput('token', {required: true})

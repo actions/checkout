@@ -88,6 +88,10 @@ inputs:
       When the `ssh-key` input is not provided, SSH URLs beginning with `git@github.com:` are
       converted to HTTPS.
     default: false
+  submodulesFetchJobs:
+    description: >
+      Specifies how many submodules are fetched/cloned at the same time. A positive integer allows up to that number of submodules fetched in parallel. A value of 0 will give some reasonable default. If unset, it defaults to 1.
+    default: 1
   set-safe-directory:
     description: Add repository path as safe.directory for Git global config by running `git config --global --add safe.directory <path>`
     default: true

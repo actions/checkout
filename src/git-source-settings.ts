@@ -75,6 +75,11 @@ export interface IGitSourceSettings {
   nestedSubmodules: boolean
 
   /**
+   * Indicates the number of parallel jobs to use when fetching submodules
+   */
+  submodulesFetchJobs: string
+
+  /**
    * The auth token to use when fetching the repository
    */
   authToken: string

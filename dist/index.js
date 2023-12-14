@@ -1304,6 +1304,7 @@ function getSource(settings) {
                 core.endGroup();
                 // Checkout submodules
                 core.startGroup('Fetching submodules');
+                yield git.config('submodule.fetchJobs', settings.submodulesFetchJobs);
                 yield git.submoduleSync(settings.nestedSubmodules);
                 yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
                 yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
@@ -1770,8 +1771,10 @@ function getInputs() {
         else if (submodulesString == 'TRUE') {
             result.submodules = true;
         }
+        result.submodulesFetchJobs = core.getInput('submodulesFetchJobs') || '1';
         core.debug(`submodules = ${result.submodules}`);
         core.debug(`recursive submodules = ${result.nestedSubmodules}`);
+        core.debug(`submodules fetchJobs= ${result.submodulesFetchJobs}`);
         // Auth token
         result.authToken = core.getInput('token', { required: true });
         // SSH
