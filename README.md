@@ -94,6 +94,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: false
     fetch-tags: ''
 
+    # Specifies the maximal number of fetch operations to be run in parallel at a time
+    # (submodules, or remotes when the --multiple option of git-fetch is in effect). A
+    # value of 0 will give some reasonable default. If unset, it defaults to 1.
+    # Default: 1
+    fetch-parallel: ''
+
     # Whether to show progress status output when fetching.
     # Default: true
     show-progress: ''
@@ -115,7 +121,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # integer allows up to that number of submodules fetched in parallel. A value of 0
     # will give some reasonable default. If unset, it defaults to 1.
     # Default: 1
-    submodulesFetchJobs: ''
+    submodules-fetch-jobs: ''
 
     # Add repository path as safe.directory for Git global config by running `git
     # config --global --add safe.directory <path>`

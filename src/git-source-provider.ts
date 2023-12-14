@@ -153,6 +153,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fetch
     core.startGroup('Fetching the repository')
+    await git.config('fetch.parallel', settings.fetchParallel.toString())
     const fetchOptions: {
       filter?: string
       fetchDepth?: number

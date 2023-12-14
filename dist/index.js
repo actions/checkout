@@ -1243,6 +1243,7 @@ function getSource(settings) {
             }
             // Fetch
             core.startGroup('Fetching the repository');
+            yield git.config('fetch.parallel', settings.fetchParallel.toString());
             const fetchOptions = {};
             if (settings.filter) {
                 fetchOptions.filter = settings.filter;
@@ -1753,6 +1754,12 @@ function getInputs() {
         result.fetchTags =
             (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE';
         core.debug(`fetch tags = ${result.fetchTags}`);
+        // Fetch tags
+        result.fetchParallel = Math.floor(Number(core.getInput('fetch-parallel') || '1'));
+        if (isNaN(result.fetchParallel) || result.fetchParallel < 0) {
+            result.fetchParallel = 0;
+        }
+        core.debug(`fetch parallel = ${result.fetchTags}`);
         // Show fetch progress
         result.showProgress =
             (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
