@@ -3,7 +3,7 @@ import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
 import * as workflowContextHelper from './workflow-context-helper'
-import {IGitSourceSettings} from './git-source-settings'
+import { IGitSourceSettings } from './git-source-settings'
 
 export async function getInputs(): Promise<IGitSourceSettings> {
   const result = ({} as unknown) as IGitSourceSettings
@@ -142,7 +142,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     result.submodules = true
   }
   result.submodulesFetchJobs = Math.floor(
-    Number(core.getInput('submodulesFetchJobs') || '1')
+    Number(core.getInput('submodules-fetch-jobs') || '1')
   )
   if (isNaN(result.submodulesFetchJobs) || result.submodulesFetchJobs < 0) {
     result.submodulesFetchJobs = 0
