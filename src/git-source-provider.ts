@@ -153,7 +153,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fetch
     core.startGroup('Fetching the repository')
-    await git.config('fetch.parallel', settings.fetchParallel.toString())
+    await git.config('fetch.parallel', settings.fetchParallel.toString(), true)
     const fetchOptions: {
       filter?: string
       fetchDepth?: number
@@ -235,7 +235,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       core.startGroup('Fetching submodules')
       await git.config(
         'submodule.fetchJobs',
-        settings.submodulesFetchJobs.toString()
+        settings.submodulesFetchJobs.toString(),
+        true
       )
       await git.submoduleSync(settings.nestedSubmodules)
       await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules)
