@@ -82,7 +82,7 @@ export interface IGitSourceSettings {
   /**
    * Indicates the number of parallel jobs to use when fetching submodules
    */
-  submodulesFetchJobs: string
+  submodulesFetchJobs: number
 
   /**
    * The auth token to use when fetching the repository

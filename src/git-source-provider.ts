@@ -233,7 +233,10 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
       // Checkout submodules
       core.startGroup('Fetching submodules')
-      await git.config('submodule.fetchJobs', settings.submodulesFetchJobs)
+      await git.config(
+        'submodule.fetchJobs',
+        settings.submodulesFetchJobs.toString()
+      )
       await git.submoduleSync(settings.nestedSubmodules)
       await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules)
       await git.submoduleForeach(
