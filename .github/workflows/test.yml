@@ -157,7 +157,7 @@ jobs:
           ref: test-data/v2/submodule-ssh-url
           path: submodules-true
           submodules: recursive
-          submodulesFetchJobs: "10"
+          submodules-fetch-jobs: "10"
       - name: Verify submodules true
         run: __test__/verify-submodules-with-jobs.sh
 

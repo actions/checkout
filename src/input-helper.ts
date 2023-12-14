@@ -113,6 +113,15 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
   core.debug(`fetch tags = ${result.fetchTags}`)
 
+  // Fetch tags
+  result.fetchParallel = Math.floor(
+    Number(core.getInput('fetch-parallel') || '1')
+  )
+  if (isNaN(result.fetchParallel) || result.fetchParallel < 0) {
+    result.fetchParallel = 0
+  }
+  core.debug(`fetch parallel = ${result.fetchParallel}`)
+
   // Show fetch progress
   result.showProgress =
     (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
@@ -132,13 +141,20 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   } else if (submodulesString == 'TRUE') {
     result.submodules = true
   }
-  result.submodulesFetchJobs = core.getInput('submodulesFetchJobs') || '1'
+  result.submodulesFetchJobs = Math.floor(
+    Number(core.getInput('submodules-fetch-jobs') || '1')
+  )
+  if (isNaN(result.submodulesFetchJobs) || result.submodulesFetchJobs < 0) {
+    result.submodulesFetchJobs = 0
+  }
   core.debug(`submodules = ${result.submodules}`)
   core.debug(`recursive submodules = ${result.nestedSubmodules}`)
-  core.debug(`submodules fetchJobs= ${result.submodulesFetchJobs}`)
+  core.debug(`submodules submodules-fetch-jobs = ${result.submodulesFetchJobs}`)
 
   // Auth token
-  result.authToken = core.getInput('token', {required: true})
+  result.authToken = core.getInput('token', {
+    required: true
+  })
 
   // SSH
   result.sshKey = core.getInput('ssh-key')
