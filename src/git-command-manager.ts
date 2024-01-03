@@ -471,7 +471,10 @@ class GitCommandManager {
   }
 
   async tryReset(): Promise<boolean> {
-    const output = await this.execGit(['reset', '--hard', '--recurse-submodules', 'HEAD'], true)
+    const output = await this.execGit(
+      ['reset', '--hard', '--recurse-submodules', 'HEAD'],
+      true
+    )
     return output.exitCode === 0
   }
 
