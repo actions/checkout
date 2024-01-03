@@ -841,7 +841,7 @@ class GitCommandManager {
     }
     tryReset() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['reset', '--hard', 'HEAD'], true);
+            const output = yield this.execGit(['reset', '--hard', '--recurse-submodules', 'HEAD'], true);
             return output.exitCode === 0;
         });
     }
