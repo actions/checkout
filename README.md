@@ -4,7 +4,7 @@
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
@@ -12,9 +12,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 # What's new
 
-- Updated default runtime to node20
-  - This requires a minimum Actions Runner version of [v2.308.0](https://github.com/actions/runner/releases/tag/v2.308.0).
-- Added support for fetching without the `--progress` option
+Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
 
 # Usage
 
@@ -75,8 +73,12 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: true
     clean: ''
 
+    # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Default: null
+    filter: ''
+
     # Do a sparse checkout on given patterns. Each pattern should be separated with
-    # new lines
+    # new lines.
     # Default: null
     sparse-checkout: ''
 
