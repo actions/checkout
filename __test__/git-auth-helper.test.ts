@@ -727,6 +727,8 @@ async function setup(testName: string): Promise<void> {
     branchDelete: jest.fn(),
     branchExists: jest.fn(),
     branchList: jest.fn(),
+    sparseCheckout: jest.fn(),
+    sparseCheckoutNonConeMode: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(
@@ -770,6 +772,9 @@ async function setup(testName: string): Promise<void> {
       return ''
     }),
     submoduleSync: jest.fn(),
+    submoduleStatus: jest.fn(async () => {
+      return true
+    }),
     submoduleUpdate: jest.fn(),
     tagExists: jest.fn(),
     tryClean: jest.fn(),
@@ -797,7 +802,12 @@ async function setup(testName: string): Promise<void> {
     authToken: 'some auth token',
     clean: true,
     commit: '',
+    filter: undefined,
+    sparseCheckout: [],
+    sparseCheckoutConeMode: true,
     fetchDepth: 1,
+    fetchTags: false,
+    showProgress: true,
     lfs: false,
     submodules: false,
     nestedSubmodules: false,

@@ -1,5 +1,5 @@
 name: Update Main Version
-run-name: Move ${{ github.event.inputs.main_version }} to ${{ github.event.inputs.target }}
+run-name: Move ${{ github.event.inputs.major_version }} to ${{ github.event.inputs.target }}
 
 on:
   workflow_dispatch:
@@ -7,18 +7,20 @@ on:
       target:
         description: The tag or reference to use
         required: true
-      main_version:
+      major_version:
         type: choice
-        description: The main version to update
+        description: The major version to update
         options:
+          - v4
           - v3
+          - v2
 
 jobs:
   tag:
     runs-on: ubuntu-latest
     env:
       TARGET: ${{ github.event.inputs.target }}
-      MAIN_VERSION: ${{ github.event.inputs.main_version }}
+      MAIN_VERSION: ${{ github.event.inputs.major_version }}
     steps:
     - uses: actions/checkout@v3
       with:
