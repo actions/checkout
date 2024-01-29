@@ -73,6 +73,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     clean: ''
 
+    # Whether to execute clean task again before fetching submodules
+    # Default: true
+    clean-submodules: ''
+
     # Partially clone against a given filter. Overrides sparse-checkout if set.
     # Default: null
     filter: ''
