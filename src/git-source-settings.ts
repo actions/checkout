@@ -25,9 +25,14 @@ export interface IGitSourceSettings {
   commit: string
 
   /**
-   * Indicates whether to clean the repository
+   * Indicates whether to clean the repository before fetching
    */
   clean: boolean
+
+  /**
+   * Indicates whether to clean the repository before fetching submodules
+   */
+  cleanSubmodules: boolean
 
   /**
    * The filter determining which objects to include

@@ -230,6 +230,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await authHelper.configureGlobalAuth()
       core.endGroup()
 
+      if (settings.cleanSubmodules) {
+        core.info('Cleaning the repository again before fetching submodules')
+        await gitDirectoryHelper.cleanExistingDirectory(git, settings.repositoryPath)
+      }
+
       // Checkout submodules
       core.startGroup('Fetching submodules')
       await git.submoduleSync(settings.nestedSubmodules)

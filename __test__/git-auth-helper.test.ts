@@ -801,6 +801,7 @@ async function setup(testName: string): Promise<void> {
   settings = {
     authToken: 'some auth token',
     clean: true,
+    cleanSubmodules: true,
     commit: '',
     filter: undefined,
     sparseCheckout: [],

@@ -82,6 +82,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
+  // Clean
+  result.cleanSubmodules = (core.getInput('clean-submodules') || core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
+  core.debug(`clean-submodules = ${result.clean}`)
+
   // Filter
   const filter = core.getInput('filter')
   if (filter) {

@@ -89,21 +89,11 @@ export async function prepareExistingDirectory(
 
       // Clean
       if (clean) {
-        core.startGroup('Cleaning the repository')
-        if (!(await git.tryClean())) {
-          core.debug(
-            `The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`
-          )
-          remove = true
-        } else if (!(await git.tryReset())) {
-          remove = true
-        }
-        core.endGroup()
-
-        if (remove) {
+        if (!(await cleanExistingDirectory(git, repositoryPath))) {
           core.warning(
             `Unable to clean or reset the repository. The repository will be recreated instead.`
           )
+          remove = true
         }
       }
     } catch (error) {
@@ -122,4 +112,23 @@ export async function prepareExistingDirectory(
       await io.rmRF(path.join(repositoryPath, file))
     }
   }
+}
+
+export async function cleanExistingDirectory(git: IGitCommandManager, repositoryPath: string) {
+  core.startGroup('Cleaning the repository')
+
+  if (!(await git.tryClean())) {
+    core.debug(
+      `The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx --recurse-submodules' on the directory '${repositoryPath}'.`
+    )
+    return false
+  }
+  
+  if (!(await git.tryReset())) {
+    return false
+  }
+
+  core.endGroup()
+
+  return true
 }

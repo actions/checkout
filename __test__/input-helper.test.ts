@@ -77,6 +77,7 @@ describe('input-helper tests', () => {
     expect(settings).toBeTruthy()
     expect(settings.authToken).toBeFalsy()
     expect(settings.clean).toBe(true)
+    expect(settings.cleanSubmodules).toBe(true)
     expect(settings.commit).toBeTruthy()
     expect(settings.commit).toBe('1234567890123456789012345678901234567890')
     expect(settings.filter).toBe(undefined)

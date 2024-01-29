@@ -53,6 +53,9 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  clean-submodules:
+    description: 'Whether to execute clean task again before fetching submodules'
+    default: true
   filter:
     description: >
       Partially clone against a given filter.
