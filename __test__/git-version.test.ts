@@ -1,4 +1,4 @@
-import {GitVersion} from '../lib/git-version'
+import {GitVersion} from '../src/git-version'
 
 describe('git-version tests', () => {
   it('basics', async () => {
