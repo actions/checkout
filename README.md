@@ -27,6 +27,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # The branch, tag or SHA to checkout. When checking out the repository that
     # triggered a workflow, this defaults to the reference or SHA for that event.
     # Otherwise, uses the default branch.
+    # Default: ${{ github.ref }}
     ref: ''
 
     # Personal access token (PAT) used to fetch the repository. The PAT is configured
