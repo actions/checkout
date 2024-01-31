@@ -21,6 +21,10 @@ jobs:
     env:
       https_proxy: http://127.0.0.1:3128
     steps:
+      - uses: mxschmitt/action-tmate@v3
+        with:
+          detached: true
+
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@v3
