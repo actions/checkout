@@ -576,6 +576,11 @@ class GitCommandManager {
             return result;
         });
     }
+    disableSparseCheckout() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.execGit(['sparse-checkout', 'disable']);
+        });
+    }
     sparseCheckout(sparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.execGit(['sparse-checkout', 'set', ...sparseCheckout]);
@@ -1282,7 +1287,10 @@ function getSource(settings) {
                 core.endGroup();
             }
             // Sparse checkout
-            if (settings.sparseCheckout) {
+            if (!settings.sparseCheckout) {
+                yield git.disableSparseCheckout();
+            }
+            else {
                 core.startGroup('Setting up sparse checkout');
                 if (settings.sparseCheckoutConeMode) {
                     yield git.sparseCheckout(settings.sparseCheckout);
