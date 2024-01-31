@@ -183,7 +183,7 @@ jobs:
         ports:
           - 3128:3128
     env:
-      https_proxy: http://squid-proxy:3128
+      https_proxy: http://127.0.0.1:3128
     steps:
       # Clone this repo
       - name: Checkout
