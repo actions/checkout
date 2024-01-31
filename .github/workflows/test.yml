@@ -14,7 +14,7 @@ jobs:
       image: alpine/git:latest
     services:
       squid-proxy:
-        image: ubuntu/squid:latest
+        image: ubuntu/squid:5.6-22.10_edge
         ports:
           - 3128:3128
     env:
