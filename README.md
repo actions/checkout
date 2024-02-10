@@ -19,7 +19,7 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v3
+- uses: actions/checkout@v4
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -78,9 +78,30 @@ When Git 2.18 or higher is not in your PATH, falls back to the REST API to downl
     # Default: 
     clean-exclude: ''
 
+    # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Default: null
+    filter: ''
+
+    # Do a sparse checkout on given patterns. Each pattern should be separated with
+    # new lines.
+    # Default: null
+    sparse-checkout: ''
+
+    # Specifies whether to use cone-mode when doing a sparse checkout.
+    # Default: true
+    sparse-checkout-cone-mode: ''
+
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
     # Default: 1
     fetch-depth: ''
+
+    # Whether to fetch tags, even if fetch-depth > 0.
+    # Default: false
+    fetch-tags: ''
+
+    # Whether to show progress status output when fetching.
+    # Default: true
+    show-progress: ''
 
     # Whether to download Git-LFS files
     # Default: false

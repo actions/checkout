@@ -1,16 +1,16 @@
 ---
-name: cross-spawn
-version: 6.0.5
+name: "@octokit/core"
+version: 3.6.0
 type: npm
-summary: Cross platform child_process#spawn and child_process#spawnSync
-homepage: https://github.com/moxystudio/node-cross-spawn
+summary: Extendable client for GitHub's REST & GraphQL APIs
+homepage: 
 license: mit
 licenses:
 - sources: LICENSE
   text: |
-    The MIT License (MIT)
+    The MIT License
 
-    Copyright (c) 2018 Made With MOXY Lda <hello@moxy.studio>
+    Copyright (c) 2019 Octokit contributors
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -30,5 +30,5 @@ licenses:
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     THE SOFTWARE.
 - sources: README.md
-  text: Released under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
+  text: "[MIT](LICENSE)"
 notices: []

@@ -1,8 +1,8 @@
 ---
 name: is-plain-object
-version: 3.0.0
+version: 5.0.0
 type: npm
-summary: Returns true if an object was created by the `Object` constructor.
+summary: Returns true if an object was created by the `Object` constructor, or Object.create(null).
 homepage: https://github.com/jonschlinkert/is-plain-object
 license: mit
 licenses:
