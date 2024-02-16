@@ -204,9 +204,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Inspect Git Version
-        run:  git --version
-
       # Basic checkout using git
       - name: Checkout basic
         uses: ./
@@ -217,6 +214,8 @@ jobs:
         run: __test__/verify-basic.sh
 
       # Basic checkout using REST API
+      - name: Inspect Git Version
+        run:  git --version
       - name: Remove basic
         run: rm -rf basic
       - name: Override git version
