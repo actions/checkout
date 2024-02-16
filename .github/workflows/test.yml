@@ -185,7 +185,7 @@ jobs:
   test-proxy:
     runs-on: ubuntu-latest
     container:
-      image: alpine/git:latest
+      image: ubuntu:latest
       options: --dns 127.0.0.1
     services:
       squid-proxy:
@@ -197,7 +197,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       # Basic checkout using git
       - name: Checkout basic
