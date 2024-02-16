@@ -200,6 +200,11 @@ jobs:
     env:
       https_proxy: http://squid-proxy:3128
     steps:
+      - name:  Install Git
+        run: |
+          apt-get update
+          apt-get install git
+          
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@v3
