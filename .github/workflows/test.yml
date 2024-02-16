@@ -185,7 +185,7 @@ jobs:
   test-proxy:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:latest
+      image: alpine/git:latest
       options: --dns 127.0.0.1
     services:
       squid-proxy:
