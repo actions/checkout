@@ -201,12 +201,14 @@ jobs:
       https_proxy: http://squid-proxy:3128
     steps:
       - name: Install Git
+        env:
+          https_proxy: ""  # Disable https_proxy for this single step
         run: |
-          apt-get clean
-          apt-get upgrade
-          apt-get update
-          apt-get install software-properties-common
-          add-apt-repository ppa:git-core/ppa
+          # apt-get clean
+          # apt-get upgrade
+          # apt-get update
+          # apt-get install software-properties-common
+          # add-apt-repository ppa:git-core/ppa
           apt-get update
           apt-get install git    
 
