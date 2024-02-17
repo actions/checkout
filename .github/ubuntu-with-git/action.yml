@@ -1,0 +1,5 @@
+name: Ubuntu with Git
+description:  Creates a Docker Container Image with git pre-installed.
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
