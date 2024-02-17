@@ -202,6 +202,7 @@ jobs:
     steps:
       - name: Install Git
         run: |
+          apt-get update
           apt-get install software-properties-common
           add-apt-repository ppa:git-core/ppa
           apt-get update
