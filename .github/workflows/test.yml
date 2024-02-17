@@ -190,7 +190,7 @@ jobs:
   test-proxy:
     runs-on: ubuntu-latest
     container:
-      image: fdev321123/ubuntu-with-git:latest
+      image: ubuntu:latest
       options: --dns 127.0.0.1
     services:
       squid-proxy:
@@ -200,6 +200,11 @@ jobs:
     env:
       https_proxy: http://squid-proxy:3128
     steps:
+      - name: Install Git
+        run: |
+          apt-get update
+          apt-get install git    
+
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@v3
