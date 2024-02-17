@@ -198,6 +198,8 @@ jobs:
       image: ubuntu:latest
       volumes:
         - /usr/bin/git:/mapped/bin/git
+        - /usr/bin/git-lfs:/mapped/bin/git-lfs
+        - /usr/bin/git-ftp:/mapped/bin/git-ftp
         - /usr/bin/git-shell:/mapped/bin/git-shell
       options: --dns 127.0.0.1
     services:
