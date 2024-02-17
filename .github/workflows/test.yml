@@ -187,18 +187,12 @@ jobs:
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
 
-  inspect:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Inspect Git Version
-        run:  |
-          which git
-          git --version
-
   test-proxy:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:latest
+      volumes:
+        - /usr/bin/git:/mapped/bin/git
       options: --dns 127.0.0.1
     services:
       squid-proxy:
@@ -208,18 +202,8 @@ jobs:
     env:
       https_proxy: http://squid-proxy:3128
     steps:
-      # - name: Install Git
-      #   env:
-      #     https_proxy: ""  # Disable https_proxy for this single step
-      #     http_proxy: ""
-      #   run: |
-      #     apt-get clean
-      #     apt-get upgrade
-      #     apt-get update
-      #     # apt-get install software-properties-common
-      #     # add-apt-repository ppa:git-core/ppa
-      #     # apt-get update
-      #     apt-get install git    
+      - name: Update System Path
+        run:  echo "/mapped/bin" >> $GITHUB_PATH
 
       # Clone this repo
       - name: Checkout
