@@ -207,7 +207,7 @@ jobs:
           apt-get clean
           apt-get upgrade
           apt-get update
-          apt-get install software-properties-common
+          # apt-get install software-properties-common
           add-apt-repository ppa:git-core/ppa
           apt-get update
           apt-get install git    
