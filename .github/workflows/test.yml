@@ -203,6 +203,9 @@ jobs:
       - name: Install Git
         env:
           https_proxy: ""  # Disable https_proxy for this single step
+          http_proxy: ""
+          HTTPS_PROXY: ""
+          HTTP_PROXY: ""
         run: |
           apt-get clean
           apt-get upgrade
