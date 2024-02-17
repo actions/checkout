@@ -187,6 +187,11 @@ jobs:
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
 
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run:  ls -all /usr/bin
+
   test-proxy:
     runs-on: ubuntu-latest
     container:
