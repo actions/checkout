@@ -1226,17 +1226,6 @@ function getSource(settings) {
             core.startGroup('Setting up auth');
             yield authHelper.configureAuth();
             core.endGroup();
-            if (settings.defaultRefOnError && settings.defaultRefOnError === true) {
-                // Configure default branch
-                core.startGroup('Setting up default branch');
-                if (settings.sshKey) {
-                    settings.defaultBranch = yield git.getDefaultBranch(repositoryUrl);
-                }
-                else {
-                    settings.defaultBranch = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
-                }
-                core.endGroup();
-            }
             // Determine the default branch
             if (!settings.ref && !settings.commit) {
                 core.startGroup('Determining the default branch');
@@ -1261,8 +1250,7 @@ function getSource(settings) {
             else if (settings.sparseCheckout) {
                 fetchOptions.filter = 'blob:none';
             }
-            if (settings.fetchDepth <= 0 ||
-                (settings.defaultRefOnError && settings.defaultRefOnError === true)) {
+            if (settings.fetchDepth <= 0 || settings.defaultBranchCheckout) {
                 // Fetch all branches and tags
                 let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
                 yield git.fetch(refSpec, fetchOptions);
@@ -1283,17 +1271,20 @@ function getSource(settings) {
             // Checkout info
             core.startGroup('Determining the checkout info');
             let checkoutInfo;
-            if (settings.defaultRefOnError && settings.defaultRefOnError === true) {
-                try {
-                    checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
-                }
-                catch (error) {
-                    core.info('Could not determine the checkout info. Trying the default repo branch');
-                    checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.defaultBranch, settings.commit);
-                }
-            }
-            else {
+            try {
                 checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+            }
+            catch (error) {
+                if (settings.defaultBranchCheckout) {
+                    core.info('Could not determine the checkout info. Trying the default repository branch');
+                    const repositoryDefaultBranch = settings.sshKey
+                        ? yield git.getDefaultBranch(repositoryUrl)
+                        : yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
+                    checkoutInfo = yield refHelper.getCheckoutInfo(git, repositoryDefaultBranch, settings.commit);
+                }
+                else {
+                    throw error;
+                }
             }
             core.endGroup();
             // LFS fetch
@@ -1748,10 +1739,10 @@ function getInputs() {
         }
         core.debug(`ref = '${result.ref}'`);
         core.debug(`commit = '${result.commit}'`);
-        // Default ref on error
-        result.defaultRefOnError =
-            (core.getInput('default-ref-on-error') || 'true').toUpperCase() === 'TRUE';
-        core.debug(`default-ref-on-error = '${result.defaultRefOnError}'`);
+        // Default branch checkout
+        result.defaultBranchCheckout =
+            (core.getInput('default-branch-checkout') || 'true').toUpperCase() === 'TRUE';
+        core.debug(`default-branch-checkout = '${result.defaultBranchCheckout}'`);
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);

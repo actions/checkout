@@ -130,21 +130,6 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     await authHelper.configureAuth()
     core.endGroup()
 
-    if (settings.defaultRefOnError && settings.defaultRefOnError === true) {
-      // Configure default branch
-      core.startGroup('Setting up default branch')
-      if (settings.sshKey) {
-        settings.defaultBranch = await git.getDefaultBranch(repositoryUrl)
-      } else {
-        settings.defaultBranch = await githubApiHelper.getDefaultBranch(
-          settings.authToken,
-          settings.repositoryOwner,
-          settings.repositoryName
-        )
-      }
-      core.endGroup()
-    }
-
     // Determine the default branch
     if (!settings.ref && !settings.commit) {
       core.startGroup('Determining the default branch')
@@ -181,10 +166,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       fetchOptions.filter = 'blob:none'
     }
 
-    if (
-      settings.fetchDepth <= 0 ||
-      (settings.defaultRefOnError && settings.defaultRefOnError === true)
-    ) {
+    if (settings.fetchDepth <= 0 || settings.defaultBranchCheckout) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
@@ -209,29 +191,32 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // Checkout info
     core.startGroup('Determining the checkout info')
     let checkoutInfo: refHelper.ICheckoutInfo
-    if (settings.defaultRefOnError && settings.defaultRefOnError === true) {
-      try {
-        checkoutInfo = await refHelper.getCheckoutInfo(
-          git,
-          settings.ref,
-          settings.commit
-        )
-      } catch (error) {
-        core.info(
-          'Could not determine the checkout info. Trying the default repo branch'
-        )
-        checkoutInfo = await refHelper.getCheckoutInfo(
-          git,
-          settings.defaultBranch,
-          settings.commit
-        )
-      }
-    } else {
+    try {
       checkoutInfo = await refHelper.getCheckoutInfo(
         git,
         settings.ref,
         settings.commit
       )
+    } catch (error) {
+      if (settings.defaultBranchCheckout) {
+        core.info(
+          'Could not determine the checkout info. Trying the default repository branch'
+        )
+        const repositoryDefaultBranch = settings.sshKey
+          ? await git.getDefaultBranch(repositoryUrl)
+          : await githubApiHelper.getDefaultBranch(
+              settings.authToken,
+              settings.repositoryOwner,
+              settings.repositoryName
+            )
+        checkoutInfo = await refHelper.getCheckoutInfo(
+          git,
+          repositoryDefaultBranch,
+          settings.commit
+        )
+      } else {
+        throw error
+      }
     }
     core.endGroup()
 
