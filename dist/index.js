@@ -1741,7 +1741,8 @@ function getInputs() {
         core.debug(`commit = '${result.commit}'`);
         // Default branch checkout
         result.defaultBranchCheckout =
-            (core.getInput('default-branch-checkout') || 'true').toUpperCase() === 'TRUE';
+            (core.getInput('default-branch-checkout') || 'true').toUpperCase() ===
+                'TRUE';
         core.debug(`default-branch-checkout = '${result.defaultBranchCheckout}'`);
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
