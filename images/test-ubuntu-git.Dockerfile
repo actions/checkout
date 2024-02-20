@@ -5,3 +5,6 @@ FROM ubuntu:latest
 
 RUN apt update
 RUN apt install -y git
+
+LABEL org.opencontainers.image.description="Ubuntu image with git pre-installed"
+LABEL org.opencontainers.image.licenses=MIT
