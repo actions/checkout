@@ -6,7 +6,8 @@ on:
   #  so avoid trigger events that run automatically.)
   workflow_dispatch:
     inputs:
-      pushToContainerRegistry:
+      publish:
+        description:  'Publish to ghcr.io?'
         type: boolean
         required: true
         default: false
@@ -49,7 +50,7 @@ jobs:
         with:
           context: .
           file: images/test-ubuntu-git.Dockerfile
-          push: ${{ inputs.pushToContainerRegistry }}
+          push: ${{ inputs.publish }}
           tags:  ${{ env.IMAGE_NAME }}:sha-${{ env.GITHUB_SHA }}
           # tags: ${{ steps.meta.outputs.tags }}
           # labels: ${{ steps.meta.outputs.labels }}
