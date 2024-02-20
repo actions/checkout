@@ -1,0 +1,56 @@
+name: Publishes the test-ubuntu-git Container Image
+
+on:
+  # Use an on demand workflow trigger.  
+  # (Forked copies of actions/checkout won't have permission to update GHCR.io/actions, 
+  #  so avoid trigger events that run automatically.)
+  workflow_dispatch:
+    inputs:
+      publish:
+        description:  'Publish to ghcr.io?'
+        type: boolean
+        required: true
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: actions/test-ubuntu-git
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+ 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use `docker/login-action` to log in to GHCR.io. 
+      # Once published, the packages are scoped to the account defined here.
+      - name: Log in to the ghcr.io container registry
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Use `docker/metadata-action` to preserve tags and labels that exist on the GHCR.io container image. 
+      # - name: Extract metadata (tags, labels) for Docker
+      #   id: meta
+      #   uses: docker/metadata-action@v5.5.1
+      #   with:
+      #     images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Use `docker/build-push-action` to build (and optionally publish) the image. 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5.1.0
+        with:
+          context: .
+          file: images/test-ubuntu-git.Dockerfile
+          push: ${{ inputs.publish }}
+          tags:  ${{ env.IMAGE_NAME }}:sha-${{ env.GITHUB_SHA }}
+          # tags: ${{ steps.meta.outputs.tags }}
+          # labels: ${{ steps.meta.outputs.labels }}
