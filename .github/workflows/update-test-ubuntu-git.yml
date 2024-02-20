@@ -40,7 +40,7 @@ jobs:
       - name: Format Timestamp
         id: timestamp
         # Use `date` with a custom format to achieve the key=value format GITHUB_OUTPUT expects.
-        run: date -u "+now=%y%m%d.%H%M%S.%3NZ" >> "$GITHUB_OUTPUT"
+        run: date -u "+now=%Y%m%d.%H%M%S.%3NZ" >> "$GITHUB_OUTPUT"
 
       # Use `docker/build-push-action` to build (and optionally publish) the image. 
       - name: Build and push Docker image
