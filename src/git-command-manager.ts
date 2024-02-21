@@ -17,6 +17,7 @@ export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
   branchList(remote: boolean): Promise<string[]>
+  disableSparseCheckout(): Promise<void>
   sparseCheckout(sparseCheckout: string[]): Promise<void>
   sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void>
   checkout(ref: string, startPoint: string): Promise<void>
@@ -169,6 +170,10 @@ class GitCommandManager {
     }
 
     return result
+  }
+
+  async disableSparseCheckout(): Promise<void> {
+    await this.execGit(['sparse-checkout', 'disable'])
   }
 
   async sparseCheckout(sparseCheckout: string[]): Promise<void> {

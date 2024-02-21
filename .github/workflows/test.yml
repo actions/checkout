@@ -7,6 +7,11 @@ on:
       - main
       - releases/*
 
+
+# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow, 
+# these refer to "test-data" branches on this actions/checkout repo.
+# (For example, test-data/v2/basic -> https://github.com/actions/checkout/tree/test-data/v2/basic)
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -95,6 +100,16 @@ jobs:
       - name: Verify sparse checkout
         run: __test__/verify-sparse-checkout.sh
 
+      # Disabled sparse checkout in existing checkout
+      - name: Disabled sparse checkout
+        uses: ./
+        with:
+          path: sparse-checkout
+
+      - name: Verify disabled sparse checkout
+        shell: bash
+        run: set -x && ls -l sparse-checkout/src/git-command-manager.ts
+
       # Sparse checkout (non-cone mode)
       - name: Sparse checkout (non-cone mode)
         uses: ./
@@ -175,7 +190,7 @@ jobs:
   test-proxy:
     runs-on: ubuntu-latest
     container:
-      image: alpine/git:latest
+      image: ghcr.io/actions/test-ubuntu-git:main.20240221.114913.703z
       options: --dns 127.0.0.1
     services:
       squid-proxy:
