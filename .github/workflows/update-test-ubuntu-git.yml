@@ -50,6 +50,6 @@ jobs:
           file: images/test-ubuntu-git.Dockerfile
           # For now, attempts to push to ghcr.io must target the `main` branch.
           # In the future, consider also allowing attempts from `releases/*` branches.
-          push: ${{ inputs.publish && github.ref_name == 'main' }}
+          push: ${{ inputs.publish }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}.${{ steps.timestamp.outputs.now }}
