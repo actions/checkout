@@ -187,20 +187,10 @@ jobs:
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
 
-  inspect:
-    runs-on: ubuntu-latest
-    steps:
-      - run:  ls -all /usr/bin
-
   test-proxy:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:latest
-      volumes:
-        - /usr/bin/git:/mapped/bin/git
-        - /usr/bin/git-lfs:/mapped/bin/git-lfs
-        - /usr/bin/git-ftp:/mapped/bin/git-ftp
-        - /usr/bin/git-shell:/mapped/bin/git-shell
+      image: ghcr.io/actions/test-ubuntu-git:main.20240221.114913.703z
       options: --dns 127.0.0.1
     services:
       squid-proxy:
@@ -210,9 +200,6 @@ jobs:
     env:
       https_proxy: http://squid-proxy:3128
     steps:
-      - name: Update System Path
-        run:  echo "/mapped/bin" >> $GITHUB_PATH
-
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@v3
