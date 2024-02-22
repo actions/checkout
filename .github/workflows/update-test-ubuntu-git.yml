@@ -42,8 +42,12 @@ jobs:
         # Use `date` with a custom format to achieve the key=value format GITHUB_OUTPUT expects.
         run: date -u "+now=%Y%m%d.%H%M%S.%3NZ" >> "$GITHUB_OUTPUT"
 
+      - name: Issue Image Publish Warning
+        if:  ${{ inputs.publish && github.ref_name != 'main' }}
+        run: echo "::warning::test-ubuntu-git images can only be published from the actions/checkout 'main' branch.  Workflow will continue with push/publish disabled."
+
       # Use `docker/build-push-action` to build (and optionally publish) the image. 
-      - name: Build and push Docker image
+      - name: Build Docker Image (with optional Push)
         uses: docker/build-push-action@v5.1.0
         with:
           context: .
