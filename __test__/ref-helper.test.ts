@@ -7,11 +7,11 @@ let git: IGitCommandManager
 
 describe('ref-helper tests', () => {
   beforeEach(() => {
-    git = ({} as unknown) as IGitCommandManager
+    git = {} as unknown as IGitCommandManager
   })
 
   it('getCheckoutInfo requires git', async () => {
-    const git = (null as unknown) as IGitCommandManager
+    const git = null as unknown as IGitCommandManager
     try {
       await refHelper.getCheckoutInfo(git, 'refs/heads/my/branch', commit)
       throw new Error('Should not reach here')

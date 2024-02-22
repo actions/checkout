@@ -1,13 +1,15 @@
 ---
 name: "@actions/exec"
-version: 1.0.1
+version: 1.1.1
 type: npm
 summary: Actions exec lib
-homepage: https://github.com/actions/toolkit/tree/master/packages/exec
+homepage: https://github.com/actions/toolkit/tree/main/packages/exec
 license: mit
 licenses:
 - sources: LICENSE.md
   text: |-
+    The MIT License (MIT)
+
     Copyright 2019 GitHub
 
     Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:

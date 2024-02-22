@@ -23,7 +23,7 @@ export async function getCheckoutInfo(
     throw new Error('Args ref and commit cannot both be empty')
   }
 
-  const result = ({} as unknown) as ICheckoutInfo
+  const result = {} as unknown as ICheckoutInfo
   const upperRef = (ref || '').toUpperCase()
 
   // SHA only

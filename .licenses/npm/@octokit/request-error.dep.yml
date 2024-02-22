@@ -1,6 +1,6 @@
 ---
 name: "@octokit/request-error"
-version: 2.1.0
+version: 3.0.3
 type: npm
 summary: Error class for Octokit request errors
 homepage: 
