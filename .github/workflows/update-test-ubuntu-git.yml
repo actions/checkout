@@ -47,7 +47,7 @@ jobs:
         run: echo "::warning::test-ubuntu-git images can only be published from the actions/checkout 'main' branch.  Workflow will continue with push/publish disabled."
 
       # Use `docker/build-push-action` to build (and optionally publish) the image. 
-      - name: Build and push Docker image
+      - name: Build Docker Image (with optional Push)
         uses: docker/build-push-action@v5.1.0
         with:
           context: .
