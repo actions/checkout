@@ -8,7 +8,7 @@ on:
       - releases/*
 
 
-# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow, 
+# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow,
 # these refer to "test-data" branches on this actions/checkout repo.
 # (For example, test-data/v2/basic -> https://github.com/actions/checkout/tree/test-data/v2/basic)
 
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 20.x
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci
       - run: npm run build
       - run: npm run format-check
@@ -37,7 +37,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Basic checkout
       - name: Checkout basic
@@ -202,7 +202,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Basic checkout using git
       - name: Checkout basic
@@ -234,7 +234,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Basic checkout using git
       - name: Checkout basic
@@ -257,14 +257,14 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
-    
+
   test-git-container:
     runs-on: ubuntu-latest
     container: bitnami/git:latest
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: v3
 
@@ -292,6 +292,6 @@ jobs:
 
       # needed to make checkout post cleanup succeed
       - name: Fix Checkout v3
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: v3
