@@ -1526,6 +1526,7 @@ const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
 const retryHelper = __importStar(__nccwpck_require__(2155));
 const toolCache = __importStar(__nccwpck_require__(7784));
+const url_helper_1 = __nccwpck_require__(9437);
 const v4_1 = __importDefault(__nccwpck_require__(824));
 const url_helper_1 = __nccwpck_require__(9437);
 const IS_WINDOWS = process.platform === 'win32';

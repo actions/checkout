@@ -6,6 +6,7 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
+import {getServerApiUrl} from './url-helper'
 import {default as uuid} from 'uuid/v4'
 import {getServerApiUrl} from './url-helper'
 
