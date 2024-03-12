@@ -13,7 +13,7 @@ import {GitVersion} from './git-version'
 // Wire protocol v2 not supported before 2.18
 // sparse-checkout not supported before 2.25
 export const MinimumGitVersion = new GitVersion('2.18')
-export const MinimumGitSparseCheckoutVersion = new GitVersion('2.25');
+export const MinimumGitSparseCheckoutVersion = new GitVersion('2.25')
 
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>

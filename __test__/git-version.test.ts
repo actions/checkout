@@ -1,6 +1,5 @@
-import { GitVersion } from '../src/git-version'
+import {GitVersion} from '../src/git-version'
 import {MinimumGitSparseCheckoutVersion} from '../src/git-command-manager'
-
 
 describe('git-version tests', () => {
   it('basics', async () => {
