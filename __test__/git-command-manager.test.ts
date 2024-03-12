@@ -24,7 +24,7 @@ describe('git-auth-helper tests', () => {
       console.log(args, options.listeners.stdout)
 
       if (args.includes('version')) {
-        options.listeners.stdout(Buffer.from('2.18'))
+        options.listeners.stdout(Buffer.from('2.25'))
         return 0
       }
 
@@ -57,7 +57,7 @@ describe('git-auth-helper tests', () => {
       console.log(args, options.listeners.stdout)
 
       if (args.includes('version')) {
-        options.listeners.stdout(Buffer.from('2.18'))
+        options.listeners.stdout(Buffer.from('2.25'))
         return 0
       }
 
@@ -97,7 +97,7 @@ describe('Test fetchDepth and fetchTags options', () => {
       console.log(args, options.listeners.stdout)
 
       if (args.includes('version')) {
-        options.listeners.stdout(Buffer.from('2.18'))
+        options.listeners.stdout(Buffer.from('2.25'))
       }
 
       return 0

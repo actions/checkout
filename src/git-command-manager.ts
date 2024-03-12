@@ -111,16 +111,7 @@ class GitCommandManager {
 
   async branchList(remote: boolean): Promise<string[]> {
     const result: string[] = []
-
-    // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
-    // "branch --list" is more difficult when in a detached HEAD state.
-
-    // TODO(https://github.com/actions/checkout/issues/786): this implementation uses
-    // "rev-parse --symbolic-full-name" because there is a bug
-    // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names. When
-    // 2.18 is no longer supported, we can switch back to --symbolic.
-
-    const args = ['rev-parse', '--symbolic-full-name']
+    const args = ['rev-parse', '--symbolic']
     if (remote) {
       args.push('--remotes=origin')
     } else {
