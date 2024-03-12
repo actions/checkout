@@ -9,7 +9,7 @@ import * as path from 'path'
 import * as refHelper from './ref-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
-import {IGitCommandManager} from './git-command-manager'
+import {MinimumGitSparseCheckoutVersion, IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
@@ -209,7 +209,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Sparse checkout
     if (!settings.sparseCheckout) {
-      await git.disableSparseCheckout()
+      let gitVersion = await git.version()
+      // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
+      if (gitVersion.checkMinimum(MinimumGitSparseCheckoutVersion)) {
+        await git.disableSparseCheckout()
+      }
     } else {
       core.startGroup('Setting up sparse checkout')
       if (settings.sparseCheckoutConeMode) {
