@@ -45,26 +45,68 @@ describe('git-version tests', () => {
   })
 
   it('sparse checkout', async () => {
-    expect(new GitVersion('1.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeFalsy()
-    expect(new GitVersion('1.99').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeFalsy()
-    expect(new GitVersion('2.24').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeFalsy()
-    expect(new GitVersion('2.24.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeFalsy()
-    expect(new GitVersion('2.24.1').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeFalsy()
-    expect(new GitVersion('2.24.9').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeFalsy()
-    expect(new GitVersion('2.25').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.25.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.25.1').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.25.9').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.26').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.26.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.26.1').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.26.9').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('2.99').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('3.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('3.99').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('4.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('4.99').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('5.0').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
-    expect(new GitVersion('5.99').checkMinimum(MinimumGitSparseCheckoutVersion)).toBeTruthy()
+    expect(
+      new GitVersion('1.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeFalsy()
+    expect(
+      new GitVersion('1.99').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeFalsy()
+    expect(
+      new GitVersion('2.24').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeFalsy()
+    expect(
+      new GitVersion('2.24.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeFalsy()
+    expect(
+      new GitVersion('2.24.1').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeFalsy()
+    expect(
+      new GitVersion('2.24.9').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeFalsy()
+    expect(
+      new GitVersion('2.25').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.25.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.25.1').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.25.9').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.26').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.26.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.26.1').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.26.9').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('2.99').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('3.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('3.99').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('4.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('4.99').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('5.0').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
+    expect(
+      new GitVersion('5.99').checkMinimum(MinimumGitSparseCheckoutVersion)
+    ).toBeTruthy()
   })
 })
