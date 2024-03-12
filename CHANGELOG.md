@@ -1,5 +1,12 @@
 # Changelog
 
+## v4.1.2
+- Fix: Disable sparse checkout whenever `sparse-checkout` option is not present @dscho in https://github.com/actions/checkout/pull/1598
+
+## v4.1.1
+- Correct link to GitHub Docs by @peterbe in https://github.com/actions/checkout/pull/1511
+- Link to release page from what's new section by @cory-miller in https://github.com/actions/checkout/pull/1514
+
 ## v4.1.0
 - [Add support for partial checkout filters](https://github.com/actions/checkout/pull/1396)
 
