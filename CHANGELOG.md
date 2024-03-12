@@ -4,7 +4,6 @@
 - Fix: Disable sparse checkout whenever `sparse-checkout` option is not present @dscho in https://github.com/actions/checkout/pull/1598
 
 ## v4.1.1
-- Update CODEOWNERS to Launch team by @joshmgross in https://github.com/actions/checkout/pull/1510
 - Correct link to GitHub Docs by @peterbe in https://github.com/actions/checkout/pull/1511
 - Link to release page from what's new section by @cory-miller in https://github.com/actions/checkout/pull/1514
 
