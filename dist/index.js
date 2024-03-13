@@ -480,7 +480,8 @@ const retryHelper = __importStar(__nccwpck_require__(2155));
 const git_version_1 = __nccwpck_require__(3142);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
-exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
+// sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
+exports.MinimumGitVersion = new git_version_1.GitVersion('2.28');
 function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
@@ -523,13 +524,7 @@ class GitCommandManager {
     branchList(remote) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = [];
-            // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
-            // "branch --list" is more difficult when in a detached HEAD state.
-            // TODO(https://github.com/actions/checkout/issues/786): this implementation uses
-            // "rev-parse --symbolic-full-name" because there is a bug
-            // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names. When
-            // 2.18 is no longer supported, we can switch back to --symbolic.
-            const args = ['rev-parse', '--symbolic-full-name'];
+            const args = ['rev-parse', '--symbolic'];
             if (remote) {
                 args.push('--remotes=origin');
             }
@@ -942,13 +937,6 @@ class GitCommandManager {
                 }
             }
             this.doSparseCheckout = doSparseCheckout;
-            if (this.doSparseCheckout) {
-                // The `git sparse-checkout` command was introduced in Git v2.25.0
-                const minimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.25');
-                if (!gitVersion.checkMinimum(minimumGitSparseCheckoutVersion)) {
-                    throw new Error(`Minimum Git version required for sparse checkout is ${minimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
-                }
-            }
             // Set the user agent
             const gitHttpUserAgent = `git/${gitVersion} (github-actions-checkout)`;
             core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
