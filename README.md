@@ -8,7 +8,7 @@ Only a single commit is fetched by default, for the ref/SHA that triggered the w
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
-When Git 2.25 or higher is not in your PATH, falls back to the REST API to download the files.
+When Git 2.28 or higher is not in your PATH, falls back to the REST API to download the files.
 
 # What's new
 

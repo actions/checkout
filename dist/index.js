@@ -480,8 +480,8 @@ const retryHelper = __importStar(__nccwpck_require__(2155));
 const git_version_1 = __nccwpck_require__(3142);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
-// sparse-checkout not supported before 2.25
-exports.MinimumGitVersion = new git_version_1.GitVersion('2.25');
+// sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
+exports.MinimumGitVersion = new git_version_1.GitVersion('2.28');
 function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
@@ -937,13 +937,6 @@ class GitCommandManager {
                 }
             }
             this.doSparseCheckout = doSparseCheckout;
-            if (this.doSparseCheckout) {
-                // The `git sparse-checkout` command was introduced in Git v2.25.0
-                const minimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.25');
-                if (!gitVersion.checkMinimum(minimumGitSparseCheckoutVersion)) {
-                    throw new Error(`Minimum Git version required for sparse checkout is ${minimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
-                }
-            }
             // Set the user agent
             const gitHttpUserAgent = `git/${gitVersion} (github-actions-checkout)`;
             core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
