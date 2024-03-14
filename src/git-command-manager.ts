@@ -11,7 +11,9 @@ import {GitVersion} from './git-version'
 
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
+// sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 export const MinimumGitVersion = new GitVersion('2.18')
+export const MinimumGitSparseCheckoutVersion = new GitVersion('2.28')
 
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
@@ -60,6 +62,7 @@ export interface IGitCommandManager {
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
+  version(): Promise<GitVersion>
 }
 
 export async function createCommandManager(
@@ -83,6 +86,7 @@ class GitCommandManager {
   private lfs = false
   private doSparseCheckout = false
   private workingDirectory = ''
+  private gitVersion: GitVersion = new GitVersion()
 
   // Private constructor; use createCommandManager()
   private constructor() {}
@@ -480,6 +484,10 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
+  async version(): Promise<GitVersion> {
+    return this.gitVersion
+  }
+
   static async createCommandManager(
     workingDirectory: string,
     lfs: boolean,
@@ -556,23 +564,23 @@ class GitCommandManager {
 
     // Git version
     core.debug('Getting git version')
-    let gitVersion = new GitVersion()
+    this.gitVersion = new GitVersion()
     let gitOutput = await this.execGit(['version'])
     let stdout = gitOutput.stdout.trim()
     if (!stdout.includes('\n')) {
       const match = stdout.match(/\d+\.\d+(\.\d+)?/)
       if (match) {
-        gitVersion = new GitVersion(match[0])
+        this.gitVersion = new GitVersion(match[0])
       }
     }
-    if (!gitVersion.isValid()) {
+    if (!this.gitVersion.isValid()) {
       throw new Error('Unable to determine git version')
     }
 
     // Minimum git version
-    if (!gitVersion.checkMinimum(MinimumGitVersion)) {
+    if (!this.gitVersion.checkMinimum(MinimumGitVersion)) {
       throw new Error(
-        `Minimum required git version is ${MinimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`
+        `Minimum required git version is ${MinimumGitVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`
       )
     }
 
@@ -606,16 +614,14 @@ class GitCommandManager {
 
     this.doSparseCheckout = doSparseCheckout
     if (this.doSparseCheckout) {
-      // The `git sparse-checkout` command was introduced in Git v2.25.0
-      const minimumGitSparseCheckoutVersion = new GitVersion('2.25')
-      if (!gitVersion.checkMinimum(minimumGitSparseCheckoutVersion)) {
+      if (!this.gitVersion.checkMinimum(MinimumGitSparseCheckoutVersion)) {
         throw new Error(
-          `Minimum Git version required for sparse checkout is ${minimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${gitVersion}`
+          `Minimum Git version required for sparse checkout is ${MinimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`
         )
       }
     }
     // Set the user agent
-    const gitHttpUserAgent = `git/${gitVersion} (github-actions-checkout)`
+    const gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`
     core.debug(`Set git useragent to: ${gitHttpUserAgent}`)
     this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent
   }

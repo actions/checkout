@@ -467,7 +467,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createCommandManager = exports.MinimumGitVersion = void 0;
+exports.createCommandManager = exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -480,7 +480,9 @@ const retryHelper = __importStar(__nccwpck_require__(2155));
 const git_version_1 = __nccwpck_require__(3142);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
+// sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
+exports.MinimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.28');
 function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
@@ -498,6 +500,7 @@ class GitCommandManager {
         this.lfs = false;
         this.doSparseCheckout = false;
         this.workingDirectory = '';
+        this.gitVersion = new git_version_1.GitVersion();
     }
     branchDelete(remote, branch) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -850,6 +853,11 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
+    version() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.gitVersion;
+        });
+    }
     static createCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = new GitCommandManager();
@@ -901,21 +909,21 @@ class GitCommandManager {
             this.gitPath = yield io.which('git', true);
             // Git version
             core.debug('Getting git version');
-            let gitVersion = new git_version_1.GitVersion();
+            this.gitVersion = new git_version_1.GitVersion();
             let gitOutput = yield this.execGit(['version']);
             let stdout = gitOutput.stdout.trim();
             if (!stdout.includes('\n')) {
                 const match = stdout.match(/\d+\.\d+(\.\d+)?/);
                 if (match) {
-                    gitVersion = new git_version_1.GitVersion(match[0]);
+                    this.gitVersion = new git_version_1.GitVersion(match[0]);
                 }
             }
-            if (!gitVersion.isValid()) {
+            if (!this.gitVersion.isValid()) {
                 throw new Error('Unable to determine git version');
             }
             // Minimum git version
-            if (!gitVersion.checkMinimum(exports.MinimumGitVersion)) {
-                throw new Error(`Minimum required git version is ${exports.MinimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
+            if (!this.gitVersion.checkMinimum(exports.MinimumGitVersion)) {
+                throw new Error(`Minimum required git version is ${exports.MinimumGitVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`);
             }
             if (this.lfs) {
                 // Git-lfs version
@@ -943,14 +951,12 @@ class GitCommandManager {
             }
             this.doSparseCheckout = doSparseCheckout;
             if (this.doSparseCheckout) {
-                // The `git sparse-checkout` command was introduced in Git v2.25.0
-                const minimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.25');
-                if (!gitVersion.checkMinimum(minimumGitSparseCheckoutVersion)) {
-                    throw new Error(`Minimum Git version required for sparse checkout is ${minimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${gitVersion}`);
+                if (!this.gitVersion.checkMinimum(exports.MinimumGitSparseCheckoutVersion)) {
+                    throw new Error(`Minimum Git version required for sparse checkout is ${exports.MinimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`);
                 }
             }
             // Set the user agent
-            const gitHttpUserAgent = `git/${gitVersion} (github-actions-checkout)`;
+            const gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`;
             core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
             this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
         });
@@ -1155,6 +1161,7 @@ const path = __importStar(__nccwpck_require__(1017));
 const refHelper = __importStar(__nccwpck_require__(8601));
 const stateHelper = __importStar(__nccwpck_require__(8647));
 const urlHelper = __importStar(__nccwpck_require__(9437));
+const git_command_manager_1 = __nccwpck_require__(738);
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
@@ -1288,7 +1295,11 @@ function getSource(settings) {
             }
             // Sparse checkout
             if (!settings.sparseCheckout) {
-                yield git.disableSparseCheckout();
+                let gitVersion = yield git.version();
+                // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
+                if (gitVersion.checkMinimum(git_command_manager_1.MinimumGitSparseCheckoutVersion)) {
+                    yield git.disableSparseCheckout();
+                }
             }
             else {
                 core.startGroup('Setting up sparse checkout');
