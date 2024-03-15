@@ -243,6 +243,8 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ## Checkout pull request HEAD commit instead of merge commit
 
+The default behavior of a `pull_request` event is to checkout to a ref that already merged your branch into the base branch (So don't be surprised to see the SHA checked out doesn't match your local HEAD SHA). You can change that to checkout your pull request's HEAD by: 
+
 ```yaml
 - uses: actions/checkout@v4
   with:
