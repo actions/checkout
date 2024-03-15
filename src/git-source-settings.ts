@@ -55,6 +55,11 @@ export interface IGitSourceSettings {
   fetchTags: boolean
 
   /**
+   * Indicates the maximal number of fetch operations to be run in parallel at a time
+   */
+  fetchParallel: number
+
+  /**
    * Indicates whether to use the --progress option when fetching
    */
   showProgress: boolean
@@ -73,6 +78,11 @@ export interface IGitSourceSettings {
    * Indicates whether to recursively checkout submodules
    */
   nestedSubmodules: boolean
+
+  /**
+   * Indicates the number of parallel jobs to use when fetching submodules
+   */
+  submodulesFetchJobs: number
 
   /**
    * The auth token to use when fetching the repository
