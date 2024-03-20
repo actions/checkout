@@ -43,7 +43,7 @@ function updateUsage(
   const newReadme: string[] = []
 
   // Append the beginning
-  newReadme.push(originalReadme.substr(0, startTokenIndex + startToken.length))
+  newReadme.push(originalReadme.slice(0, startTokenIndex + startToken.length))
 
   // Build the new usage section
   newReadme.push('```yaml', `- uses: ${actionReference}`, '  with:')
@@ -68,9 +68,9 @@ function updateUsage(
       // Longer than width? Find a space to break apart
       let segment: string = description
       if (description.length > width) {
-        segment = description.substr(0, width + 1)
+        segment = description.slice(0, width + 1)
         while (!segment.endsWith(' ') && !segment.endsWith('\n') && segment) {
-          segment = segment.substr(0, segment.length - 1)
+          segment = segment.slice(0, -1)
         }
 
         // Trimmed too much?
@@ -84,14 +84,14 @@ function updateUsage(
       // Check for newline
       const newlineIndex = segment.indexOf('\n')
       if (newlineIndex >= 0) {
-        segment = segment.substr(0, newlineIndex + 1)
+        segment = segment.slice(0, newlineIndex + 1)
       }
 
       // Append segment
       newReadme.push(`    # ${segment}`.trimRight())
 
       // Remaining
-      description = description.substr(segment.length)
+      description = description.slice(segment.length)
     }
 
     if (input.default !== undefined) {
@@ -113,7 +113,7 @@ function updateUsage(
   newReadme.push('```')
 
   // Append the end
-  newReadme.push(originalReadme.substr(endTokenIndex))
+  newReadme.push(originalReadme.slice(endTokenIndex))
 
   // Write the new README
   fs.writeFileSync(readmePath, newReadme.join(os.EOL))

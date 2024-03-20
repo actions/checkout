@@ -278,6 +278,6 @@ function select(obj: any, path: string): any {
     return obj[path]
   }
 
-  const key = path.substr(0, i)
-  return select(obj[key], path.substr(i + 1))
+  const key = path.slice(0, i)
+  return select(obj[key], path.slice(i + 1))
 }
