@@ -15,8 +15,7 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
     return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`
   }
 
-  // "origin" is SCHEME://HOSTNAME[:PORT]
-  return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`
+  return `${serviceUrl}/${encodedOwner}/${encodedName}`
 }
 
 export function getServerUrl(url?: string): URL {
