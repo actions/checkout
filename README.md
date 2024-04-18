@@ -62,7 +62,8 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     ssh-strict: ''
     
-    # The user to use when connecting to the remote SSH host. By default 'git' is used.
+    # The user to use when connecting to the remote SSH host. By default 'git' is
+    # used.
     ssh-user: ''
 
     # Whether to configure the token or SSH key with the local git config
