@@ -45,6 +45,10 @@ inputs:
       and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
       configure additional hosts.
     default: true
+  ssh-user:
+    description: >
+      The user to use when connecting to the remote SSH host. By default 'git' is used.
+    default: git
   persist-credentials:
     description: 'Whether to configure the token or SSH key with the local git config'
     default: true

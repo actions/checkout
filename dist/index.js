@@ -1798,6 +1798,7 @@ function getInputs() {
         result.sshKnownHosts = core.getInput('ssh-known-hosts');
         result.sshStrict =
             (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE';
+        result.sshUser = core.getInput('ssh-user');
         // Persist credentials
         result.persistCredentials =
             (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
@@ -2400,7 +2401,8 @@ function getFetchUrl(settings) {
     const encodedOwner = encodeURIComponent(settings.repositoryOwner);
     const encodedName = encodeURIComponent(settings.repositoryName);
     if (settings.sshKey) {
-        return `git@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
+        const user = settings.sshUser.length > 0 ? settings.sshUser : 'git';
+        return `${user}@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
     }
     // "origin" is SCHEME://HOSTNAME[:PORT]
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
