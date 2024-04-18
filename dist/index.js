@@ -2401,7 +2401,7 @@ function getFetchUrl(settings) {
     const encodedOwner = encodeURIComponent(settings.repositoryOwner);
     const encodedName = encodeURIComponent(settings.repositoryName);
     if (settings.sshKey) {
-        let user = settings.sshUser.length > 0 ? settings.sshUser : 'git';
+        const user = settings.sshUser.length > 0 ? settings.sshUser : 'git';
         return `${user}@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
     }
     // "origin" is SCHEME://HOSTNAME[:PORT]
