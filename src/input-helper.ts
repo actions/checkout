@@ -143,6 +143,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.sshKnownHosts = core.getInput('ssh-known-hosts')
   result.sshStrict =
     (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE'
+  result.sshUser = core.getInput('ssh-user')
 
   // Persist credentials
   result.persistCredentials =

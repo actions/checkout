@@ -821,6 +821,7 @@ async function setup(testName: string): Promise<void> {
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
     sshStrict: true,
+    sshUser: '',
     workflowOrganizationId: 123456,
     setSafeDirectory: true,
     githubServerUrl: githubServerUrl
