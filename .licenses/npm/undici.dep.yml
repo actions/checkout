@@ -1,16 +1,16 @@
 ---
-name: uuid
-version: 3.3.3
+name: undici
+version: 5.28.4
 type: npm
-summary: RFC4122 (v1, v4, and v5) UUIDs
-homepage: https://github.com/kelektiv/node-uuid#readme
+summary: An HTTP/1.1 client, written from scratch for Node.js
+homepage: https://undici.nodejs.org
 license: mit
 licenses:
-- sources: LICENSE.md
+- sources: LICENSE
   text: |
-    The MIT License (MIT)
+    MIT License
 
-    Copyright (c) 2010-2016 Robert Kieffer and other contributors
+    Copyright (c) Matteo Collina and Undici contributors
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -29,11 +29,6 @@ licenses:
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-notices:
-- sources: AUTHORS
-  text: |-
-    Robert Kieffer <robert@broofa.com>
-    Christoph Tavan <dev@tavan.de>
-    AJ ONeal <coolaj86@gmail.com>
-    Vincent Voyer <vincent@zeroload.net>
-    Roman Shtylman <shtylman@gmail.com>
+- sources: README.md
+  text: MIT
+notices: []
