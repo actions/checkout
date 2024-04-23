@@ -8,7 +8,7 @@ import * as path from 'path'
 import * as regexpHelper from './regexp-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
-import {default as uuid} from 'uuid/v4'
+import {v4 as uuid} from 'uuid'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
