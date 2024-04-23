@@ -178,6 +178,8 @@ class GitCommandManager {
 
   async disableSparseCheckout(): Promise<void> {
     await this.execGit(['sparse-checkout', 'disable'])
+    // Disabling 'sparse-checkout` leaves behind an undesirable side-effect in config (even in a pristine environment).
+    await this.tryConfigUnset('extensions.worktreeConfig', false)
   }
 
   async sparseCheckout(sparseCheckout: string[]): Promise<void> {
