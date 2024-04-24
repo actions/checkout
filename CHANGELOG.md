@@ -1,5 +1,16 @@
 # Changelog
 
+## v4.1.4
+- Disable `extensions.worktreeConfig` when disabling `sparse-checkout` by @jww3 in https://github.com/actions/checkout/pull/1692
+- Add dependabot config by @cory-miller in https://github.com/actions/checkout/pull/1688
+- Bump the minor-actions-dependencies group with 2 updates by @dependabot in https://github.com/actions/checkout/pull/1693
+- Bump word-wrap from 1.2.3 to 1.2.5 by @dependabot in https://github.com/actions/checkout/pull/1643
+
+## v4.1.3
+- Check git version before attempting to disable `sparse-checkout` by @jww3 in https://github.com/actions/checkout/pull/1656
+- Add SSH user parameter by @cory-miller in https://github.com/actions/checkout/pull/1685
+- Update `actions/checkout` version in `update-main-version.yml` by @jww3 in https://github.com/actions/checkout/pull/1650
+
 ## v4.1.2
 - Fix: Disable sparse checkout whenever `sparse-checkout` option is not present @dscho in https://github.com/actions/checkout/pull/1598
 
