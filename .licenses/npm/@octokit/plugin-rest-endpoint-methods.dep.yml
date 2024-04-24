@@ -1,6 +1,6 @@
 ---
 name: "@octokit/plugin-rest-endpoint-methods"
-version: 5.16.2
+version: 10.4.1
 type: npm
 summary: Octokit plugin adding one method for all of api.github.com REST API endpoints
 homepage: 

@@ -23,8 +23,9 @@ export async function getOrganizationId(): Promise<number | undefined> {
     return id as number
   } catch (err) {
     core.debug(
-      `Unable to load organization ID from GITHUB_EVENT_PATH: ${(err as any)
-        .message || err}`
+      `Unable to load organization ID from GITHUB_EVENT_PATH: ${
+        (err as any).message || err
+      }`
     )
   }
 }

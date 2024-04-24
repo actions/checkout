@@ -1,6 +1,6 @@
 ---
 name: "@octokit/endpoint"
-version: 6.0.12
+version: 9.0.5
 type: npm
 summary: Turns REST API endpoints into generic request options
 homepage: 

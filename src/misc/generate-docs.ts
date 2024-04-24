@@ -20,7 +20,7 @@ function updateUsage(
   }
 
   // Load the action.yml
-  const actionYaml = yaml.safeLoad(fs.readFileSync(actionYamlPath).toString())
+  const actionYaml = yaml.load(fs.readFileSync(actionYamlPath).toString())
 
   // Load the README
   const originalReadme = fs.readFileSync(readmePath).toString()

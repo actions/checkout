@@ -1,6 +1,6 @@
 ---
 name: universal-user-agent
-version: 6.0.0
+version: 6.0.1
 type: npm
 summary: Get a user agent string in both browser and node
 homepage: 
