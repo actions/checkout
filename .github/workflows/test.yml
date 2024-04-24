@@ -8,7 +8,7 @@ on:
       - releases/*
 
 
-# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow, 
+# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow,
 # these refer to "test-data" branches on this actions/checkout repo.
 # (For example, test-data/v2/basic -> https://github.com/actions/checkout/tree/test-data/v2/basic)
 
@@ -37,7 +37,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.1.1
 
       # Basic checkout
       - name: Checkout basic
@@ -257,7 +257,7 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
-    
+
   test-git-container:
     runs-on: ubuntu-latest
     container: bitnami/git:latest
