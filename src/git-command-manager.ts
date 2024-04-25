@@ -1,5 +1,6 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import * as fs from 'fs'
 import * as fshelper from './fs-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
@@ -10,12 +11,17 @@ import {GitVersion} from './git-version'
 
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
+// sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 export const MinimumGitVersion = new GitVersion('2.18')
+export const MinimumGitSparseCheckoutVersion = new GitVersion('2.28')
 
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
   branchList(remote: boolean): Promise<string[]>
+  disableSparseCheckout(): Promise<void>
+  sparseCheckout(sparseCheckout: string[]): Promise<void>
+  sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void>
   checkout(ref: string, startPoint: string): Promise<void>
   checkoutDetach(): Promise<void>
   config(
@@ -25,7 +31,15 @@ export interface IGitCommandManager {
     add?: boolean
   ): Promise<void>
   configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
-  fetch(refSpec: string[], fetchDepth?: number): Promise<void>
+  fetch(
+    refSpec: string[],
+    options: {
+      filter?: string
+      fetchDepth?: number
+      fetchTags?: boolean
+      showProgress?: boolean
+    }
+  ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
   init(): Promise<void>
@@ -41,19 +55,26 @@ export interface IGitCommandManager {
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
+  submoduleStatus(): Promise<boolean>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
   tryReset(): Promise<boolean>
+  version(): Promise<GitVersion>
 }
 
 export async function createCommandManager(
   workingDirectory: string,
-  lfs: boolean
+  lfs: boolean,
+  doSparseCheckout: boolean
 ): Promise<IGitCommandManager> {
-  return await GitCommandManager.createCommandManager(workingDirectory, lfs)
+  return await GitCommandManager.createCommandManager(
+    workingDirectory,
+    lfs,
+    doSparseCheckout
+  )
 }
 
 class GitCommandManager {
@@ -63,7 +84,9 @@ class GitCommandManager {
   }
   private gitPath = ''
   private lfs = false
+  private doSparseCheckout = false
   private workingDirectory = ''
+  private gitVersion: GitVersion = new GitVersion()
 
   // Private constructor; use createCommandManager()
   private constructor() {}
@@ -153,6 +176,33 @@ class GitCommandManager {
     return result
   }
 
+  async disableSparseCheckout(): Promise<void> {
+    await this.execGit(['sparse-checkout', 'disable'])
+    // Disabling 'sparse-checkout` leaves behind an undesirable side-effect in config (even in a pristine environment).
+    await this.tryConfigUnset('extensions.worktreeConfig', false)
+  }
+
+  async sparseCheckout(sparseCheckout: string[]): Promise<void> {
+    await this.execGit(['sparse-checkout', 'set', ...sparseCheckout])
+  }
+
+  async sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void> {
+    await this.execGit(['config', 'core.sparseCheckout', 'true'])
+    const output = await this.execGit([
+      'rev-parse',
+      '--git-path',
+      'info/sparse-checkout'
+    ])
+    const sparseCheckoutPath = path.join(
+      this.workingDirectory,
+      output.stdout.trimRight()
+    )
+    await fs.promises.appendFile(
+      sparseCheckoutPath,
+      `\n${sparseCheckout.join('\n')}\n`
+    )
+  }
+
   async checkout(ref: string, startPoint: string): Promise<void> {
     const args = ['checkout', '--progress', '--force']
     if (startPoint) {
@@ -201,15 +251,31 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
-  async fetch(refSpec: string[], fetchDepth?: number): Promise<void> {
+  async fetch(
+    refSpec: string[],
+    options: {
+      filter?: string
+      fetchDepth?: number
+      fetchTags?: boolean
+      showProgress?: boolean
+    }
+  ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
-    if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
+    if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
       args.push('--no-tags')
     }
 
-    args.push('--prune', '--progress', '--no-recurse-submodules')
-    if (fetchDepth && fetchDepth > 0) {
-      args.push(`--depth=${fetchDepth}`)
+    args.push('--prune', '--no-recurse-submodules')
+    if (options.showProgress) {
+      args.push('--progress')
+    }
+
+    if (options.filter) {
+      args.push(`--filter=${options.filter}`)
+    }
+
+    if (options.fetchDepth && options.fetchDepth > 0) {
+      args.push(`--depth=${options.fetchDepth}`)
     } else if (
       fshelper.fileExistsSync(
         path.join(this.workingDirectory, '.git', 'shallow')
@@ -288,8 +354,8 @@ class GitCommandManager {
   }
 
   async log1(format?: string): Promise<string> {
-    var args = format ? ['log', '-1', format] : ['log', '-1']
-    var silent = format ? false : true
+    const args = format ? ['log', '-1', format] : ['log', '-1']
+    const silent = format ? false : true
     const output = await this.execGit(args, false, silent)
     return output.stdout
   }
@@ -357,6 +423,12 @@ class GitCommandManager {
     await this.execGit(args)
   }
 
+  async submoduleStatus(): Promise<boolean> {
+    const output = await this.execGit(['submodule', 'status'], true)
+    core.debug(output.stdout)
+    return output.exitCode === 0
+  }
+
   async tagExists(pattern: string): Promise<boolean> {
     const output = await this.execGit(['tag', '--list', pattern])
     return !!output.stdout.trim()
@@ -414,12 +486,21 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
+  async version(): Promise<GitVersion> {
+    return this.gitVersion
+  }
+
   static async createCommandManager(
     workingDirectory: string,
-    lfs: boolean
+    lfs: boolean,
+    doSparseCheckout: boolean
   ): Promise<GitCommandManager> {
     const result = new GitCommandManager()
-    await result.initializeCommandManager(workingDirectory, lfs)
+    await result.initializeCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
     return result
   }
 
@@ -469,7 +550,8 @@ class GitCommandManager {
 
   private async initializeCommandManager(
     workingDirectory: string,
-    lfs: boolean
+    lfs: boolean,
+    doSparseCheckout: boolean
   ): Promise<void> {
     this.workingDirectory = workingDirectory
 
@@ -484,23 +566,23 @@ class GitCommandManager {
 
     // Git version
     core.debug('Getting git version')
-    let gitVersion = new GitVersion()
+    this.gitVersion = new GitVersion()
     let gitOutput = await this.execGit(['version'])
     let stdout = gitOutput.stdout.trim()
     if (!stdout.includes('\n')) {
       const match = stdout.match(/\d+\.\d+(\.\d+)?/)
       if (match) {
-        gitVersion = new GitVersion(match[0])
+        this.gitVersion = new GitVersion(match[0])
       }
     }
-    if (!gitVersion.isValid()) {
+    if (!this.gitVersion.isValid()) {
       throw new Error('Unable to determine git version')
     }
 
     // Minimum git version
-    if (!gitVersion.checkMinimum(MinimumGitVersion)) {
+    if (!this.gitVersion.checkMinimum(MinimumGitVersion)) {
       throw new Error(
-        `Minimum required git version is ${MinimumGitVersion}. Your git ('${this.gitPath}') is ${gitVersion}`
+        `Minimum required git version is ${MinimumGitVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`
       )
     }
 
@@ -532,8 +614,16 @@ class GitCommandManager {
       }
     }
 
+    this.doSparseCheckout = doSparseCheckout
+    if (this.doSparseCheckout) {
+      if (!this.gitVersion.checkMinimum(MinimumGitSparseCheckoutVersion)) {
+        throw new Error(
+          `Minimum Git version required for sparse checkout is ${MinimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`
+        )
+      }
+    }
     // Set the user agent
-    const gitHttpUserAgent = `git/${gitVersion} (github-actions-checkout)`
+    const gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`
     core.debug(`Set git useragent to: ${gitHttpUserAgent}`)
     this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent
   }

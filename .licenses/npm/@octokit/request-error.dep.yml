@@ -1,8 +1,8 @@
 ---
-name: "@octokit/endpoint"
-version: 9.0.5
+name: "@octokit/request-error"
+version: 5.1.0
 type: npm
-summary: Turns REST API endpoints into generic request options
+summary: Error class for Octokit request errors
 homepage: 
 license: mit
 licenses:
@@ -10,7 +10,7 @@ licenses:
   text: |
     The MIT License
 
-    Copyright (c) 2018 Octokit contributors
+    Copyright (c) 2019 Octokit contributors
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal

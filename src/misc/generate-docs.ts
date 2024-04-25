@@ -20,7 +20,7 @@ function updateUsage(
   }
 
   // Load the action.yml
-  const actionYaml = yaml.safeLoad(fs.readFileSync(actionYamlPath).toString())
+  const actionYaml = yaml.load(fs.readFileSync(actionYamlPath).toString())
 
   // Load the README
   const originalReadme = fs.readFileSync(readmePath).toString()
@@ -120,7 +120,7 @@ function updateUsage(
 }
 
 updateUsage(
-  'actions/checkout@v3',
+  'actions/checkout@v4',
   path.join(__dirname, '..', '..', 'action.yml'),
   path.join(__dirname, '..', '..', 'README.md')
 )

@@ -1,0 +1,59 @@
+name: Publish test-ubuntu-git Container
+
+on:
+  # Use an on demand workflow trigger.  
+  # (Forked copies of actions/checkout won't have permission to update GHCR.io/actions, 
+  #  so avoid trigger events that run automatically.)
+  workflow_dispatch:
+    inputs:
+      publish:
+        description:  'Publish to ghcr.io? (main branch only)'
+        type: boolean
+        required: true
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: actions/test-ubuntu-git
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+ 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Use `docker/login-action` to log in to GHCR.io. 
+      # Once published, the packages are scoped to the account defined here.
+      - name: Log in to the ghcr.io container registry
+        uses: docker/login-action@v3.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Format Timestamp
+        id: timestamp
+        # Use `date` with a custom format to achieve the key=value format GITHUB_OUTPUT expects.
+        run: date -u "+now=%Y%m%d.%H%M%S.%3NZ" >> "$GITHUB_OUTPUT"
+
+      - name: Issue Image Publish Warning
+        if:  ${{ inputs.publish && github.ref_name != 'main' }}
+        run: echo "::warning::test-ubuntu-git images can only be published from the actions/checkout 'main' branch.  Workflow will continue with push/publish disabled."
+
+      # Use `docker/build-push-action` to build (and optionally publish) the image. 
+      - name: Build Docker Image (with optional Push)
+        uses: docker/build-push-action@v5.3.0
+        with:
+          context: .
+          file: images/test-ubuntu-git.Dockerfile
+          # For now, attempts to push to ghcr.io must target the `main` branch.
+          # In the future, consider also allowing attempts from `releases/*` branches.
+          push: ${{ inputs.publish && github.ref_name == 'main' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}.${{ steps.timestamp.outputs.now }}

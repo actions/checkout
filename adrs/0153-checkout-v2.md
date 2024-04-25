@@ -181,7 +181,7 @@ GITHUB_WORKSPACE=/home/runner/work/foo/foo
 RUNNER_WORKSPACE=/home/runner/work/foo
 ```
 
-V2 introduces a new contraint on the checkout path. The location must now be under `github.workspace`. Whereas the checkout@v1 constraint was one level up, under `runner.workspace`.
+V2 introduces a new constraint on the checkout path. The location must now be under `github.workspace`. Whereas the checkout@v1 constraint was one level up, under `runner.workspace`.
 
 V2 no longer changes `github.workspace` to follow wherever the self repo is checked-out.
 

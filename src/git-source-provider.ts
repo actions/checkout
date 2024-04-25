@@ -9,7 +9,10 @@ import * as path from 'path'
 import * as refHelper from './ref-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
-import {IGitCommandManager} from './git-command-manager'
+import {
+  MinimumGitSparseCheckoutVersion,
+  IGitCommandManager
+} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
@@ -153,23 +156,38 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fetch
     core.startGroup('Fetching the repository')
+    const fetchOptions: {
+      filter?: string
+      fetchDepth?: number
+      fetchTags?: boolean
+      showProgress?: boolean
+    } = {}
+
+    if (settings.filter) {
+      fetchOptions.filter = settings.filter
+    } else if (settings.sparseCheckout) {
+      fetchOptions.filter = 'blob:none'
+    }
+
     if (settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
         settings.commit
       )
-      await git.fetch(refSpec)
+      await git.fetch(refSpec, fetchOptions)
 
       // When all history is fetched, the ref we're interested in may have moved to a different
       // commit (push or force push). If so, fetch again with a targeted refspec.
       if (!(await refHelper.testRef(git, settings.ref, settings.commit))) {
         refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-        await git.fetch(refSpec)
+        await git.fetch(refSpec, fetchOptions)
       }
     } else {
+      fetchOptions.fetchDepth = settings.fetchDepth
+      fetchOptions.fetchTags = settings.fetchTags
       const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-      await git.fetch(refSpec, settings.fetchDepth)
+      await git.fetch(refSpec, fetchOptions)
     }
     core.endGroup()
 
@@ -185,9 +203,27 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // LFS fetch
     // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
     // Explicit lfs fetch will fetch lfs objects in parallel.
-    if (settings.lfs) {
+    // For sparse checkouts, let `checkout` fetch the needed objects lazily.
+    if (settings.lfs && !settings.sparseCheckout) {
       core.startGroup('Fetching LFS objects')
       await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
+      core.endGroup()
+    }
+
+    // Sparse checkout
+    if (!settings.sparseCheckout) {
+      let gitVersion = await git.version()
+      // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
+      if (gitVersion.checkMinimum(MinimumGitSparseCheckoutVersion)) {
+        await git.disableSparseCheckout()
+      }
+    } else {
+      core.startGroup('Setting up sparse checkout')
+      if (settings.sparseCheckoutConeMode) {
+        await git.sparseCheckout(settings.sparseCheckout)
+      } else {
+        await git.sparseCheckoutNonConeMode(settings.sparseCheckout)
+      }
       core.endGroup()
     }
 
@@ -261,7 +297,11 @@ export async function cleanup(repositoryPath: string): Promise<void> {
 
   let git: IGitCommandManager
   try {
-    git = await gitCommandManager.createCommandManager(repositoryPath, false)
+    git = await gitCommandManager.createCommandManager(
+      repositoryPath,
+      false,
+      false
+    )
   } catch {
     return
   }
@@ -297,7 +337,8 @@ async function getGitCommandManager(
   try {
     return await gitCommandManager.createCommandManager(
       settings.repositoryPath,
-      settings.lfs
+      settings.lfs,
+      settings.sparseCheckout != null
     )
   } catch (err) {
     // Git is required for LFS

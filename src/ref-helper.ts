@@ -1,8 +1,7 @@
 import {IGitCommandManager} from './git-command-manager'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {getOctokit} from './octokit-provider'
-import {isGhes} from './url-helper'
+import {getServerApiUrl, isGhes} from './url-helper'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'
 
@@ -24,7 +23,7 @@ export async function getCheckoutInfo(
     throw new Error('Args ref and commit cannot both be empty')
   }
 
-  const result = ({} as unknown) as ICheckoutInfo
+  const result = {} as unknown as ICheckoutInfo
   const upperRef = (ref || '').toUpperCase()
 
   // SHA only
@@ -245,15 +244,18 @@ export async function checkCommitInfo(
       core.debug(
         `Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`
       )
-      const octokit = getOctokit(token, {
-        baseUrl: baseUrl,
+      const octokit = github.getOctokit(token, {
+        baseUrl: getServerApiUrl(baseUrl),
         userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload(
           'number'
         )};run_id=${
           process.env['GITHUB_RUN_ID']
         };expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
       })
-      await octokit.repos.get({owner: repositoryOwner, repo: repositoryName})
+      await octokit.rest.repos.get({
+        owner: repositoryOwner,
+        repo: repositoryName
+      })
     }
   } catch (err) {
     core.debug(

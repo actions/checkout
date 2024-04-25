@@ -45,6 +45,10 @@ inputs:
       and `CheckHostIP=no` to the SSH command line. Use the input `ssh-known-hosts` to
       configure additional hosts.
     default: true
+  ssh-user:
+    description: >
+      The user to use when connecting to the remote SSH host. By default 'git' is used.
+    default: git
   persist-credentials:
     description: 'Whether to configure the token or SSH key with the local git config'
     default: true
@@ -53,9 +57,29 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  filter:
+    description: >
+      Partially clone against a given filter.
+      Overrides sparse-checkout if set.
+    default: null
+  sparse-checkout:
+    description: >
+      Do a sparse checkout on given patterns.
+      Each pattern should be separated with new lines.
+    default: null
+  sparse-checkout-cone-mode:
+    description: >
+      Specifies whether to use cone-mode when doing a sparse checkout.
+    default: true
   fetch-depth:
     description: 'Number of commits to fetch. 0 indicates all history for all branches and tags.'
     default: 1
+  fetch-tags:
+    description: 'Whether to fetch tags, even if fetch-depth > 0.'
+    default: false
+  show-progress:
+    description: 'Whether to show progress status output when fetching.'
+    default: true
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
@@ -75,6 +99,6 @@ inputs:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false
 runs:
-  using: node16
+  using: node20
   main: dist/index.js
   post: dist/index.js
