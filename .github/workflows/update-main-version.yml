@@ -21,7 +21,7 @@ jobs:
     steps:
     # Note this update workflow can also be used as a rollback tool.
     # For that reason, it's best to pin `actions/checkout` to a known, stable version
-    # (typically, about two releases back).
+    # (typically, the previous major version -- see https://github.com/actions/checkout/pull/1705).
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
