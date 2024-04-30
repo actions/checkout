@@ -279,8 +279,9 @@ jobs:
       - uses: actions/checkout@v4
       - run: |
           date > generated.txt
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "generated"
           git push
