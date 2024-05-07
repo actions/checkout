@@ -49,7 +49,7 @@ class GitAuthHelper {
     gitSourceSettings: IGitSourceSettings | undefined
   ) {
     this.git = gitCommandManager
-    this.settings = gitSourceSettings || ({} as unknown as IGitSourceSettings)
+    this.settings = gitSourceSettings || (({} as unknown) as IGitSourceSettings)
 
     // Token auth header
     const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl)
