@@ -1574,7 +1574,9 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath,
         // Write archive to disk
         core.info('Writing archive to disk');
         const uniqueId = (0, uuid_1.v4)();
-        const archivePath = path.join(repositoryPath, `${uniqueId}.tar.gz`);
+        const archivePath = IS_WINDOWS
+            ? path.join(repositoryPath, `${uniqueId}.zip`)
+            : path.join(repositoryPath, `${uniqueId}.tar.gz`);
         yield fs.promises.writeFile(archivePath, archiveData);
         archiveData = Buffer.from(''); // Free memory
         // Extract archive
