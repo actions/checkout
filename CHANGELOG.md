@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.1.6
+* Check platform to set archive extension appropriately by @cory-miller in https://github.com/actions/checkout/pull/1732
+
+## v4.1.5
+* Update NPM dependencies by @cory-miller in https://github.com/actions/checkout/pull/1703
+* Bump github/codeql-action from 2 to 3 by @dependabot in https://github.com/actions/checkout/pull/1694
+* Bump actions/setup-node from 1 to 4 by @dependabot in https://github.com/actions/checkout/pull/1696
+* Bump actions/upload-artifact from 2 to 4 by @dependabot in https://github.com/actions/checkout/pull/1695
+* README: Suggest `user.email` to be `41898282+github-actions[bot]@users.noreply.github.com` by @cory-miller in https://github.com/actions/checkout/pull/1707
+
 ## v4.1.4
 - Disable `extensions.worktreeConfig` when disabling `sparse-checkout` by @jww3 in https://github.com/actions/checkout/pull/1692
 - Add dependabot config by @cory-miller in https://github.com/actions/checkout/pull/1688
