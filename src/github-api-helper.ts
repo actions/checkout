@@ -35,7 +35,9 @@ export async function downloadRepository(
   // Write archive to disk
   core.info('Writing archive to disk')
   const uniqueId = uuid()
-  const archivePath = path.join(repositoryPath, `${uniqueId}.tar.gz`)
+  const archivePath = IS_WINDOWS
+    ? path.join(repositoryPath, `${uniqueId}.zip`)
+    : path.join(repositoryPath, `${uniqueId}.tar.gz`)
   await fs.promises.writeFile(archivePath, archiveData)
   archiveData = Buffer.from('') // Free memory
 
