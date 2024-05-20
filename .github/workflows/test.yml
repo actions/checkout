@@ -266,7 +266,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: v3
+          path: v4
 
       # Basic checkout using git
       - name: Checkout basic
@@ -294,4 +294,4 @@ jobs:
       - name: Fix Checkout v3
         uses: actions/checkout@v4
         with:
-          path: v3
+          path: v4
