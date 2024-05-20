@@ -270,7 +270,7 @@ jobs:
 
       # Basic checkout using git
       - name: Checkout basic
-        uses: ./v3
+        uses: ./v4
         with:
           ref: test-data/v2/basic
       - name: Verify basic
@@ -291,7 +291,7 @@ jobs:
           git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
 
       # needed to make checkout post cleanup succeed
-      - name: Fix Checkout v3
+      - name: Fix Checkout v4
         uses: actions/checkout@v4
         with:
           path: v4
