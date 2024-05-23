@@ -54,13 +54,22 @@ class GitAuthHelper {
     // Token auth header
     const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl)
     this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader` // "origin" is SCHEME://HOSTNAME[:PORT]
-    const basicCredential = Buffer.from(
-      `x-access-token:${this.settings.authToken}`,
-      'utf8'
-    ).toString('base64')
-    core.setSecret(basicCredential)
+    const authTokenArray = this.settings.authToken.split("\n")
+    assert.ok(authTokenArray, "Token array not defined")
+    this.tokenConfigValue = ``
+    for (const aToken of authTokenArray) {
+        const basicCredential = Buffer.from(
+              `x-access-token:${aToken}`,
+              'utf8'
+            ).toString('base64')
+        core.setSecret(basicCredential)
+        if (this.tokenConfigValue == null)
+            this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`
+        else
+            this.tokenConfigValue.concat(`\nAUTHORIZATION: basic ${basicCredential}`)
+    }
+
     this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`
-    this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`
 
     // Instead of SSH URL
     this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf` // "origin" is SCHEME://HOSTNAME[:PORT]
