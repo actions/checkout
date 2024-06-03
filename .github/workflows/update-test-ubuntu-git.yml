@@ -31,7 +31,7 @@ jobs:
       # Use `docker/login-action` to log in to GHCR.io. 
       # Once published, the packages are scoped to the account defined here.
       - name: Log in to the ghcr.io container registry
-        uses: docker/login-action@v3.1.0
+        uses: docker/login-action@v3.2.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
