@@ -71,6 +71,9 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     persist-credentials: ''
 
+    # Custom git credential helper
+    custom-credential-helper: ''
+
     # Relative path under $GITHUB_WORKSPACE to place the repository
     path: ''
 

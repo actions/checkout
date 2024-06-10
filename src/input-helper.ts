@@ -149,6 +149,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.persistCredentials =
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
+  // Custom credential helper
+  result.customCredentialHelper = core.getInput('custom-credential-helper')
+
   // Workflow organization ID
   result.workflowOrganizationId =
     await workflowContextHelper.getOrganizationId()

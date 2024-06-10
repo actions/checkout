@@ -166,13 +166,16 @@ class GitAuthHelper {
         this.temporaryHomePath = '';
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
-        // Token auth header
+        this.credentialConfigKey = `credential.helper`;
+        const runnerTemp = process.env['RUNNER_TEMP'] || '';
+        assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
+        const uniqueId = (0, uuid_1.v4)();
+        this.credentialStorePath = path.join(runnerTemp, `${uniqueId}_credential_store`);
+        this.credentialConfigValue = `store --file ${this.credentialStorePath}`;
         const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl);
-        this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader`; // "origin" is SCHEME://HOSTNAME[:PORT]
-        const basicCredential = Buffer.from(`x-access-token:${this.settings.authToken}`, 'utf8').toString('base64');
-        core.setSecret(basicCredential);
-        this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`;
-        this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`;
+        serverUrl.username = `x-access-token`;
+        serverUrl.password = this.settings.authToken;
+        this.tokenCredential = serverUrl.href;
         // Instead of SSH URL
         this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf`; // "origin" is SCHEME://HOSTNAME[:PORT]
         this.insteadOfValues.push(`git@${serverUrl.hostname}:`);
@@ -246,7 +249,7 @@ class GitAuthHelper {
             catch (err) {
                 // Unset in case somehow written to the real global config
                 core.info('Encountered an error when attempting to configure token. Attempting unconfigure.');
-                yield this.git.tryConfigUnset(this.tokenConfigKey, true);
+                yield this.git.tryConfigUnset(this.credentialConfigKey, true);
                 throw err;
             }
         });
@@ -256,18 +259,12 @@ class GitAuthHelper {
             // Remove possible previous HTTPS instead of SSH
             yield this.removeGitConfig(this.insteadOfKey, true);
             if (this.settings.persistCredentials) {
-                // Configure a placeholder value. This approach avoids the credential being captured
-                // by process creation audit events, which are commonly logged. For more information,
-                // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-                const output = yield this.git.submoduleForeach(
-                // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
-                `sh -c "git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`, this.settings.nestedSubmodules);
-                // Replace the placeholder
-                const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
-                for (const configPath of configPaths) {
-                    core.debug(`Replacing token placeholder in '${configPath}'`);
-                    yield this.replaceTokenPlaceholder(configPath);
+                if (this.settings.customCredentialHelper) {
+                    yield this.git.submoduleForeach(`sh -c "git config --local --add '${this.credentialConfigKey}' '${this.settings.customCredentialHelper}' && git config --local 'credential.useHttpPath' 'true'"`, this.settings.nestedSubmodules);
                 }
+                yield this.git.submoduleForeach(
+                // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
+                `sh -c "git config --local --add '${this.credentialConfigKey}' '${this.credentialConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`, this.settings.nestedSubmodules);
                 if (this.settings.sshKey) {
                     // Configure core.sshCommand
                     yield this.git.submoduleForeach(`git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`, this.settings.nestedSubmodules);
@@ -306,7 +303,7 @@ class GitAuthHelper {
             const runnerTemp = process.env['RUNNER_TEMP'] || '';
             assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
             const uniqueId = (0, uuid_1.v4)();
-            this.sshKeyPath = path.join(runnerTemp, uniqueId);
+            this.sshKeyPath = path.join(runnerTemp, `${uniqueId}_ssh_key`);
             stateHelper.setSshKeyPath(this.sshKeyPath);
             yield fs.promises.mkdir(runnerTemp, { recursive: true });
             yield fs.promises.writeFile(this.sshKeyPath, this.settings.sshKey.trim() + '\n', { mode: 0o600 });
@@ -357,30 +354,17 @@ class GitAuthHelper {
         return __awaiter(this, void 0, void 0, function* () {
             // Validate args
             assert.ok((configPath && globalConfig) || (!configPath && !globalConfig), 'Unexpected configureToken parameter combinations');
+            stateHelper.setCredentialStorePath(this.credentialStorePath);
+            yield fs.promises.writeFile(this.credentialStorePath, this.tokenCredential);
             // Default config path
             if (!configPath && !globalConfig) {
                 configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
             }
-            // Configure a placeholder value. This approach avoids the credential being captured
-            // by process creation audit events, which are commonly logged. For more information,
-            // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-            yield this.git.config(this.tokenConfigKey, this.tokenPlaceholderConfigValue, globalConfig);
-            // Replace the placeholder
-            yield this.replaceTokenPlaceholder(configPath || '');
-        });
-    }
-    replaceTokenPlaceholder(configPath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            assert.ok(configPath, 'configPath is not defined');
-            let content = (yield fs.promises.readFile(configPath)).toString();
-            const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue);
-            if (placeholderIndex < 0 ||
-                placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)) {
-                throw new Error(`Unable to replace auth placeholder in ${configPath}`);
+            if (this.settings.customCredentialHelper) {
+                yield this.git.config(this.credentialConfigKey, this.settings.customCredentialHelper, globalConfig, true);
+                yield this.git.config('credential.useHttpPath', 'true', globalConfig);
             }
-            assert.ok(this.tokenConfigValue, 'tokenConfigValue is not defined');
-            content = content.replace(this.tokenPlaceholderConfigValue, this.tokenConfigValue);
-            yield fs.promises.writeFile(configPath, content);
+            yield this.git.config(this.credentialConfigKey, this.credentialConfigValue, globalConfig, true);
         });
     }
     removeSsh() {
@@ -413,8 +397,19 @@ class GitAuthHelper {
     }
     removeToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            // HTTP extra header
-            yield this.removeGitConfig(this.tokenConfigKey);
+            var _a;
+            // Credential Helper
+            const credentialStorePath = this.credentialStorePath || stateHelper.CredentialStorePath;
+            if (credentialStorePath) {
+                try {
+                    yield io.rmRF(credentialStorePath);
+                }
+                catch (err) {
+                    core.debug(`${(_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : err}`);
+                    core.warning(`Failed to remove credential store '${credentialStorePath}'`);
+                }
+            }
+            yield this.removeGitConfig(this.credentialConfigKey);
         });
     }
     removeGitConfig(configKey_1) {
@@ -1826,6 +1821,8 @@ function getInputs() {
         // Persist credentials
         result.persistCredentials =
             (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
+        // Custom credential helper
+        result.customCredentialHelper = core.getInput('custom-credential-helper');
         // Workflow organization ID
         result.workflowOrganizationId =
             yield workflowContextHelper.getOrganizationId();
@@ -2347,7 +2344,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.setSafeDirectory = exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
+exports.setCredentialStorePath = exports.setSafeDirectory = exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.CredentialStorePath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 /**
  * Indicates whether the POST action is running
@@ -2369,6 +2366,10 @@ exports.SshKeyPath = core.getState('sshKeyPath');
  * The SSH known hosts path for the POST action. The value is empty during the MAIN action.
  */
 exports.SshKnownHostsPath = core.getState('sshKnownHostsPath');
+/**
+ * The credential store path for git-credential-store
+ */
+exports.CredentialStorePath = core.getState('credentialStorePath');
 /**
  * Save the repository path so the POST action can retrieve the value.
  */
@@ -2402,6 +2403,13 @@ exports.setSafeDirectory = setSafeDirectory;
 if (!exports.IsPost) {
     core.saveState('isPost', 'true');
 }
+/**
+ * Save the credential store path so the POST action can retrieve the value.
+ */
+function setCredentialStorePath(credentialStorePath) {
+    core.saveState('credentialStorePath', credentialStorePath);
+}
+exports.setCredentialStorePath = setCredentialStorePath;
 
 
 /***/ }),

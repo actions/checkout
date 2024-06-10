@@ -34,9 +34,10 @@ export function createAuthHelper(
 class GitAuthHelper {
   private readonly git: IGitCommandManager
   private readonly settings: IGitSourceSettings
-  private readonly tokenConfigKey: string
-  private readonly tokenConfigValue: string
-  private readonly tokenPlaceholderConfigValue: string
+  private readonly credentialConfigKey: string
+  private readonly credentialConfigValue: string
+  private readonly tokenCredential: string
+  private readonly credentialStorePath: string
   private readonly insteadOfKey: string
   private readonly insteadOfValues: string[] = []
   private sshCommand = ''
@@ -51,16 +52,20 @@ class GitAuthHelper {
     this.git = gitCommandManager
     this.settings = gitSourceSettings || ({} as unknown as IGitSourceSettings)
 
-    // Token auth header
+    this.credentialConfigKey = `credential.helper`
+    const runnerTemp = process.env['RUNNER_TEMP'] || ''
+    assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
+    const uniqueId = uuid()
+    this.credentialStorePath = path.join(
+      runnerTemp,
+      `${uniqueId}_credential_store`
+    )
+    this.credentialConfigValue = `store --file ${this.credentialStorePath}`
+
     const serverUrl = urlHelper.getServerUrl(this.settings.githubServerUrl)
-    this.tokenConfigKey = `http.${serverUrl.origin}/.extraheader` // "origin" is SCHEME://HOSTNAME[:PORT]
-    const basicCredential = Buffer.from(
-      `x-access-token:${this.settings.authToken}`,
-      'utf8'
-    ).toString('base64')
-    core.setSecret(basicCredential)
-    this.tokenPlaceholderConfigValue = `AUTHORIZATION: basic ***`
-    this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`
+    serverUrl.username = `x-access-token`
+    serverUrl.password = this.settings.authToken
+    this.tokenCredential = serverUrl.href
 
     // Instead of SSH URL
     this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf` // "origin" is SCHEME://HOSTNAME[:PORT]
@@ -143,7 +148,7 @@ class GitAuthHelper {
       core.info(
         'Encountered an error when attempting to configure token. Attempting unconfigure.'
       )
-      await this.git.tryConfigUnset(this.tokenConfigKey, true)
+      await this.git.tryConfigUnset(this.credentialConfigKey, true)
       throw err
     }
   }
@@ -153,22 +158,18 @@ class GitAuthHelper {
     await this.removeGitConfig(this.insteadOfKey, true)
 
     if (this.settings.persistCredentials) {
-      // Configure a placeholder value. This approach avoids the credential being captured
-      // by process creation audit events, which are commonly logged. For more information,
-      // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-      const output = await this.git.submoduleForeach(
+      if (this.settings.customCredentialHelper) {
+        await this.git.submoduleForeach(
+          `sh -c "git config --local --add '${this.credentialConfigKey}' '${this.settings.customCredentialHelper}' && git config --local 'credential.useHttpPath' 'true'"`,
+          this.settings.nestedSubmodules
+        )
+      }
+
+      await this.git.submoduleForeach(
         // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
-        `sh -c "git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`,
+        `sh -c "git config --local --add '${this.credentialConfigKey}' '${this.credentialConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`,
         this.settings.nestedSubmodules
       )
-
-      // Replace the placeholder
-      const configPaths: string[] =
-        output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || []
-      for (const configPath of configPaths) {
-        core.debug(`Replacing token placeholder in '${configPath}'`)
-        await this.replaceTokenPlaceholder(configPath)
-      }
 
       if (this.settings.sshKey) {
         // Configure core.sshCommand
@@ -210,7 +211,7 @@ class GitAuthHelper {
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
     const uniqueId = uuid()
-    this.sshKeyPath = path.join(runnerTemp, uniqueId)
+    this.sshKeyPath = path.join(runnerTemp, `${uniqueId}_ssh_key`)
     stateHelper.setSshKeyPath(this.sshKeyPath)
     await fs.promises.mkdir(runnerTemp, {recursive: true})
     await fs.promises.writeFile(
@@ -282,40 +283,31 @@ class GitAuthHelper {
       'Unexpected configureToken parameter combinations'
     )
 
+    stateHelper.setCredentialStorePath(this.credentialStorePath)
+    await fs.promises.writeFile(this.credentialStorePath, this.tokenCredential)
+
     // Default config path
     if (!configPath && !globalConfig) {
       configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config')
     }
 
-    // Configure a placeholder value. This approach avoids the credential being captured
-    // by process creation audit events, which are commonly logged. For more information,
-    // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-    await this.git.config(
-      this.tokenConfigKey,
-      this.tokenPlaceholderConfigValue,
-      globalConfig
-    )
+    if (this.settings.customCredentialHelper) {
+      await this.git.config(
+        this.credentialConfigKey,
+        this.settings.customCredentialHelper,
+        globalConfig,
+        true
+      )
 
-    // Replace the placeholder
-    await this.replaceTokenPlaceholder(configPath || '')
-  }
-
-  private async replaceTokenPlaceholder(configPath: string): Promise<void> {
-    assert.ok(configPath, 'configPath is not defined')
-    let content = (await fs.promises.readFile(configPath)).toString()
-    const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue)
-    if (
-      placeholderIndex < 0 ||
-      placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)
-    ) {
-      throw new Error(`Unable to replace auth placeholder in ${configPath}`)
+      await this.git.config('credential.useHttpPath', 'true', globalConfig)
     }
-    assert.ok(this.tokenConfigValue, 'tokenConfigValue is not defined')
-    content = content.replace(
-      this.tokenPlaceholderConfigValue,
-      this.tokenConfigValue
+
+    await this.git.config(
+      this.credentialConfigKey,
+      this.credentialConfigValue,
+      globalConfig,
+      true
     )
-    await fs.promises.writeFile(configPath, content)
   }
 
   private async removeSsh(): Promise<void> {
@@ -346,8 +338,20 @@ class GitAuthHelper {
   }
 
   private async removeToken(): Promise<void> {
-    // HTTP extra header
-    await this.removeGitConfig(this.tokenConfigKey)
+    // Credential Helper
+    const credentialStorePath =
+      this.credentialStorePath || stateHelper.CredentialStorePath
+    if (credentialStorePath) {
+      try {
+        await io.rmRF(credentialStorePath)
+      } catch (err) {
+        core.debug(`${(err as any)?.message ?? err}`)
+        core.warning(
+          `Failed to remove credential store '${credentialStorePath}'`
+        )
+      }
+    }
+    await this.removeGitConfig(this.credentialConfigKey)
   }
 
   private async removeGitConfig(

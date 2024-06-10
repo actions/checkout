@@ -105,6 +105,11 @@ export interface IGitSourceSettings {
   persistCredentials: boolean
 
   /**
+   * Use following command/script as value for "credential.<URL>.helper"
+   */
+  customCredentialHelper: string | undefined
+
+  /**
    * Organization ID for the currently running workflow (used for auth settings)
    */
   workflowOrganizationId: number | undefined

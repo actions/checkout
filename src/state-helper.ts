@@ -26,6 +26,11 @@ export const SshKeyPath = core.getState('sshKeyPath')
 export const SshKnownHostsPath = core.getState('sshKnownHostsPath')
 
 /**
+ * The credential store path for git-credential-store
+ */
+export const CredentialStorePath = core.getState('credentialStorePath')
+
+/**
  * Save the repository path so the POST action can retrieve the value.
  */
 export function setRepositoryPath(repositoryPath: string) {
@@ -57,4 +62,11 @@ export function setSafeDirectory() {
 // This is necessary since we don't have a separate entry point.
 if (!IsPost) {
   core.saveState('isPost', 'true')
+}
+
+/**
+ * Save the credential store path so the POST action can retrieve the value.
+ */
+export function setCredentialStorePath(credentialStorePath: string) {
+  core.saveState('credentialStorePath', credentialStorePath)
 }
