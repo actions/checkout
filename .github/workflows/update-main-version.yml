@@ -22,7 +22,7 @@ jobs:
     # Note this update workflow can also be used as a rollback tool.
     # For that reason, it's best to pin `actions/checkout` to a known, stable version
     # (typically, about two releases back).
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.1.6
       with:
         fetch-depth: 0
     - name: Git config
