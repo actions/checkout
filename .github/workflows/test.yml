@@ -266,11 +266,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.6
         with:
-          path: v4
+          path: localClone
 
       # Basic checkout using git
       - name: Checkout basic
-        uses: ./v4.1.6
+        uses: ./localClone
         with:
           ref: test-data/v2/basic
       - name: Verify basic
