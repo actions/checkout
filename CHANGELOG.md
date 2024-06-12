@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.1.7
+* Bump the minor-npm-dependencies group across 1 directory with 4 updates by @dependabot in https://github.com/actions/checkout/pull/1739
+* Bump actions/checkout from 3 to 4 by @dependabot in https://github.com/actions/checkout/pull/1697
+* Check out other refs/* by commit by @orhantoy in https://github.com/actions/checkout/pull/1774
+* Pin actions/checkout's own workflows to a known, good, stable version. by @jww3 in https://github.com/actions/checkout/pull/1776
+
 ## v4.1.6
 * Check platform to set archive extension appropriately by @cory-miller in https://github.com/actions/checkout/pull/1732
 
