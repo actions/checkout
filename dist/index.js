@@ -1306,7 +1306,7 @@ function getSource(settings) {
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
             // Explicit lfs fetch will fetch lfs objects in parallel.
             // For sparse checkouts, let `checkout` fetch the needed objects lazily.
-            if (settings.lfs && !settings.sparseCheckout) {
+            if (settings.lfs && !settings.sparseCheckout && !fetchOptions.filter) {
                 core.startGroup('Fetching LFS objects');
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
                 core.endGroup();
