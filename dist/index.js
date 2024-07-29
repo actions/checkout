@@ -1280,7 +1280,7 @@ function getSource(settings) {
             else if (settings.sparseCheckout) {
                 fetchOptions.filter = 'blob:none';
             }
-            if (settings.fetchDepth <= 0) {
+            if (settings.fetchDepth <= 0 || settings.defaultBranchCheckout) {
                 // Fetch all branches and tags
                 let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
                 yield git.fetch(refSpec, fetchOptions);
@@ -1300,7 +1300,22 @@ function getSource(settings) {
             core.endGroup();
             // Checkout info
             core.startGroup('Determining the checkout info');
-            const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+            let checkoutInfo;
+            try {
+                checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+            }
+            catch (error) {
+                if (settings.defaultBranchCheckout) {
+                    core.info('Could not determine the checkout info. Trying the default repository branch');
+                    const repositoryDefaultBranch = settings.sshKey
+                        ? yield git.getDefaultBranch(repositoryUrl)
+                        : yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName);
+                    checkoutInfo = yield refHelper.getCheckoutInfo(git, repositoryDefaultBranch, settings.commit);
+                }
+                else {
+                    throw error;
+                }
+            }
             core.endGroup();
             // LFS fetch
             // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
@@ -1767,6 +1782,11 @@ function getInputs() {
         }
         core.debug(`ref = '${result.ref}'`);
         core.debug(`commit = '${result.commit}'`);
+        // Default branch checkout
+        result.defaultBranchCheckout =
+            (core.getInput('default-branch-checkout') || 'false').toUpperCase() ===
+                'TRUE';
+        core.debug(`default-branch-checkout = '${result.defaultBranchCheckout}'`);
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
