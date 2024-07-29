@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as github from '@actions/github'
 import * as fsHelper from './fs-helper'
 import * as gitAuthHelper from './git-auth-helper'
 import * as gitCommandManager from './git-command-manager'
@@ -273,6 +274,14 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       settings.commit,
       settings.githubServerUrl
     )
+
+    // Set default author
+    if (!await git.configExists('user.name', true)) {
+      await git.config('user.name', github.context.workflow, true)
+    }
+    if (!await git.configExists('user.email', true)) {
+      await git.config('user.email', 'github-actions@github.com', true)
+    }
   } finally {
     // Remove auth
     if (authHelper) {
