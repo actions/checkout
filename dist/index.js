@@ -805,7 +805,10 @@ class GitCommandManager {
             if (recursive) {
                 args.push('--recursive');
             }
-            yield this.execGit(args);
+            const that = this;
+            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args);
+            }));
         });
     }
     submoduleStatus() {
