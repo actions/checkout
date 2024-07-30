@@ -71,7 +71,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     persist-credentials: ''
 
-    # Relative path under $GITHUB_WORKSPACE to place the repository
+    # Relative path under $GITHUB_WORKSPACE/working-directory to place the repository
     path: ''
 
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
@@ -126,6 +126,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Provide the working directory for the git commands to execute into, defaults to
+    # $GITHUB_WORKSPACE
+    working-directory: ''
 ```
 <!-- end usage -->
 

@@ -144,4 +144,25 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
   })
+
+  it('sets a different working directory', async() => {
+    inputs['working-directory'] = '/home/user/test'
+    inputs['path'] = 'path/to/repo'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.repositoryPath).toBe(path.resolve('/home/user/test/path/to/repo'))
+  })
+
+  it('sets a working directory on root', async() => {
+    inputs['working-directory'] = '/'
+    inputs['path'] = 'path/to/repo'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.repositoryPath).toBe(path.resolve('/path/to/repo'))
+  })
+
+  it('sets a working directory on root and repository path is set to empty', async() => {
+    inputs['working-directory'] = '/'
+    inputs['path'] = ''
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.repositoryPath).toBe(path.resolve('/'))
+  })
 })

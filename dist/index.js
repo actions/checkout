@@ -1718,14 +1718,14 @@ const workflowContextHelper = __importStar(__nccwpck_require__(9568));
 function getInputs() {
     return __awaiter(this, void 0, void 0, function* () {
         const result = {};
-        // GitHub workspace
-        let githubWorkspacePath = process.env['GITHUB_WORKSPACE'];
-        if (!githubWorkspacePath) {
-            throw new Error('GITHUB_WORKSPACE not defined');
+        // Working directory
+        let workingDirectory = core.getInput('workingDirectory') || process.env['GITHUB_WORKSPACE'];
+        if (!workingDirectory) {
+            throw new Error('working dir not defined');
         }
-        githubWorkspacePath = path.resolve(githubWorkspacePath);
-        core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
-        fsHelper.directoryExistsSync(githubWorkspacePath, true);
+        workingDirectory = path.resolve(workingDirectory);
+        core.debug(`working directory = '${workingDirectory}'`);
+        fsHelper.directoryExistsSync(workingDirectory, true);
         // Qualified repository
         const qualifiedRepository = core.getInput('repository') ||
             `${github.context.repo.owner}/${github.context.repo.repo}`;
@@ -1740,9 +1740,9 @@ function getInputs() {
         result.repositoryName = splitRepository[1];
         // Repository path
         result.repositoryPath = core.getInput('path') || '.';
-        result.repositoryPath = path.resolve(githubWorkspacePath, result.repositoryPath);
-        if (!(result.repositoryPath + path.sep).startsWith(githubWorkspacePath + path.sep)) {
-            throw new Error(`Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`);
+        result.repositoryPath = path.resolve(workingDirectory, result.repositoryPath);
+        if (!(result.repositoryPath + path.sep).startsWith(workingDirectory + path.sep)) {
+            throw new Error(`Repository path '${result.repositoryPath}' is not under '${workingDirectory}'`);
         }
         // Workflow repository?
         const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
