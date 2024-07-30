@@ -17,15 +17,20 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
   }
 
   // "origin" is SCHEME://HOSTNAME[:PORT]
-  return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`
+  const baseURL = getBaseUrl(serviceUrl)
+  return `${baseURL}/${encodedOwner}/${encodedName}`
 }
 
 export function getServerUrl(url?: string): URL {
-  let urlValue =
+  const urlValue =
     url && url.trim().length > 0
       ? url
       : process.env['GITHUB_SERVER_URL'] || 'https://github.com'
   return new URL(urlValue)
+}
+
+function getBaseUrl(u: URL) {
+  return u.protocol + "//" + u.host + u.pathname.replace(/\/+$/g, '');
 }
 
 export function getServerApiUrl(url?: string): string {

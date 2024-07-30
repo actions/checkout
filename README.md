@@ -123,8 +123,9 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
     # The base URL for the GitHub instance that you are trying to clone from, will use
     # environment defaults to fetch from the same instance that the workflow is
-    # running from unless specified. Example URLs are https://github.com or
-    # https://my-ghes-server.example.com
+    # running from unless specified. Also support URL pathname except SSH (`ssh-key`
+    # not specified). Example URLs are https://github.com or
+    # https://my-ghes-server.example.com or https://my-ghes-server.example.com/git/
     github-server-url: ''
 ```
 <!-- end usage -->
