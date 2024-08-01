@@ -142,6 +142,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 - [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
+- [Checkout pull request on `issue_comment` event](#Checkout-pull-request-on-issue_comment-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
 
 ## Fetch only the root files
@@ -266,6 +267,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+```
+
+## Checkout pull request on `issue_comment` event
+
+**Note:** The job must check if the issue is a pull request using `if: github.event.issue.pull_request` which skips it otherwise.
+
+```yaml
+- uses: actions/checkout@v3
+  with:
+    ref: refs/pull/${{ github.event.issue.number }}/head
 ```
 
 ## Push a commit using the built-in token
