@@ -37,7 +37,7 @@ export interface IGitCommandManager {
       filter?: string
       fetchDepth?: number
       fetchTags?: boolean
-      showProgress?: boolean
+      showProgress: boolean
     }
   ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
@@ -257,7 +257,7 @@ class GitCommandManager {
       filter?: string
       fetchDepth?: number
       fetchTags?: boolean
-      showProgress?: boolean
+      showProgress: boolean
     }
   ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
