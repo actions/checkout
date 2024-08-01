@@ -261,7 +261,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     const commitInfo = await git.log1()
 
     // Log commit sha
-    await git.log1("--format='%H'")
+    const commitSHA = await git.log1('--format=%H')
+    core.setOutput('commit', commitSHA.trim())
 
     // Check for incorrect pull request merge commit
     await refHelper.checkCommitInfo(

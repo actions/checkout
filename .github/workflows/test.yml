@@ -295,3 +295,37 @@ jobs:
         uses: actions/checkout@v4.1.6
         with:
           path: localClone
+
+  test-output:
+    runs-on: ubuntu-latest
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v4.1.6
+
+      # Basic checkout using git
+      - name: Checkout basic
+        id: checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+
+      # Verify output
+      - name: Verify output
+        run: |
+          echo "Commit: ${{ steps.checkout.outputs.commit }}"
+          echo "Ref: ${{ steps.checkout.outputs.ref }}"
+
+          if [ "${{ steps.checkout.outputs.ref }}" != "test-data/v2/basic" ]; then
+            echo "Expected ref to be test-data/v2/basic"
+            exit 1
+          fi
+
+          if [ "${{ steps.checkout.outputs.commit }}" != "82f71901cf8c021332310dcc8cdba84c4193ff5d" ]; then
+            echo "Expected commit to be 82f71901cf8c021332310dcc8cdba84c4193ff5d"
+            exit 1
+          fi
+
+      # needed to make checkout post cleanup succeed
+      - name: Fix Checkout
+        uses: actions/checkout@v4.1.6
