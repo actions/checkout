@@ -51,7 +51,7 @@ inputs:
     default: git
   persist-credentials:
     description: 'Whether to configure the token or SSH key with the local git config'
-    default: true
+    default: false
   path:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
   clean:

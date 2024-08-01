@@ -6,7 +6,7 @@ This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workfl
 
 Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
-The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
+Set `persist-credentials: true` to opt-in to persist the auth token in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup.
 
 When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
@@ -68,7 +68,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     ssh-user: ''
 
     # Whether to configure the token or SSH key with the local git config
-    # Default: true
+    # Default: false
     persist-credentials: ''
 
     # Relative path under $GITHUB_WORKSPACE to place the repository
