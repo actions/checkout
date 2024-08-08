@@ -713,7 +713,11 @@ class GitCommandManager {
     }
     init() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['init', this.workingDirectory]);
+            yield this.execGit([
+                'init',
+                '--initial-branch=silence_warning_about_default_branch',
+                this.workingDirectory
+            ]);
         });
     }
     isDetached() {
