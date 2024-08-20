@@ -57,6 +57,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase()
 
   // Source branch, source version
+  result.commit = core.getInput('commit')
   result.ref = core.getInput('ref')
   if (!result.ref) {
     if (isWorkflowRepository) {
