@@ -62,7 +62,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     throw new Error(`The commit SHA '${result.commit}' is not a valid SHA.`)
   }
 
-  result.ref = core.getInput('ref') ?? result.commit
+  result.ref = core.getInput('ref') || result.commit
   if (!result.ref) {
     if (isWorkflowRepository) {
       result.ref = github.context.ref

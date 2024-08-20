@@ -163,10 +163,8 @@ describe('input-helper tests', () => {
     inputs.commit = '0123456789012345678901234567890123456789'
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings).toBeTruthy()
-    expect(settings.ref).toBeTruthy()
-    expect(settings.ref).toStrictEqual(
-      '0123456789012345678901234567890123456789'
-    )
+    expect(settings.ref).toBeFalsy()
+    expect(settings.ref).toStrictEqual('')
     expect(settings.commit).toBeTruthy()
     expect(settings.commit).toStrictEqual(
       '0123456789012345678901234567890123456789'

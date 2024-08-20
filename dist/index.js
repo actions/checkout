@@ -1717,7 +1717,6 @@ const path = __importStar(__nccwpck_require__(1017));
 const workflowContextHelper = __importStar(__nccwpck_require__(9568));
 function getInputs() {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a;
         const result = {};
         // GitHub workspace
         let githubWorkspacePath = process.env['GITHUB_WORKSPACE'];
@@ -1753,7 +1752,7 @@ function getInputs() {
         if (result.commit && !result.commit.match(/^[0-9a-fA-F]{40}$/)) {
             throw new Error(`The commit SHA '${result.commit}' is not a valid SHA.`);
         }
-        result.ref = (_a = core.getInput('ref')) !== null && _a !== void 0 ? _a : result.commit;
+        result.ref = core.getInput('ref') || result.commit;
         if (!result.ref) {
             if (isWorkflowRepository) {
                 result.ref = github.context.ref;
