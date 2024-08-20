@@ -58,7 +58,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
 
   // Source branch, source version
   result.commit = core.getInput('commit')
-  result.ref = core.getInput('ref')
+  result.ref = core.getInput('ref') ?? result.commit
   if (!result.ref) {
     if (isWorkflowRepository) {
       result.ref = github.context.ref
