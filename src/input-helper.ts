@@ -58,6 +58,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
 
   // Source branch, source version
   result.commit = core.getInput('commit')
+  if (result.commit && !result.commit.match(/^[0-9a-fA-F]{40}$/)) {
+    throw new Error(`The commit SHA '${result.commit}' is not a valid SHA.`)
+  }
+
   result.ref = core.getInput('ref') ?? result.commit
   if (!result.ref) {
     if (isWorkflowRepository) {
