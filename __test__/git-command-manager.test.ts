@@ -375,4 +375,25 @@ describe('Test fetchDepth and fetchTags options', () => {
       expect.any(Object)
     )
   })
+
+  it('should call execGit with the correct arguments when sha256 is used', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    await git.init({objectFormat: 'sha256'})
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['init', '--object-format=sha256', 'test'],
+      expect.any(Object)
+    )
+  })
 })

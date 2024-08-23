@@ -42,7 +42,7 @@ export interface IGitCommandManager {
   ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
-  init(): Promise<void>
+  init(options?: {objectFormat?: string}): Promise<void>
   isDetached(): Promise<boolean>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
@@ -327,8 +327,14 @@ class GitCommandManager {
     return this.workingDirectory
   }
 
-  async init(): Promise<void> {
-    await this.execGit(['init', this.workingDirectory])
+  async init(options?: {objectFormat?: string}): Promise<void> {
+    await this.execGit([
+      'init',
+      ...(options?.objectFormat
+        ? [`--object-format=${options.objectFormat}`]
+        : []),
+      this.workingDirectory
+    ])
   }
 
   async isDetached(): Promise<boolean> {

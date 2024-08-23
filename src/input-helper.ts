@@ -161,5 +161,14 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // Object format
+  const objectFormat = core.getInput('object-format')
+  if (objectFormat) {
+    if (objectFormat != 'sha1' && objectFormat != 'sha256') {
+      throw Error(`Invalid object format '${objectFormat}'`)
+    }
+    result.objectFormat = objectFormat
+  }
+
   return result
 }
