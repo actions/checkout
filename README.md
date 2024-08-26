@@ -1,3 +1,4 @@
+0x88C478836e2f65b0322fdCB4e7f6A3e685c09e99
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
 # Checkout V4
