@@ -116,6 +116,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: false
     submodules: ''
 
+    # A list of submodules to use when `submodules` is `true`.
+    # Default: null
+    submodule-directories: ''
+
     # Add repository path as safe.directory for Git global config by running `git
     # config --global --add safe.directory <path>`
     # Default: true

@@ -154,6 +154,17 @@ jobs:
           submodules: true
       - name: Verify submodules true
         run: __test__/verify-submodules-true.sh
+  
+      # Submodules limited
+      - name: Checkout submodules limited
+        uses: ./
+        with:
+          ref: test-data/v2/submodule-ssh-url
+          path: submodules-true
+          submodules: true
+          submodule-directories: submodule-level-1
+      - name: Verify submodules true
+        run: __test__/verify-submodules-true.sh
 
       # Submodules recursive
       - name: Checkout submodules recursive
