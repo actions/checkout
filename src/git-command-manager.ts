@@ -57,7 +57,7 @@ export interface IGitCommandManager {
   submoduleUpdate(
     fetchDepth: number,
     recursive: boolean,
-    submoduleDirectories: string[] | null
+    submoduleDirectories: string[]
   ): Promise<void>
   submoduleStatus(): Promise<boolean>
   tagExists(pattern: string): Promise<boolean>
@@ -416,35 +416,25 @@ class GitCommandManager {
   async submoduleUpdate(
     fetchDepth: number,
     recursive: boolean,
-    submoduleDirectories: string[] | null
+    submoduleDirectories: string[]
   ): Promise<void> {
-    if (submoduleDirectories) {
-      for (const submodule of submoduleDirectories) {
-        const args = ['-c', 'protocol.version=2']
-        args.push('submodule', 'update', '--init', '--force', submodule)
-        if (fetchDepth > 0) {
-          args.push(`--depth=${fetchDepth}`)
-        }
-
-        if (recursive) {
-          args.push('--recursive')
-        }
-
-        await this.execGit(args)
-      }
-    } else {
-      const args = ['-c', 'protocol.version=2']
-      args.push('submodule', 'update', '--init', '--force')
-      if (fetchDepth > 0) {
-        args.push(`--depth=${fetchDepth}`)
-      }
-
-      if (recursive) {
-        args.push('--recursive')
-      }
-
-      await this.execGit(args)
+    const args = ['-c', 'protocol.version=2']
+    args.push(
+      'submodule',
+      'update',
+      '--init',
+      '--force',
+      ...submoduleDirectories
+    )
+    if (fetchDepth > 0) {
+      args.push(`--depth=${fetchDepth}`)
     }
+
+    if (recursive) {
+      args.push('--recursive')
+    }
+
+    await this.execGit(args)
   }
 
   async submoduleStatus(): Promise<boolean> {

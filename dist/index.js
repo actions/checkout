@@ -797,30 +797,15 @@ class GitCommandManager {
     }
     submoduleUpdate(fetchDepth, recursive, submoduleDirectories) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (submoduleDirectories) {
-                for (const submodule of submoduleDirectories) {
-                    const args = ['-c', 'protocol.version=2'];
-                    args.push('submodule', 'update', '--init', '--force', submodule);
-                    if (fetchDepth > 0) {
-                        args.push(`--depth=${fetchDepth}`);
-                    }
-                    if (recursive) {
-                        args.push('--recursive');
-                    }
-                    yield this.execGit(args);
-                }
+            const args = ['-c', 'protocol.version=2'];
+            args.push('submodule', 'update', '--init', '--force', ...submoduleDirectories);
+            if (fetchDepth > 0) {
+                args.push(`--depth=${fetchDepth}`);
             }
-            else {
-                const args = ['-c', 'protocol.version=2'];
-                args.push('submodule', 'update', '--init', '--force');
-                if (fetchDepth > 0) {
-                    args.push(`--depth=${fetchDepth}`);
-                }
-                if (recursive) {
-                    args.push('--recursive');
-                }
-                yield this.execGit(args);
+            if (recursive) {
+                args.push('--recursive');
             }
+            yield this.execGit(args);
         });
     }
     submoduleStatus() {
@@ -1820,7 +1805,7 @@ function getInputs() {
         // Submodules
         result.submodules = false;
         result.nestedSubmodules = false;
-        result.submoduleDirectories = null;
+        result.submoduleDirectories = [];
         const submodulesString = (core.getInput('submodules') || '').toUpperCase();
         if (submodulesString == 'RECURSIVE') {
             result.submodules = true;
@@ -1834,9 +1819,6 @@ function getInputs() {
             result.submoduleDirectories = submoduleDirectories;
             if (!result.submodules)
                 result.submodules = true;
-        }
-        else {
-            result.submoduleDirectories = null;
         }
         core.debug(`submodules = ${result.submodules}`);
         core.debug(`recursive submodules = ${result.nestedSubmodules}`);

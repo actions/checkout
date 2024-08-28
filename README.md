@@ -116,7 +116,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: false
     submodules: ''
 
-    # A list of submodules to use when `submodules` is `true`.
+    # A list of submodules to checkout.
     # Default: null
     submodule-directories: ''
 

@@ -77,7 +77,7 @@ export interface IGitSourceSettings {
   /**
    * Indicates which submodule paths to checkout
    */
-  submoduleDirectories: string[] | null
+  submoduleDirectories: string[]
 
   /**
    * The auth token to use when fetching the repository

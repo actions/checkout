@@ -94,7 +94,7 @@ describe('input-helper tests', () => {
     expect(settings.showProgress).toBe(true)
     expect(settings.lfs).toBe(false)
     expect(settings.ref).toBe('refs/heads/some-ref')
-    expect(settings.submoduleDirectories).toBe(null)
+    expect(settings.submoduleDirectories).toStrictEqual([])
     expect(settings.repositoryName).toBe('some-repo')
     expect(settings.repositoryOwner).toBe('some-owner')
     expect(settings.repositoryPath).toBe(gitHubWorkspace)

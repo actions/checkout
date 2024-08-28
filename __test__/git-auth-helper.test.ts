@@ -813,7 +813,7 @@ async function setup(testName: string): Promise<void> {
     lfs: false,
     submodules: false,
     nestedSubmodules: false,
-    submoduleDirectories: null,
+    submoduleDirectories: [],
     persistCredentials: true,
     ref: 'refs/heads/main',
     repositoryName: 'my-repo',
