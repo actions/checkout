@@ -286,7 +286,7 @@ jobs:
           git commit -m "generated"
           git push
 ```
-
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
