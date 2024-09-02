@@ -84,4 +84,28 @@ describe('retry-helper tests', () => {
     expect(info[2]).toBe('some error 2')
     expect(info[3]).toMatch(/Waiting .+ seconds before trying again/)
   })
+
+  it('should be able to set max attempts', async () => {
+    let attempts = 0
+    let error: Error = null as unknown as Error
+    try {
+      retryHelper.config(5, 1, 5)
+      await retryHelper.execute(() => {
+        throw new Error(`some error ${++attempts}`)
+      })
+    } catch (err) {
+      error = err as Error
+    }
+    expect(error.message).toBe('some error 5')
+    expect(attempts).toBe(5)
+    expect(info).toHaveLength(6)
+    expect(info[0]).toBe('some error 1')
+    expect(info[1]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[2]).toBe('some error 2')
+    expect(info[3]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[4]).toBe('some error 3')
+    expect(info[5]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[6]).toBe('some error 4')
+    expect(info[7]).toMatch(/Waiting .+ seconds before trying again/)
+  })
 })

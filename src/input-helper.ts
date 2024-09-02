@@ -161,5 +161,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // Retry
+  result.maxAttempts = parseInt(core.getInput('max-attempts') || '3')
+  result.minRetryInterval = parseInt(core.getInput('min-retry-interval') || '10')
+  result.maxRetryInterval = parseInt(core.getInput('max-retry-interval') || '20')
+
   return result
 }
