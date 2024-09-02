@@ -126,6 +126,18 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Maximum number of attempts
+    # Default: 3
+    max-attempts: ''
+
+    # Minimum number of seconds to wait before retrying
+    # Default: 10
+    min-retry-interval: ''
+
+    # Maximum number of seconds to wait before retrying
+    # Default: 20
+    max-retry-interval: ''
 ```
 <!-- end usage -->
 

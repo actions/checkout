@@ -55,7 +55,12 @@ export class RetryHelper {
   }
 }
 
+let retryHelper = new RetryHelper()
+
 export async function execute<T>(action: () => Promise<T>): Promise<T> {
-  const retryHelper = new RetryHelper()
   return await retryHelper.execute(action)
+}
+
+export function config(maxAttempts: number, minSeconds: number, maxSeconds: number): void {
+  retryHelper = new RetryHelper(maxAttempts, minSeconds, maxSeconds)
 }

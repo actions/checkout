@@ -1835,6 +1835,10 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Retry
+        result.maxAttempts = parseInt(core.getInput('max-attempts') || '3');
+        result.minRetryInterval = parseInt(core.getInput('min-retry-interval') || '10');
+        result.maxRetryInterval = parseInt(core.getInput('max-retry-interval') || '20');
         return result;
     });
 }
@@ -1887,11 +1891,13 @@ const gitSourceProvider = __importStar(__nccwpck_require__(9210));
 const inputHelper = __importStar(__nccwpck_require__(5480));
 const path = __importStar(__nccwpck_require__(1017));
 const stateHelper = __importStar(__nccwpck_require__(4866));
+const retryHelper = __importStar(__nccwpck_require__(2155));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         try {
             const sourceSettings = yield inputHelper.getInputs();
+            retryHelper.config(sourceSettings.maxAttempts, sourceSettings.minRetryInterval, sourceSettings.maxRetryInterval);
             try {
                 // Register problem matcher
                 coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
@@ -2265,7 +2271,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.execute = exports.RetryHelper = void 0;
+exports.config = exports.execute = exports.RetryHelper = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const defaultMaxAttempts = 3;
 const defaultMinSeconds = 10;
@@ -2311,13 +2317,17 @@ class RetryHelper {
     }
 }
 exports.RetryHelper = RetryHelper;
+let retryHelper = new RetryHelper();
 function execute(action) {
     return __awaiter(this, void 0, void 0, function* () {
-        const retryHelper = new RetryHelper();
         return yield retryHelper.execute(action);
     });
 }
 exports.execute = execute;
+function config(maxAttempts, minSeconds, maxSeconds) {
+    retryHelper = new RetryHelper(maxAttempts, minSeconds, maxSeconds);
+}
+exports.config = config;
 
 
 /***/ }),

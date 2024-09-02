@@ -4,10 +4,12 @@ import * as gitSourceProvider from './git-source-provider'
 import * as inputHelper from './input-helper'
 import * as path from 'path'
 import * as stateHelper from './state-helper'
+import * as retryHelper from './retry-helper'
 
 async function run(): Promise<void> {
   try {
     const sourceSettings = await inputHelper.getInputs()
+    retryHelper.config(sourceSettings.maxAttempts, sourceSettings.minRetryInterval, sourceSettings.maxRetryInterval)
 
     try {
       // Register problem matcher
