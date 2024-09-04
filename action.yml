@@ -53,7 +53,7 @@ inputs:
     description: 'Whether to configure the token or SSH key with the local git config'
     default: true
   path:
-    description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+    description: 'Relative path under $GITHUB_WORKSPACE/working-directory to place the repository'
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
@@ -97,6 +97,9 @@ inputs:
     default: true
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
+    required: false
+  working-directory:
+    description: Provide the working directory for the git commands to execute into, defaults to $GITHUB_WORKSPACE
     required: false
 runs:
   using: node20

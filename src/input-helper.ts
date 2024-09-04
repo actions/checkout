@@ -8,14 +8,14 @@ import {IGitSourceSettings} from './git-source-settings'
 export async function getInputs(): Promise<IGitSourceSettings> {
   const result = {} as unknown as IGitSourceSettings
 
-  // GitHub workspace
-  let githubWorkspacePath = process.env['GITHUB_WORKSPACE']
-  if (!githubWorkspacePath) {
-    throw new Error('GITHUB_WORKSPACE not defined')
+  // Working directory
+  let workingDirectory = core.getInput('working-directory') || process.env['GITHUB_WORKSPACE']
+  if (!workingDirectory) {
+    throw new Error('working dir not defined')
   }
-  githubWorkspacePath = path.resolve(githubWorkspacePath)
-  core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`)
-  fsHelper.directoryExistsSync(githubWorkspacePath, true)
+  workingDirectory = path.resolve(workingDirectory)
+  core.debug(`working directory = '${workingDirectory}'`)
+  fsHelper.directoryExistsSync(workingDirectory, true)
 
   // Qualified repository
   const qualifiedRepository =
@@ -38,16 +38,16 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // Repository path
   result.repositoryPath = core.getInput('path') || '.'
   result.repositoryPath = path.resolve(
-    githubWorkspacePath,
+    workingDirectory,
     result.repositoryPath
   )
   if (
     !(result.repositoryPath + path.sep).startsWith(
-      githubWorkspacePath + path.sep
+      workingDirectory
     )
   ) {
     throw new Error(
-      `Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`
+      `Repository path '${result.repositoryPath + path.sep}' is not under '${workingDirectory}'`
     )
   }
 
