@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.1.8
+
+* Add Ref and Commit outputs by @lucacome in https://github.com/actions/checkout/pull/1180
+* Dependency updates by @dependabot- https://github.com/actions/checkout/pull/1777, https://github.com/actions/checkout/pull/1872
+
 ## v4.1.7
 * Bump the minor-npm-dependencies group across 1 directory with 4 updates by @dependabot in https://github.com/actions/checkout/pull/1739
 * Bump actions/checkout from 3 to 4 by @dependabot in https://github.com/actions/checkout/pull/1697
