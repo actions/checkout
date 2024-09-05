@@ -98,6 +98,11 @@ inputs:
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false
+outputs:
+  ref:
+    description: 'The branch, tag or SHA that was checked out'
+  commit:
+    description: 'The commit SHA that was checked out'
 runs:
   using: node20
   main: dist/index.js
