@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.1.8
+## v4.2.0
 
 * Add Ref and Commit outputs by @lucacome in https://github.com/actions/checkout/pull/1180
 * Dependency updates by @dependabot- https://github.com/actions/checkout/pull/1777, https://github.com/actions/checkout/pull/1872
