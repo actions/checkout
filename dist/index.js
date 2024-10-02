@@ -2005,8 +2005,8 @@ function getCheckoutInfo(git, ref, commit) {
             result.ref = ref;
         }
         // refs/
-        else if (upperRef.startsWith('REFS/') && commit) {
-            result.ref = commit;
+        else if (upperRef.startsWith('REFS/')) {
+            result.ref = commit ? commit : ref;
         }
         // Unqualified ref, check for a matching branch or tag
         else {
