@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.2.1
+* Check out other refs/* by commit if provided, fall back to ref by @orhantoy in https://github.com/actions/checkout/pull/1924
+
 ## v4.2.0
 
 * Add Ref and Commit outputs by @lucacome in https://github.com/actions/checkout/pull/1180
