@@ -289,9 +289,8 @@ class GitCommandManager {
       args.push(arg)
     }
 
-    const that = this
     await retryHelper.execute(async () => {
-      await that.execGit(args)
+      await this.execGit(args)
     })
   }
 
@@ -343,9 +342,8 @@ class GitCommandManager {
   async lfsFetch(ref: string): Promise<void> {
     const args = ['lfs', 'fetch', 'origin', ref]
 
-    const that = this
     await retryHelper.execute(async () => {
-      await that.execGit(args)
+      await this.execGit(args)
     })
   }
 
