@@ -144,4 +144,30 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
   })
+
+  it('accepts ref and commit', async () => {
+    inputs.ref = 'refs/pull/123/merge'
+    inputs.commit = '0123456789012345678901234567890123456789'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings).toBeTruthy()
+    expect(settings.ref).toBeTruthy()
+    expect(settings.ref).toStrictEqual('refs/pull/123/merge')
+    expect(settings.commit).toBeTruthy()
+    expect(settings.commit).toStrictEqual(
+      '0123456789012345678901234567890123456789'
+    )
+  })
+
+  it('ref fallbacks to commit if ref is empty but commit is specified', async () => {
+    inputs.ref = ''
+    inputs.commit = '0123456789012345678901234567890123456789'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings).toBeTruthy()
+    expect(settings.ref).toBeFalsy()
+    expect(settings.ref).toStrictEqual('')
+    expect(settings.commit).toBeTruthy()
+    expect(settings.commit).toStrictEqual(
+      '0123456789012345678901234567890123456789'
+    )
+  })
 })
