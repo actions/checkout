@@ -88,7 +88,7 @@ export async function getDefaultBranch(
   return await retryHelper.execute(async () => {
     core.info('Retrieving the default branch name')
     const octokit = github.getOctokit(authToken, {
-      baseUrl: getServerApiUrl(baseUrl)
+      baseUrl: getServerApiUrl()
     })
     let result: string
     try {
@@ -131,7 +131,7 @@ async function downloadArchive(
   baseUrl?: string
 ): Promise<Buffer> {
   const octokit = github.getOctokit(authToken, {
-    baseUrl: getServerApiUrl(baseUrl)
+    baseUrl: getServerApiUrl()
   })
   const download = IS_WINDOWS
     ? octokit.rest.repos.downloadZipballArchive

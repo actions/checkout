@@ -28,19 +28,19 @@ export function getServerUrl(url?: string): URL {
   return new URL(urlValue)
 }
 
-export function getServerApiUrl(url?: string): string {
-  let apiUrl = 'https://api.github.com'
-
-  if (isGhes(url)) {
-    const serverUrl = getServerUrl(url)
-    apiUrl = new URL(`${serverUrl.origin}/api/v3`).toString()
-  }
-
-  return apiUrl
+export function getServerApiUrl(): string {
+  return process.env['GITHUB_API_URL'] || 'https://api.github.com'
 }
 
-export function isGhes(url?: string): boolean {
-  const ghUrl = getServerUrl(url)
+export function isGhes(): boolean {
+  const ghUrl = new URL(
+    process.env['GITHUB_SERVER_URL'] || 'https://github.com'
+  )
 
-  return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM'
+  const hostname = ghUrl.hostname.trimEnd().toUpperCase()
+  const isGitHubHost = hostname === 'GITHUB.COM'
+  const isGheHost = hostname.endsWith('.GHE.COM')
+  const isLocalHost = hostname.endsWith('.LOCALHOST')
+
+  return !isGitHubHost && !isGheHost && !isLocalHost
 }
