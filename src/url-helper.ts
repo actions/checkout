@@ -21,20 +21,32 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
 }
 
 export function getServerUrl(url?: string): URL {
-  let urlValue =
-    url && url.trim().length > 0
-      ? url
-      : process.env['GITHUB_SERVER_URL'] || 'https://github.com'
-  return new URL(urlValue)
+  let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com'
+  if (hasContent(url, false)) {
+    resolvedUrl = url!
+  }
+
+  return new URL(resolvedUrl)
 }
 
-export function getServerApiUrl(): string {
+export function getServerApiUrl(url?: string): string {
+  if (hasContent(url, false)) {
+    let serverUrl = getServerUrl(url)
+    if (isGhes(url)) {
+      serverUrl.pathname = "api/v3"
+    } else {
+      serverUrl.hostname = "api." + serverUrl.hostname
+    }
+
+    return pruneSuffix(serverUrl.toString(), '/')
+  }
+
   return process.env['GITHUB_API_URL'] || 'https://api.github.com'
 }
 
-export function isGhes(): boolean {
+export function isGhes(url?: string): boolean {
   const ghUrl = new URL(
-    process.env['GITHUB_SERVER_URL'] || 'https://github.com'
+    url || process.env['GITHUB_SERVER_URL'] || 'https://github.com'
   )
 
   const hostname = ghUrl.hostname.trimEnd().toUpperCase()
@@ -44,3 +56,20 @@ export function isGhes(): boolean {
 
   return !isGitHubHost && !isGheHost && !isLocalHost
 }
+
+
+function pruneSuffix(text: string, suffix: string) {
+  if (hasContent(suffix, true) && text?.endsWith(suffix)) {
+    return text.substring(0, text.length - suffix.length)
+  }
+  return text
+}
+
+function hasContent(text: string | undefined, allowPureWhitespace: boolean): boolean {
+  let refinedText = text ?? ""
+  if (!allowPureWhitespace) {
+    refinedText = refinedText.trim()
+  }
+  return refinedText.length > 0
+}
+
