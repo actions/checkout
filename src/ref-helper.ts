@@ -192,7 +192,7 @@ export async function checkCommitInfo(
 ): Promise<void> {
   try {
     // GHES?
-    if (isGhes()) {
+    if (isGhes(baseUrl)) {
       return
     }
 
@@ -249,7 +249,7 @@ export async function checkCommitInfo(
         `Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`
       )
       const octokit = github.getOctokit(token, {
-        baseUrl: getServerApiUrl(),
+        baseUrl: getServerApiUrl(baseUrl),
         userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload(
           'number'
         )};run_id=${

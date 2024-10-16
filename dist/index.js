@@ -1617,7 +1617,7 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
         return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
             core.info('Retrieving the default branch name');
             const octokit = github.getOctokit(authToken, {
-                baseUrl: (0, url_helper_1.getServerApiUrl)()
+                baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
             });
             let result;
             try {
@@ -1650,7 +1650,7 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
 function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = github.getOctokit(authToken, {
-            baseUrl: (0, url_helper_1.getServerApiUrl)()
+            baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
         });
         const download = IS_WINDOWS
             ? octokit.rest.repos.downloadZipballArchive
@@ -2128,7 +2128,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
         var _a;
         try {
             // GHES?
-            if ((0, url_helper_1.isGhes)()) {
+            if ((0, url_helper_1.isGhes)(baseUrl)) {
                 return;
             }
             // Auth token?
@@ -2174,7 +2174,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
             if (actualHeadSha !== expectedHeadSha) {
                 core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
                 const octokit = github.getOctokit(token, {
-                    baseUrl: (0, url_helper_1.getServerApiUrl)(),
+                    baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl),
                     userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
                 });
                 yield octokit.rest.repos.get({
@@ -2454,21 +2454,45 @@ function getFetchUrl(settings) {
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
 }
 function getServerUrl(url) {
-    let urlValue = url && url.trim().length > 0
-        ? url
-        : process.env['GITHUB_SERVER_URL'] || 'https://github.com';
-    return new url_1.URL(urlValue);
+    let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com';
+    if (hasContent(url, false)) {
+        resolvedUrl = url;
+    }
+    return new url_1.URL(resolvedUrl);
 }
-function getServerApiUrl() {
+function getServerApiUrl(url) {
+    if (hasContent(url, false)) {
+        let serverUrl = getServerUrl(url);
+        if (isGhes(url)) {
+            serverUrl.pathname = "api/v3";
+        }
+        else {
+            serverUrl.hostname = "api." + serverUrl.hostname;
+        }
+        return pruneSuffix(serverUrl.toString(), '/');
+    }
     return process.env['GITHUB_API_URL'] || 'https://api.github.com';
 }
-function isGhes() {
-    const ghUrl = new url_1.URL(process.env['GITHUB_SERVER_URL'] || 'https://github.com');
+function isGhes(url) {
+    const ghUrl = new url_1.URL(url || process.env['GITHUB_SERVER_URL'] || 'https://github.com');
     const hostname = ghUrl.hostname.trimEnd().toUpperCase();
     const isGitHubHost = hostname === 'GITHUB.COM';
     const isGheHost = hostname.endsWith('.GHE.COM');
     const isLocalHost = hostname.endsWith('.LOCALHOST');
     return !isGitHubHost && !isGheHost && !isLocalHost;
+}
+function pruneSuffix(text, suffix) {
+    if (hasContent(suffix, true) && (text === null || text === void 0 ? void 0 : text.endsWith(suffix))) {
+        return text.substring(0, text.length - suffix.length);
+    }
+    return text;
+}
+function hasContent(text, allowPureWhitespace) {
+    let refinedText = text !== null && text !== void 0 ? text : "";
+    if (!allowPureWhitespace) {
+        refinedText = refinedText.trim();
+    }
+    return refinedText.length > 0;
 }
 
 
