@@ -14,10 +14,20 @@ describe('isGhes tests', () => {
 describe('getServerApiUrl tests', () => {
   it('basics', async () => {
     expect(urlHelper.getServerApiUrl()).toBe('https://api.github.com')
-    expect(urlHelper.getServerApiUrl('https://github.com')).toBe('https://api.github.com')
-    expect(urlHelper.getServerApiUrl('https://GitHub.com')).toBe('https://api.github.com')
-    expect(urlHelper.getServerApiUrl('https://europe.ghe.com')).toBe('https://api.europe.ghe.com')
-    expect(urlHelper.getServerApiUrl('https://australia.GHE.COM')).toBe('https://api.australia.ghe.com')
-    expect(urlHelper.getServerApiUrl('https://src.onpremise.customer.com')).toBe('https://src.onpremise.customer.com/api/v3')
+    expect(urlHelper.getServerApiUrl('https://github.com')).toBe(
+      'https://api.github.com'
+    )
+    expect(urlHelper.getServerApiUrl('https://GitHub.com')).toBe(
+      'https://api.github.com'
+    )
+    expect(urlHelper.getServerApiUrl('https://europe.ghe.com')).toBe(
+      'https://api.europe.ghe.com'
+    )
+    expect(urlHelper.getServerApiUrl('https://australia.GHE.COM')).toBe(
+      'https://api.australia.ghe.com'
+    )
+    expect(
+      urlHelper.getServerApiUrl('https://src.onpremise.customer.com')
+    ).toBe('https://src.onpremise.customer.com/api/v3')
   })
 })

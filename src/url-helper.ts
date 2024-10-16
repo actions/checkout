@@ -33,9 +33,9 @@ export function getServerApiUrl(url?: string): string {
   if (hasContent(url, false)) {
     let serverUrl = getServerUrl(url)
     if (isGhes(url)) {
-      serverUrl.pathname = "api/v3"
+      serverUrl.pathname = 'api/v3'
     } else {
-      serverUrl.hostname = "api." + serverUrl.hostname
+      serverUrl.hostname = 'api.' + serverUrl.hostname
     }
 
     return pruneSuffix(serverUrl.toString(), '/')
@@ -57,7 +57,6 @@ export function isGhes(url?: string): boolean {
   return !isGitHubHost && !isGheHost && !isLocalHost
 }
 
-
 function pruneSuffix(text: string, suffix: string) {
   if (hasContent(suffix, true) && text?.endsWith(suffix)) {
     return text.substring(0, text.length - suffix.length)
@@ -65,11 +64,13 @@ function pruneSuffix(text: string, suffix: string) {
   return text
 }
 
-function hasContent(text: string | undefined, allowPureWhitespace: boolean): boolean {
-  let refinedText = text ?? ""
+function hasContent(
+  text: string | undefined,
+  allowPureWhitespace: boolean
+): boolean {
+  let refinedText = text ?? ''
   if (!allowPureWhitespace) {
     refinedText = refinedText.trim()
   }
   return refinedText.length > 0
 }
-
