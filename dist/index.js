@@ -2464,10 +2464,10 @@ function getServerApiUrl(url) {
     if (hasContent(url, false)) {
         let serverUrl = getServerUrl(url);
         if (isGhes(url)) {
-            serverUrl.pathname = "api/v3";
+            serverUrl.pathname = 'api/v3';
         }
         else {
-            serverUrl.hostname = "api." + serverUrl.hostname;
+            serverUrl.hostname = 'api.' + serverUrl.hostname;
         }
         return pruneSuffix(serverUrl.toString(), '/');
     }
@@ -2488,7 +2488,7 @@ function pruneSuffix(text, suffix) {
     return text;
 }
 function hasContent(text, allowPureWhitespace) {
-    let refinedText = text !== null && text !== void 0 ? text : "";
+    let refinedText = text !== null && text !== void 0 ? text : '';
     if (!allowPureWhitespace) {
         refinedText = refinedText.trim();
     }
