@@ -5,7 +5,7 @@ describe('isGhes tests', () => {
     expect(urlHelper.isGhes()).toBeFalsy()
     expect(urlHelper.isGhes('https://github.com')).toBeFalsy()
     //expect(urlHelper.isGhes('https://api.github.com')).toBeFalsy()
-    expect(urlHelper.isGhes('https://europe.ghe.com')).toBeFalsy()
+    expect(urlHelper.isGhes('https://contoso.ghe.com')).toBeFalsy()
     expect(urlHelper.isGhes('https://test.github.localhost')).toBeFalsy()
     expect(urlHelper.isGhes('https://src.onpremise.customer.com')).toBeTruthy()
   })
@@ -20,11 +20,11 @@ describe('getServerApiUrl tests', () => {
     expect(urlHelper.getServerApiUrl('https://GitHub.com')).toBe(
       'https://api.github.com'
     )
-    expect(urlHelper.getServerApiUrl('https://europe.ghe.com')).toBe(
-      'https://api.europe.ghe.com'
+    expect(urlHelper.getServerApiUrl('https://contoso.ghe.com')).toBe(
+      'https://api.contoso.ghe.com'
     )
-    expect(urlHelper.getServerApiUrl('https://australia.GHE.COM')).toBe(
-      'https://api.australia.ghe.com'
+    expect(urlHelper.getServerApiUrl('https://fabrikam.GHE.COM')).toBe(
+      'https://api.fabrikam.ghe.com'
     )
     expect(
       urlHelper.getServerApiUrl('https://src.onpremise.customer.com')
