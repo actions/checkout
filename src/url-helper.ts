@@ -51,10 +51,10 @@ export function isGhes(url?: string): boolean {
 
   const hostname = ghUrl.hostname.trimEnd().toUpperCase()
   const isGitHubHost = hostname === 'GITHUB.COM'
-  const isGheHost = hostname.endsWith('.GHE.COM')
+  const isGitHubEnterpriseCloudHost = hostname.endsWith('.GHE.COM')
   const isLocalHost = hostname.endsWith('.LOCALHOST')
 
-  return !isGitHubHost && !isGheHost && !isLocalHost
+  return !isGitHubHost && !isGitHubEnterpriseCloudHost && !isLocalHost
 }
 
 function pruneSuffix(text: string, suffix: string) {
