@@ -4,10 +4,9 @@ describe('isGhes tests', () => {
   it('basics', async () => {
     expect(urlHelper.isGhes()).toBeFalsy()
     expect(urlHelper.isGhes('https://github.com')).toBeFalsy()
-    //expect(urlHelper.isGhes('https://api.github.com')).toBeFalsy()
     expect(urlHelper.isGhes('https://contoso.ghe.com')).toBeFalsy()
     expect(urlHelper.isGhes('https://test.github.localhost')).toBeFalsy()
-    expect(urlHelper.isGhes('https://src.onpremise.customer.com')).toBeTruthy()
+    expect(urlHelper.isGhes('https://src.onpremise.fabrikam.com')).toBeTruthy()
   })
 })
 
@@ -27,7 +26,7 @@ describe('getServerApiUrl tests', () => {
       'https://api.fabrikam.ghe.com'
     )
     expect(
-      urlHelper.getServerApiUrl('https://src.onpremise.customer.com')
-    ).toBe('https://src.onpremise.customer.com/api/v3')
+      urlHelper.getServerApiUrl('https://src.onpremise.fabrikam.com')
+    ).toBe('https://src.onpremise.fabrikam.com/api/v3')
   })
 })
