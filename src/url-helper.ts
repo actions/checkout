@@ -22,7 +22,7 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
 
 export function getServerUrl(url?: string): URL {
   let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com'
-  if (hasContent(url, false)) {
+  if (hasContent(url, WhitespaceMode.IgnorePureWhitespace)) {
     resolvedUrl = url!
   }
 
@@ -30,7 +30,7 @@ export function getServerUrl(url?: string): URL {
 }
 
 export function getServerApiUrl(url?: string): string {
-  if (hasContent(url, false)) {
+  if (hasContent(url, WhitespaceMode.IgnorePureWhitespace)) {
     let serverUrl = getServerUrl(url)
     if (isGhes(url)) {
       serverUrl.pathname = 'api/v3'
@@ -58,18 +58,26 @@ export function isGhes(url?: string): boolean {
 }
 
 function pruneSuffix(text: string, suffix: string) {
-  if (hasContent(suffix, true) && text?.endsWith(suffix)) {
+  if (
+    hasContent(suffix, WhitespaceMode.AllowPureWhitespace) &&
+    text?.endsWith(suffix)
+  ) {
     return text.substring(0, text.length - suffix.length)
   }
   return text
 }
 
+enum WhitespaceMode {
+  IgnorePureWhitespace,
+  AllowPureWhitespace
+}
+
 function hasContent(
   text: string | undefined,
-  allowPureWhitespace: boolean
+  whitespaceMode: WhitespaceMode
 ): boolean {
   let refinedText = text ?? ''
-  if (!allowPureWhitespace) {
+  if (whitespaceMode == WhitespaceMode.IgnorePureWhitespace) {
     refinedText = refinedText.trim()
   }
   return refinedText.length > 0

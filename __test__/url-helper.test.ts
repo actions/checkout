@@ -1,5 +1,28 @@
 import * as urlHelper from '../src/url-helper'
 
+describe('getServerUrl tests', () => {
+  it('basics', async () => {
+    // Note that URL::toString will append a trailing / when passed just a domain name ...
+    expect(urlHelper.getServerUrl().toString()).toBe('https://github.com/')
+    expect(urlHelper.getServerUrl(' ').toString()).toBe('https://github.com/')
+    expect(urlHelper.getServerUrl('   ').toString()).toBe('https://github.com/')
+    expect(urlHelper.getServerUrl('http://contoso.com').toString()).toBe(
+      'http://contoso.com/'
+    )
+    expect(urlHelper.getServerUrl('https://contoso.com').toString()).toBe(
+      'https://contoso.com/'
+    )
+    expect(urlHelper.getServerUrl('https://contoso.com/').toString()).toBe(
+      'https://contoso.com/'
+    )
+
+    // ... but can't make that same assumption when passed an URL that includes some deeper path.
+    expect(urlHelper.getServerUrl('https://contoso.com/a/b').toString()).toBe(
+      'https://contoso.com/a/b'
+    )
+  })
+})
+
 describe('isGhes tests', () => {
   it('basics', async () => {
     expect(urlHelper.isGhes()).toBeFalsy()
