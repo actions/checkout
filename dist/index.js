@@ -2477,9 +2477,9 @@ function isGhes(url) {
     const ghUrl = new url_1.URL(url || process.env['GITHUB_SERVER_URL'] || 'https://github.com');
     const hostname = ghUrl.hostname.trimEnd().toUpperCase();
     const isGitHubHost = hostname === 'GITHUB.COM';
-    const isGheHost = hostname.endsWith('.GHE.COM');
+    const isGitHubEnterpriseCloudHost = hostname.endsWith('.GHE.COM');
     const isLocalHost = hostname.endsWith('.LOCALHOST');
-    return !isGitHubHost && !isGheHost && !isLocalHost;
+    return !isGitHubHost && !isGitHubEnterpriseCloudHost && !isLocalHost;
 }
 function pruneSuffix(text, suffix) {
     if (hasContent(suffix, true) && (text === null || text === void 0 ? void 0 : text.endsWith(suffix))) {
