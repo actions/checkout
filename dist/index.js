@@ -2455,13 +2455,13 @@ function getFetchUrl(settings) {
 }
 function getServerUrl(url) {
     let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com';
-    if (hasContent(url, WhitespaceMode.IgnorePureWhitespace)) {
+    if (hasContent(url, WhitespaceMode.Trim)) {
         resolvedUrl = url;
     }
     return new url_1.URL(resolvedUrl);
 }
 function getServerApiUrl(url) {
-    if (hasContent(url, WhitespaceMode.IgnorePureWhitespace)) {
+    if (hasContent(url, WhitespaceMode.Trim)) {
         let serverUrl = getServerUrl(url);
         if (isGhes(url)) {
             serverUrl.pathname = 'api/v3';
@@ -2482,20 +2482,19 @@ function isGhes(url) {
     return !isGitHubHost && !isGitHubEnterpriseCloudHost && !isLocalHost;
 }
 function pruneSuffix(text, suffix) {
-    if (hasContent(suffix, WhitespaceMode.AllowPureWhitespace) &&
-        (text === null || text === void 0 ? void 0 : text.endsWith(suffix))) {
+    if (hasContent(suffix, WhitespaceMode.Preserve) && (text === null || text === void 0 ? void 0 : text.endsWith(suffix))) {
         return text.substring(0, text.length - suffix.length);
     }
     return text;
 }
 var WhitespaceMode;
 (function (WhitespaceMode) {
-    WhitespaceMode[WhitespaceMode["IgnorePureWhitespace"] = 0] = "IgnorePureWhitespace";
-    WhitespaceMode[WhitespaceMode["AllowPureWhitespace"] = 1] = "AllowPureWhitespace";
+    WhitespaceMode[WhitespaceMode["Trim"] = 0] = "Trim";
+    WhitespaceMode[WhitespaceMode["Preserve"] = 1] = "Preserve";
 })(WhitespaceMode || (WhitespaceMode = {}));
 function hasContent(text, whitespaceMode) {
     let refinedText = text !== null && text !== void 0 ? text : '';
-    if (whitespaceMode == WhitespaceMode.IgnorePureWhitespace) {
+    if (whitespaceMode == WhitespaceMode.Trim) {
         refinedText = refinedText.trim();
     }
     return refinedText.length > 0;
