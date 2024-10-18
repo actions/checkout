@@ -1,21 +1,5 @@
 # Changelog
 
-## v4.1.0
-- [Add support for partial checkout filters](https://github.com/actions/checkout/pull/1396)
-
-## v4.0.0
-- [Support fetching without the --progress option](https://github.com/actions/checkout/pull/1067)
-- [Update to node20](https://github.com/actions/checkout/pull/1436)
-
-## v3.6.0
-- [Fix: Mark test scripts with Bash'isms to be run via Bash](https://github.com/actions/checkout/pull/1377)
-- [Add option to fetch tags even if fetch-depth > 0](https://github.com/actions/checkout/pull/579)
-
-## v3.5.3
-- [Fix: Checkout fail in self-hosted runners when faulty submodule are checked-in](https://github.com/actions/checkout/pull/1196)
-- [Fix typos found by codespell](https://github.com/actions/checkout/pull/1287)
-- [Add support for sparse checkouts](https://github.com/actions/checkout/pull/1369)
-
 ## v3.5.2
 - [Fix api endpoint for GHES](https://github.com/actions/checkout/pull/1289)
 

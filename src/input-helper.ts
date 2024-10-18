@@ -82,41 +82,12 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
-  // Filter
-  const filter = core.getInput('filter')
-  if (filter) {
-    result.filter = filter
-  }
-
-  core.debug(`filter = ${result.filter}`)
-
-  // Sparse checkout
-  const sparseCheckout = core.getMultilineInput('sparse-checkout')
-  if (sparseCheckout.length) {
-    result.sparseCheckout = sparseCheckout
-    core.debug(`sparse checkout = ${result.sparseCheckout}`)
-  }
-
-  result.sparseCheckoutConeMode =
-    (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
-    'TRUE'
-
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
     result.fetchDepth = 0
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
-
-  // Fetch tags
-  result.fetchTags =
-    (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
-  core.debug(`fetch tags = ${result.fetchTags}`)
-
-  // Show fetch progress
-  result.showProgress =
-    (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
-  core.debug(`show progress = ${result.showProgress}`)
 
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
