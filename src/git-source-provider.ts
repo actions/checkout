@@ -153,38 +153,23 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Fetch
     core.startGroup('Fetching the repository')
-    const fetchOptions: {
-      filter?: string
-      fetchDepth?: number
-      fetchTags?: boolean
-      showProgress?: boolean
-    } = {}
-
-    if (settings.filter) {
-      fetchOptions.filter = settings.filter
-    } else if (settings.sparseCheckout) {
-      fetchOptions.filter = 'blob:none'
-    }
-
     if (settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
         settings.commit
       )
-      await git.fetch(refSpec, fetchOptions)
+      await git.fetch(refSpec)
 
       // When all history is fetched, the ref we're interested in may have moved to a different
       // commit (push or force push). If so, fetch again with a targeted refspec.
       if (!(await refHelper.testRef(git, settings.ref, settings.commit))) {
         refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-        await git.fetch(refSpec, fetchOptions)
+        await git.fetch(refSpec)
       }
     } else {
-      fetchOptions.fetchDepth = settings.fetchDepth
-      fetchOptions.fetchTags = settings.fetchTags
       const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
-      await git.fetch(refSpec, fetchOptions)
+      await git.fetch(refSpec, settings.fetchDepth)
     }
     core.endGroup()
 
@@ -200,21 +185,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // LFS fetch
     // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
     // Explicit lfs fetch will fetch lfs objects in parallel.
-    // For sparse checkouts, let `checkout` fetch the needed objects lazily.
-    if (settings.lfs && !settings.sparseCheckout) {
+    if (settings.lfs) {
       core.startGroup('Fetching LFS objects')
       await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref)
-      core.endGroup()
-    }
-
-    // Sparse checkout
-    if (settings.sparseCheckout) {
-      core.startGroup('Setting up sparse checkout')
-      if (settings.sparseCheckoutConeMode) {
-        await git.sparseCheckout(settings.sparseCheckout)
-      } else {
-        await git.sparseCheckoutNonConeMode(settings.sparseCheckout)
-      }
       core.endGroup()
     }
 
@@ -288,11 +261,7 @@ export async function cleanup(repositoryPath: string): Promise<void> {
 
   let git: IGitCommandManager
   try {
-    git = await gitCommandManager.createCommandManager(
-      repositoryPath,
-      false,
-      false
-    )
+    git = await gitCommandManager.createCommandManager(repositoryPath, false)
   } catch {
     return
   }
@@ -328,8 +297,7 @@ async function getGitCommandManager(
   try {
     return await gitCommandManager.createCommandManager(
       settings.repositoryPath,
-      settings.lfs,
-      settings.sparseCheckout != null
+      settings.lfs
     )
   } catch (err) {
     // Git is required for LFS
