@@ -126,6 +126,11 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Use the given object format when creating local repository.  Specifically, use
+    # 'sha256' to checkout a SHA-256 repository.
+    # Defualt: null
+    object-format: ''
 ```
 <!-- end usage -->
 
@@ -143,6 +148,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
+- [Checkout SHA-256 repository](#checkout-sha-256-repository)
 
 ## Fetch only the root files
 
@@ -287,6 +293,14 @@ jobs:
           git push
 ```
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+## Checkout SHA-256 repository
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    object-format: sha256
+```
 
 # License
 
