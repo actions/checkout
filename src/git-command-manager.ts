@@ -44,6 +44,7 @@ export interface IGitCommandManager {
   getWorkingDirectory(): string
   init(): Promise<void>
   isDetached(): Promise<boolean>
+  lfsCheckout(): Promise<void>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
   log1(format?: string): Promise<string>
@@ -338,6 +339,10 @@ class GitCommandManager {
       true
     )
     return !output.stdout.trim().startsWith('refs/heads/')
+  }
+
+  async lfsCheckout(): Promise<void> {
+    await this.execGit(['lfs', 'checkout'])
   }
 
   async lfsFetch(ref: string): Promise<void> {
