@@ -21,26 +21,61 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
 }
 
 export function getServerUrl(url?: string): URL {
-  let urlValue =
-    url && url.trim().length > 0
-      ? url
-      : process.env['GITHUB_SERVER_URL'] || 'https://github.com'
-  return new URL(urlValue)
+  let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com'
+  if (hasContent(url, WhitespaceMode.Trim)) {
+    resolvedUrl = url!
+  }
+
+  return new URL(resolvedUrl)
 }
 
 export function getServerApiUrl(url?: string): string {
-  let apiUrl = 'https://api.github.com'
+  if (hasContent(url, WhitespaceMode.Trim)) {
+    let serverUrl = getServerUrl(url)
+    if (isGhes(url)) {
+      serverUrl.pathname = 'api/v3'
+    } else {
+      serverUrl.hostname = 'api.' + serverUrl.hostname
+    }
 
-  if (isGhes(url)) {
-    const serverUrl = getServerUrl(url)
-    apiUrl = new URL(`${serverUrl.origin}/api/v3`).toString()
+    return pruneSuffix(serverUrl.toString(), '/')
   }
 
-  return apiUrl
+  return process.env['GITHUB_API_URL'] || 'https://api.github.com'
 }
 
 export function isGhes(url?: string): boolean {
-  const ghUrl = getServerUrl(url)
+  const ghUrl = new URL(
+    url || process.env['GITHUB_SERVER_URL'] || 'https://github.com'
+  )
 
-  return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM'
+  const hostname = ghUrl.hostname.trimEnd().toUpperCase()
+  const isGitHubHost = hostname === 'GITHUB.COM'
+  const isGitHubEnterpriseCloudHost = hostname.endsWith('.GHE.COM')
+  const isLocalHost = hostname.endsWith('.LOCALHOST')
+
+  return !isGitHubHost && !isGitHubEnterpriseCloudHost && !isLocalHost
+}
+
+function pruneSuffix(text: string, suffix: string) {
+  if (hasContent(suffix, WhitespaceMode.Preserve) && text?.endsWith(suffix)) {
+    return text.substring(0, text.length - suffix.length)
+  }
+  return text
+}
+
+enum WhitespaceMode {
+  Trim,
+  Preserve
+}
+
+function hasContent(
+  text: string | undefined,
+  whitespaceMode: WhitespaceMode
+): boolean {
+  let refinedText = text ?? ''
+  if (whitespaceMode == WhitespaceMode.Trim) {
+    refinedText = refinedText.trim()
+  }
+  return refinedText.length > 0
 }

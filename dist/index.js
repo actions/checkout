@@ -2454,22 +2454,50 @@ function getFetchUrl(settings) {
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
 }
 function getServerUrl(url) {
-    let urlValue = url && url.trim().length > 0
-        ? url
-        : process.env['GITHUB_SERVER_URL'] || 'https://github.com';
-    return new url_1.URL(urlValue);
+    let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com';
+    if (hasContent(url, WhitespaceMode.Trim)) {
+        resolvedUrl = url;
+    }
+    return new url_1.URL(resolvedUrl);
 }
 function getServerApiUrl(url) {
-    let apiUrl = 'https://api.github.com';
-    if (isGhes(url)) {
-        const serverUrl = getServerUrl(url);
-        apiUrl = new url_1.URL(`${serverUrl.origin}/api/v3`).toString();
+    if (hasContent(url, WhitespaceMode.Trim)) {
+        let serverUrl = getServerUrl(url);
+        if (isGhes(url)) {
+            serverUrl.pathname = 'api/v3';
+        }
+        else {
+            serverUrl.hostname = 'api.' + serverUrl.hostname;
+        }
+        return pruneSuffix(serverUrl.toString(), '/');
     }
-    return apiUrl;
+    return process.env['GITHUB_API_URL'] || 'https://api.github.com';
 }
 function isGhes(url) {
-    const ghUrl = getServerUrl(url);
-    return ghUrl.hostname.toUpperCase() !== 'GITHUB.COM';
+    const ghUrl = new url_1.URL(url || process.env['GITHUB_SERVER_URL'] || 'https://github.com');
+    const hostname = ghUrl.hostname.trimEnd().toUpperCase();
+    const isGitHubHost = hostname === 'GITHUB.COM';
+    const isGitHubEnterpriseCloudHost = hostname.endsWith('.GHE.COM');
+    const isLocalHost = hostname.endsWith('.LOCALHOST');
+    return !isGitHubHost && !isGitHubEnterpriseCloudHost && !isLocalHost;
+}
+function pruneSuffix(text, suffix) {
+    if (hasContent(suffix, WhitespaceMode.Preserve) && (text === null || text === void 0 ? void 0 : text.endsWith(suffix))) {
+        return text.substring(0, text.length - suffix.length);
+    }
+    return text;
+}
+var WhitespaceMode;
+(function (WhitespaceMode) {
+    WhitespaceMode[WhitespaceMode["Trim"] = 0] = "Trim";
+    WhitespaceMode[WhitespaceMode["Preserve"] = 1] = "Preserve";
+})(WhitespaceMode || (WhitespaceMode = {}));
+function hasContent(text, whitespaceMode) {
+    let refinedText = text !== null && text !== void 0 ? text : '';
+    if (whitespaceMode == WhitespaceMode.Trim) {
+        refinedText = refinedText.trim();
+    }
+    return refinedText.length > 0;
 }
 
 
