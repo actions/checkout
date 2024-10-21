@@ -272,6 +272,9 @@ jobs:
 
 ```yaml
 on: push
+# `contents:write` permission must be granted to the built-in token, see https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+permissions:
+  contents: write #Require 
 jobs:
   build:
     runs-on: ubuntu-latest
