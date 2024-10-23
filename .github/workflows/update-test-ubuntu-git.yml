@@ -48,7 +48,7 @@ jobs:
 
       # Use `docker/build-push-action` to build (and optionally publish) the image. 
       - name: Build Docker Image (with optional Push)
-        uses: docker/build-push-action@v6.5.0
+        uses: docker/build-push-action@v6.9.0
         with:
           context: .
           file: images/test-ubuntu-git.Dockerfile
