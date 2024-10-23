@@ -33,6 +33,9 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # with the local git config, which enables your scripts to run authenticated git
     # commands. The post-job step removes the PAT.
     #
+    # If any of the submodules are private GitHub repos, pass in a PAT with read-access 
+    # to them. 
+    #
     # We recommend using a service account with the least permissions necessary. Also
     # when generating a new PAT, select the least scopes necessary.
     #
@@ -110,8 +113,8 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Whether to checkout submodules: `true` to checkout submodules or `recursive` to
     # recursively checkout submodules.
     #
-    # When the `ssh-key` input is not provided, SSH URLs beginning with
-    # `git@github.com:` are converted to HTTPS.
+    # When neither the `ssh-key` nor the `token` inputs are provided, SSH URLs 
+    # beginning with `git@github.com:` are converted to HTTPS. 
     #
     # Default: false
     submodules: ''
@@ -239,12 +242,19 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
   uses: actions/checkout@v4
   with:
     repository: my-org/my-private-tools
-    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+    token: ${{ secrets.GH_PAT }}  # `GH_PAT` is a secret that contains a PAT with read-access to this private repository
     path: my-tools
 ```
 
-> - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
+## Checkout a repo and its private submodules
 
+```yaml
+- name: Checkout
+  uses: actions/checkout@v2
+  with:
+    submodules: true
+    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains a PAT with read-access to the private submodules
+```
 
 ## Checkout pull request HEAD commit instead of merge commit
 
