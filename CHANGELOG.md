@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.2.2
+* `url-helper.ts` now leverages well-known environment variables by @jww3 in https://github.com/actions/checkout/pull/1941
+* Expand unit test coverage for `isGhes` by @jww3 in https://github.com/actions/checkout/pull/1946
+
 ## v4.2.1
 * Check out other refs/* by commit if provided, fall back to ref by @orhantoy in https://github.com/actions/checkout/pull/1924
 
