@@ -30,9 +30,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.directoryExistsSync = directoryExistsSync;
-exports.existsSync = existsSync;
-exports.fileExistsSync = fileExistsSync;
+exports.fileExistsSync = exports.existsSync = exports.directoryExistsSync = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 function directoryExistsSync(path, required) {
     var _a;
@@ -60,6 +58,7 @@ function directoryExistsSync(path, required) {
     }
     throw new Error(`Directory '${path}' does not exist`);
 }
+exports.directoryExistsSync = directoryExistsSync;
 function existsSync(path) {
     var _a;
     if (!path) {
@@ -76,6 +75,7 @@ function existsSync(path) {
     }
     return true;
 }
+exports.existsSync = existsSync;
 function fileExistsSync(path) {
     var _a;
     if (!path) {
@@ -96,6 +96,7 @@ function fileExistsSync(path) {
     }
     return false;
 }
+exports.fileExistsSync = fileExistsSync;
 
 
 /***/ }),
@@ -138,7 +139,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createAuthHelper = createAuthHelper;
+exports.createAuthHelper = void 0;
 const assert = __importStar(__nccwpck_require__(9491));
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
@@ -155,6 +156,7 @@ const SSH_COMMAND_KEY = 'core.sshCommand';
 function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
 }
+exports.createAuthHelper = createAuthHelper;
 class GitAuthHelper {
     constructor(gitCommandManager, gitSourceSettings) {
         this.insteadOfValues = [];
@@ -473,8 +475,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
-exports.createCommandManager = createCommandManager;
+exports.createCommandManager = exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -495,6 +496,7 @@ function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
     });
 }
+exports.createCommandManager = createCommandManager;
 class GitCommandManager {
     // Private constructor; use createCommandManager()
     constructor() {
@@ -709,9 +711,13 @@ class GitCommandManager {
     getWorkingDirectory() {
         return this.workingDirectory;
     }
-    init() {
+    init(options) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['init', this.workingDirectory]);
+            yield this.execGit([
+                'init',
+                ...((options === null || options === void 0 ? void 0 : options.objectFormat) ? [`--object-format=${options.objectFormat}`] : []),
+                this.workingDirectory
+            ]);
         });
     }
     isDetached() {
@@ -1018,7 +1024,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.prepareExistingDirectory = prepareExistingDirectory;
+exports.prepareExistingDirectory = void 0;
 const assert = __importStar(__nccwpck_require__(9491));
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -1122,6 +1128,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
         }
     });
 }
+exports.prepareExistingDirectory = prepareExistingDirectory;
 
 
 /***/ }),
@@ -1164,8 +1171,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getSource = getSource;
-exports.cleanup = cleanup;
+exports.cleanup = exports.getSource = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const gitAuthHelper = __importStar(__nccwpck_require__(2565));
@@ -1236,7 +1242,7 @@ function getSource(settings) {
             // Initialize the repository
             if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
                 core.startGroup('Initializing the repository');
-                yield git.init();
+                yield git.init({ objectFormat: settings.objectFormat });
                 yield git.remoteAdd('origin', repositoryUrl);
                 core.endGroup();
             }
@@ -1371,6 +1377,7 @@ function getSource(settings) {
         }
     });
 }
+exports.getSource = getSource;
 function cleanup(repositoryPath) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repo exists?
@@ -1406,6 +1413,7 @@ function cleanup(repositoryPath) {
         }
     });
 }
+exports.cleanup = cleanup;
 function getGitCommandManager(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         core.info(`Working directory is '${settings.repositoryPath}'`);
@@ -1544,8 +1552,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.downloadRepository = downloadRepository;
-exports.getDefaultBranch = getDefaultBranch;
+exports.getDefaultBranch = exports.downloadRepository = void 0;
 const assert = __importStar(__nccwpck_require__(9491));
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -1609,6 +1616,7 @@ function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath,
         yield io.rmRF(extractPath);
     });
 }
+exports.downloadRepository = downloadRepository;
 /**
  * Looks up the default branch name
  */
@@ -1647,6 +1655,7 @@ function getDefaultBranch(authToken, owner, repo, baseUrl) {
         }));
     });
 }
+exports.getDefaultBranch = getDefaultBranch;
 function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = github.getOctokit(authToken, {
@@ -1705,7 +1714,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getInputs = getInputs;
+exports.getInputs = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const github = __importStar(__nccwpck_require__(5438));
@@ -1831,9 +1840,18 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Object format
+        const objectFormat = core.getInput('object-format');
+        if (objectFormat) {
+            if (objectFormat != 'sha1' && objectFormat != 'sha256') {
+                throw Error(`Invalid object format '${objectFormat}'`);
+            }
+            result.objectFormat = objectFormat;
+        }
         return result;
     });
 }
+exports.getInputs = getInputs;
 
 
 /***/ }),
@@ -1965,12 +1983,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tagsRefSpec = void 0;
-exports.getCheckoutInfo = getCheckoutInfo;
-exports.getRefSpecForAllHistory = getRefSpecForAllHistory;
-exports.getRefSpec = getRefSpec;
-exports.testRef = testRef;
-exports.checkCommitInfo = checkCommitInfo;
+exports.checkCommitInfo = exports.testRef = exports.getRefSpec = exports.getRefSpecForAllHistory = exports.getCheckoutInfo = exports.tagsRefSpec = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const url_helper_1 = __nccwpck_require__(9437);
@@ -2024,6 +2037,7 @@ function getCheckoutInfo(git, ref, commit) {
         return result;
     });
 }
+exports.getCheckoutInfo = getCheckoutInfo;
 function getRefSpecForAllHistory(ref, commit) {
     const result = ['+refs/heads/*:refs/remotes/origin/*', exports.tagsRefSpec];
     if (ref && ref.toUpperCase().startsWith('REFS/PULL/')) {
@@ -2032,6 +2046,7 @@ function getRefSpecForAllHistory(ref, commit) {
     }
     return result;
 }
+exports.getRefSpecForAllHistory = getRefSpecForAllHistory;
 function getRefSpec(ref, commit) {
     if (!ref && !commit) {
         throw new Error('Args ref and commit cannot both be empty');
@@ -2080,6 +2095,7 @@ function getRefSpec(ref, commit) {
         return [`+${ref}:${ref}`];
     }
 }
+exports.getRefSpec = getRefSpec;
 /**
  * Tests whether the initial fetch created the ref at the expected commit
  */
@@ -2123,6 +2139,7 @@ function testRef(git, ref, commit) {
         }
     });
 }
+exports.testRef = testRef;
 function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit, baseUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
@@ -2188,6 +2205,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
         }
     });
 }
+exports.checkCommitInfo = checkCommitInfo;
 function fromPayload(path) {
     return select(github.context.payload, path);
 }
@@ -2212,12 +2230,13 @@ function select(obj, path) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.escape = escape;
+exports.escape = void 0;
 function escape(value) {
     return value.replace(/[^a-zA-Z0-9_]/g, x => {
         return `\\${x}`;
     });
 }
+exports.escape = escape;
 
 
 /***/ }),
@@ -2260,8 +2279,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RetryHelper = void 0;
-exports.execute = execute;
+exports.execute = exports.RetryHelper = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const defaultMaxAttempts = 3;
 const defaultMinSeconds = 10;
@@ -2313,6 +2331,7 @@ function execute(action) {
         return yield retryHelper.execute(action);
     });
 }
+exports.execute = execute;
 
 
 /***/ }),
@@ -2346,11 +2365,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
-exports.setRepositoryPath = setRepositoryPath;
-exports.setSshKeyPath = setSshKeyPath;
-exports.setSshKnownHostsPath = setSshKnownHostsPath;
-exports.setSafeDirectory = setSafeDirectory;
+exports.setSafeDirectory = exports.setSshKnownHostsPath = exports.setSshKeyPath = exports.setRepositoryPath = exports.SshKnownHostsPath = exports.SshKeyPath = exports.PostSetSafeDirectory = exports.RepositoryPath = exports.IsPost = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 /**
  * Indicates whether the POST action is running
@@ -2378,24 +2393,28 @@ exports.SshKnownHostsPath = core.getState('sshKnownHostsPath');
 function setRepositoryPath(repositoryPath) {
     core.saveState('repositoryPath', repositoryPath);
 }
+exports.setRepositoryPath = setRepositoryPath;
 /**
  * Save the SSH key path so the POST action can retrieve the value.
  */
 function setSshKeyPath(sshKeyPath) {
     core.saveState('sshKeyPath', sshKeyPath);
 }
+exports.setSshKeyPath = setSshKeyPath;
 /**
  * Save the SSH known hosts path so the POST action can retrieve the value.
  */
 function setSshKnownHostsPath(sshKnownHostsPath) {
     core.saveState('sshKnownHostsPath', sshKnownHostsPath);
 }
+exports.setSshKnownHostsPath = setSshKnownHostsPath;
 /**
  * Save the set-safe-directory input so the POST action can retrieve the value.
  */
 function setSafeDirectory() {
     core.saveState('setSafeDirectory', 'true');
 }
+exports.setSafeDirectory = setSafeDirectory;
 // Publish a variable so that when the POST action runs, it can determine it should run the cleanup logic.
 // This is necessary since we don't have a separate entry point.
 if (!exports.IsPost) {
@@ -2434,10 +2453,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getFetchUrl = getFetchUrl;
-exports.getServerUrl = getServerUrl;
-exports.getServerApiUrl = getServerApiUrl;
-exports.isGhes = isGhes;
+exports.isGhes = exports.getServerApiUrl = exports.getServerUrl = exports.getFetchUrl = void 0;
 const assert = __importStar(__nccwpck_require__(9491));
 const url_1 = __nccwpck_require__(7310);
 function getFetchUrl(settings) {
@@ -2453,6 +2469,7 @@ function getFetchUrl(settings) {
     // "origin" is SCHEME://HOSTNAME[:PORT]
     return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
 }
+exports.getFetchUrl = getFetchUrl;
 function getServerUrl(url) {
     let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com';
     if (hasContent(url, WhitespaceMode.Trim)) {
@@ -2460,6 +2477,7 @@ function getServerUrl(url) {
     }
     return new url_1.URL(resolvedUrl);
 }
+exports.getServerUrl = getServerUrl;
 function getServerApiUrl(url) {
     if (hasContent(url, WhitespaceMode.Trim)) {
         let serverUrl = getServerUrl(url);
@@ -2473,6 +2491,7 @@ function getServerApiUrl(url) {
     }
     return process.env['GITHUB_API_URL'] || 'https://api.github.com';
 }
+exports.getServerApiUrl = getServerApiUrl;
 function isGhes(url) {
     const ghUrl = new url_1.URL(url || process.env['GITHUB_SERVER_URL'] || 'https://github.com');
     const hostname = ghUrl.hostname.trimEnd().toUpperCase();
@@ -2499,6 +2518,7 @@ function hasContent(text, whitespaceMode) {
     }
     return refinedText.length > 0;
 }
+exports.isGhes = isGhes;
 
 
 /***/ }),
@@ -2541,7 +2561,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getOrganizationId = getOrganizationId;
+exports.getOrganizationId = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
 /**
@@ -2570,6 +2590,7 @@ function getOrganizationId() {
         }
     });
 }
+exports.getOrganizationId = getOrganizationId;
 
 
 /***/ }),
