@@ -43,5 +43,5 @@ if (!stateHelper.IsPost) {
 }
 // Post
 else {
-  cleanup()
+  core.warning('cleanup injected');cleanup()
 }
