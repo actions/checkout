@@ -43,5 +43,6 @@ if (!stateHelper.IsPost) {
 }
 // Post
 else {
+  core.warning(`cleanup`)
   cleanup()
 }
