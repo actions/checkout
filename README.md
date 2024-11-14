@@ -29,6 +29,11 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Otherwise, uses the default branch.
     ref: ''
 
+    # Indicates whether to checkout the default repository branch if the requested ref
+    # does not exist
+    # Default: false
+    default-branch-checkout: ''
+
     # Personal access token (PAT) used to fetch the repository. The PAT is configured
     # with the local git config, which enables your scripts to run authenticated git
     # commands. The post-job step removes the PAT.
