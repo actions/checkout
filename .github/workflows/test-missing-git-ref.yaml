@@ -1,0 +1,23 @@
+name: missing-git-ref-issue
+on:
+  workflow_dispatch:
+
+jobs:
+  open-close-reopen-pr:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Push dummy PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prBranch=oriy/testRefMerge
+          git branch -d "${prBranch}" 2>/dev/null || true
+          git checkout -b "${prBranch}"
+          touch dummy
+          git commit -am 'test ref merge'
+          git push --force origin "${prBranch}"
+          gh pr create --fill-first 
+          
