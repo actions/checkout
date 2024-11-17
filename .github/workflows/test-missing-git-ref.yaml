@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
+
+      - name: Git config
+        run: |  
+          git config --global user.name oriy
+          git config --global user.email oriy@github.com
         
       - name: Push dummy PR
         env:
