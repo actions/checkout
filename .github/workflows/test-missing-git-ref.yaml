@@ -1,0 +1,55 @@
+name: missing-git-ref-issue
+on:
+  workflow_dispatch:
+
+jobs:
+  open-close-reopen-pr:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_BRANCH: oriy/testRefMerge
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Git config
+        run: |  
+          git config --global user.name oriy
+          git config --global user.email 2827449+oriy@users.noreply.github.com
+        
+      - name: Push dummy PR
+        run: |
+          git branch -d "${{ env.PR_BRANCH }}" 2>/dev/null || true
+          git checkout -b "${{ env.PR_BRANCH }}"
+          touch dummy && git add dummy
+          git commit -am 'test ref merge'
+          git push --set-upstream --force origin HEAD:"${{ env.PR_BRANCH }}"
+          git remote -v
+          gh pr create --title "test missing git ref" --body "" || echo "pr might have been already open"
+          echo "PR_NUMBER=$(gh pr view --repo $GITHUB_REPOSITORY "${{ env.PR_BRANCH }}" --json number --jq ".number")" >> $GITHUB_ENV
+
+      - name: Checkout PR merge
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: refs/pull/${{ env.PR_NUMBER }}/merge
+          clean: true
+      
+      - name: Close and reopen PR
+        run: |
+          git checkout "${{ env.PR_BRANCH }}"
+          gh pr close --repo $GITHUB_REPOSITORY "${{ env.PR_BRANCH }}"
+          echo "wait few seconds"
+          for i in {1..5}; do
+              sleep 1
+              printf "."
+          done
+          echo
+          gh pr reopen --repo $GITHUB_REPOSITORY "${{ env.PR_BRANCH }}"
+          
+      - name: Checkout PR merge once again after PR reopen
+        uses: actions/checkout@v4.2.2
+        with:
+          ref: refs/pull/${{ env.PR_NUMBER }}/merge
+          clean: true
