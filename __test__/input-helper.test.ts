@@ -91,6 +91,7 @@ describe('input-helper tests', () => {
     expect(settings.repositoryOwner).toBe('some-owner')
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
     expect(settings.setSafeDirectory).toBe(true)
+    expect(settings.reference).toBe(undefined)
   })
 
   it('qualifies ref', async () => {
