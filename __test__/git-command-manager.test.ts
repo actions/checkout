@@ -375,4 +375,42 @@ describe('Test fetchDepth and fetchTags options', () => {
       expect.any(Object)
     )
   })
+
+  it('should call execGit with the correct arguments when bare is true', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2']
+    const options = {
+      filter: 'filterValue',
+      bare: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--bare',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--filter=filterValue',
+        'origin',
+        'refspec1',
+        'refspec2'
+      ],
+      expect.any(Object)
+    )
+  })
 })

@@ -110,7 +110,11 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
     ) {
       core.startGroup('Initializing the repository')
-      await git.init()
+      const initArgs = ['init']
+      if (settings.bare) {
+        initArgs.push('--bare')
+      }
+      await git.execGit(initArgs)
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
     }
