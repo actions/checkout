@@ -35,6 +35,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     #
     # We recommend using a service account with the least permissions necessary. Also
     # when generating a new PAT, select the least scopes necessary.
+    # For a basic restricted reference, you can use the same permissions as the
+    # [`GITHUB_TOKEN` gives.](https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token)
+    # This means creating a "Fine-grained personal access token" with the
+    # `content` and `metadata` permissions.
     #
     # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     #
