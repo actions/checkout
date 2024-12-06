@@ -143,6 +143,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
+- [Push a commit to a PR using the built-in token](#Push-a-commit-to-a-PR-using-the-built-in-token)
 
 ## Fetch only the root files
 
@@ -211,7 +212,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     repository: my-org/my-tools
     path: my-tools
 ```
-> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+> - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (nested)
 
@@ -225,7 +226,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     repository: my-org/my-tools
     path: my-tools
 ```
-> - If your secondary repository is private you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+> - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (private)
 
@@ -287,6 +288,31 @@ jobs:
           git push
 ```
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+## Push a commit to a PR using the built-in token
+
+In a pull request trigger, `ref` is required as GitHub Actions checks out in detached HEAD mode, meaning it doesn’t check out your branch by default.
+
+```yaml
+on: pull_request
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - run: |
+          date > generated.txt
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "generated"
+          git push
+```
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
 
 # License
 
