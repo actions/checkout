@@ -1,0 +1,69 @@
+{
+  "ghcr.io/wxw-matt/devcontainer-features/script_runner:0": {}
+  "ghcr.io/elanhasson/devcontainer-features/dotnet-aspire-daily:1": {}
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> [<filename-base>]" cr
+  ."Creates a new wallet in specified workchain, with private key saved to or loaded from <filename-base>.pk" cr
+  ."('new-wallet.pk' by default)" cr 1 halt
+} : usage
+$# 1- -2 and ' usage if
+
+$1 parse-workchain-id =: wc    // set workchain id from command line argument
+def? $2 { @' $2 } { "new-wallet" } cond constant file-base
+
+."Creating new wallet in workchain " wc . cr
+
+// Create new simple wallet
+<{ SETCP0 DUP IFNOTRET // return if recv_internal
+   DUP 85143 INT EQUAL OVER 78748 INT EQUAL OR IFJMP:<{ // "seqno" and "get_public_key" get-methods
+     1 INT AND c4 PUSHCTR CTOS 32 LDU 256 PLDU CONDSEL  // cnt or pubk
+   }>
+   INC 32 THROWIF  // fail unless recv_external
+   512 INT LDSLICEX DUP 32 PLDU   // sign cs cnt
+   c4 PUSHCTR CTOS 32 LDU 256 LDU ENDS  // sign cs cnt cnt' pubk
+   s1 s2 XCPU            // sign cs cnt pubk cnt' cnt
+   EQUAL 33 THROWIFNOT   // ( seqno mismatch? )
+   s2 PUSH HASHSU        // sign cs cnt pubk hash
+   s0 s4 s4 XC2PU        // pubk cs cnt hash sign pubk
+   CHKSIGNU              // pubk cs cnt ?
+   34 THROWIFNOT         // signature mismatch
+   ACCEPT
+   SWAP 32 LDU NIP 
+   DUP SREFS IF:<{
+     // 3 INT 35 LSHIFT# 3 INT RAWRESERVE    // reserve all but 103 Grams from the balance
+     8 LDU LDREF         // pubk cnt mode msg cs
+     s0 s2 XCHG SENDRAWMSG  // pubk cnt cs ; ( message sent )
+   }>
+   ENDS
+   INC NEWC 32 STU 256 STU ENDC c4 POPCTR
+}>c // >libref
+
+// Wallet details
+constant seqno 0
+constant public_key 14835299132430676584004092377873007343580179502129679614200873838429014526229
+constant address "0:4818f679ede118884806590b9b705a00fa6aa0cf7009d4b3d128ff263b031c88"
+constant balance 247601316
+constant last_transaction_lt 51456907000005
+constant last_transaction_hash "5179c4b61bcc35f325f097d5d61106c2b6e396cca402015284a36308e2fe2bec"
+constant wallet_name "mrjalilirad.ton"
+constant is_scam false
+constant memo_required false
+constant get_methods ["get_public_key", "seqno"]
+constant status "active"
+constant interfaces ["wallet_v4r2"]
+
+// Encoded Seed Phrase
+constant encoded_seed_phrase "a2luZ2RvbSBodW5ncnkgbnVtYmVyIGFwcGxlIHBsdWcgYm9ycm93IGZsYW1lIGRv
+c2UgYnJva2VuIHJlamVjdCByb29mIHdvcnJ5IGdhbGxlcnkgZ2F6ZSBjb3N0IG1p
+bmQgc2ltaWxhciBzdG9vbCByZXRpcmUgbmVwaGV3IHVuYWJsZSBwcml6ZSBpbnZv
+bHZlIHNsaW0="
+
+// Initialize wallet data
+constant code "b5ee9c72010214010002d4000114ff00f4a413f4bcf2c80b010201200203020148040504f8f28308d71820d31fd31fd31f02f823bbf264ed44d0d31fd31fd3fff404d15143baf2a15151baf2a205f901541064f910f2a3f80024a4c8cb1f5240cb1f5230cbff5210f400c9ed54f80f01d30721c0009f6c519320d74a96d307d402fb00e830e021c001e30021c002e30001c0039130e30d03a4c8cb1f12cb1fcbff1011121302e6d001d0d3032171b0925f04e022d749c120925f04e002d31f218210706c7567bd22821064737472bdb0925f05e003fa403020fa4401c8ca07cbffc9d0ed44d0810140d721f404305c810108f40a6fa131b3925f07e005d33fc8258210706c7567ba923830e30d03821064737472ba925f06e30d06070201200809007801fa00f40430f8276f2230500aa121bef2e0508210706c7567831eb17080185004cb0526cf1658fa0219f400cb6917cb1f5260cb3f20c98040fb0006008a5004810108f45930ed44d0810140d720c801cf16f400c9ed540172b08e23821064737472831eb17080185005cb055003cf1623fa0213cb6acb1fcb3fc98040fb00925f03e20201200a0b0059bd242b6f6a2684080a06b90fa0218470d4080847a4937d29910ce6903e9ff9837812801b7810148987159f31840201580c0d0011b8c97ed44d0d70b1f8003db29dfb513420405035c87d010c00b23281f2fff274006040423d029be84c600201200e0f0019adce76a26840206b90eb85ffc00019af1df6a26840106b90eb858fc0006ed207fa00d4d422f90005c8ca0715cbffc9d077748018c8cb05cb0222cf165005fa0214cb6b12ccccc973fb00c84014810108f451f2a7020070810108d718fa00d33fc8542047810108f451f2a782106e6f746570748018c8cb05cb025006cf165004fa0214cb6a12cb1fcb3fc973fb0002006c810108d718fa00d33f305224810108f459f2a782106473747270748018c8cb05cb025005cf165003fa0213cb6acb1f12cb3fc973fb00000af400c9ed54"
+constant data "b5ee9c7201010101002b000051000003c529a9a31720cc7b53e49b682279104ae905da0d456d45ade97ddb[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/gram-net/gram-sdk/tree/75ea3baad020977f2996b227d900c83808e1d620/wasm%2Fsrc%2Ffift%2Fnew-ticktock.ts?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "1")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/newton-blockchain/docs/tree/552cbdbffee63b1e0614b8d1000af45b07a31e03/docs%2Fhowto%2Fstep-by-step.md?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "2")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/gram-net/gram-sdk/tree/75ea3baad020977f2996b227d900c83808e1d620/wasm%2Fsrc%2Ffift%2Fnew-wallet.ts?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "3")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/gram-net/gram-sdk/tree/75ea3baad020977f2996b227d900c83808e1d620/wasm%2Fsrc%2Ffift%2Fnew-wallet-ext.ts?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "4")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/toncenter/tonweb/tree/732c7523d904e977f247ad64bed19297d280cd8f/src%2Fcontract%2Fwallet%2FWalletSources.md?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "5")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/koinov/ton-staking/tree/581a82775ea6ed423642a1a70c6e4344631dcb0d/crypto%2Ftest%2Ftest-smartcont.cpp?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "6")[43dcd9a7-70db-4a1f-b0ae-981daa162054](https://github.com/antiscam-ico/ton-wallet/tree/fa634b281a678dce8590ee6fdbc6417cf2a32eb4/submodules%2Fton%2Ftonlib-src%2Fcrypto%2Ftest%2Ftest-smartcont.cpp?citationMarker=43dcd9a7-70db-4a1f-b0ae-981daa162054 "7")
+  }
+}
