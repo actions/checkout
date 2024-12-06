@@ -1,0 +1,3 @@
+"""'Workflow""","""'Source repository""","""'Total minutes""","""'Workflow runs""","""'Jobs""","""'Runner type""","""'Runtime OS"""
+"""'.github/workflows/node.js.yml""","""'literate-goggles""",12,4,3,"""'hosted""","""'linux"""
+"""'.github/workflows/node.js.yml""","""'j1""",6,3,3,"""'hosted""","""'linux"""
