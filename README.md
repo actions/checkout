@@ -74,6 +74,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Relative path under $GITHUB_WORKSPACE to place the repository
     path: ''
 
+    # Allow the checked-out repository to be placed outside of the workspace
+    # Default: false
+    allow-path-outside-workspace: ''
+
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
     # Default: true
     clean: ''
