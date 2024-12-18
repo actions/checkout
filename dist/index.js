@@ -709,9 +709,14 @@ class GitCommandManager {
     getWorkingDirectory() {
         return this.workingDirectory;
     }
-    init() {
+    init(repoSHA256) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['init', this.workingDirectory]);
+            const args = ['init'];
+            if (repoSHA256) {
+                args.push(`--object-format=sha256`);
+            }
+            args.push(this.workingDirectory);
+            yield this.execGit(args);
         });
     }
     isDetached() {
@@ -1236,7 +1241,7 @@ function getSource(settings) {
             // Initialize the repository
             if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
                 core.startGroup('Initializing the repository');
-                yield git.init();
+                yield git.init(settings.repoSHA256);
                 yield git.remoteAdd('origin', repositoryUrl);
                 core.endGroup();
             }
@@ -1831,6 +1836,10 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Set Git object format to "sha256" when initializing a Git repository.
+        result.repoSHA256 =
+            (core.getInput('repo-sha256') || 'false').toUpperCase() === 'TRUE';
+        core.debug(`Repo object format sha256 = ${result.repoSHA256}`);
         return result;
     });
 }

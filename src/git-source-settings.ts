@@ -118,4 +118,9 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * Set Git object format to "sha256" when initializing a Git repository
+   */
+  repoSHA256: boolean
 }

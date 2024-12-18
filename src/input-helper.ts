@@ -161,5 +161,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // Set Git object format to "sha256" when initializing a Git repository.
+  result.repoSHA256 =
+    (core.getInput('repo-sha256') || 'false').toUpperCase() === 'TRUE'
+  core.debug(`Repo object format sha256 = ${result.repoSHA256}`)
+
   return result
 }
