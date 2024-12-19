@@ -131,19 +131,19 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 # Scenarios
 
-- [Fetch only the root files](#Fetch-only-the-root-files)
-- [Fetch only the root files and `.github` and `src` folder](#Fetch-only-the-root-files-and-github-and-src-folder)
-- [Fetch only a single file](#Fetch-only-a-single-file)
-- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
-- [Checkout a different branch](#Checkout-a-different-branch)
-- [Checkout HEAD^](#Checkout-HEAD)
-- [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
-- [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
-- [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
-- [Push a commit to a PR using the built-in token](#Push-a-commit-to-a-PR-using-the-built-in-token)
+- [Fetch only the root files](#fetch-only-the-root-files)
+- [Fetch only the root files and `.github` and `src` folder](#fetch-only-the-root-files-and-github-and-src-folder)
+- [Fetch only a single file](#fetch-only-a-single-file)
+- [Fetch all history for all tags and branches](#fetch-all-history-for-all-tags-and-branches)
+- [Checkout a different branch](#checkout-a-different-branch)
+- [Checkout HEAD^](#checkout-head)
+- [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
+- [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
+- [Checkout multiple repos (private)](#checkout-multiple-repos-private)
+- [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
+- [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
+- [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
+- [Push a commit to a PR using the built-in token](#push-a-commit-to-a-pr-using-the-built-in-token)
 
 ## Fetch only the root files
 
@@ -281,8 +281,6 @@ jobs:
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "generated"
           git push
@@ -305,8 +303,6 @@ jobs:
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "generated"
           git push

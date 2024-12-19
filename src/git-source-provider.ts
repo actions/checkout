@@ -274,6 +274,14 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       settings.commit,
       settings.githubServerUrl
     )
+    if (settings.configureUser) {
+      if (!await git.configExists('user.name', true)) {
+        await git.config('user.name', 'github-action[bot]', true)
+      }
+      if (!await git.configExists('user.email', true)) {
+        await git.config('user.email', '41898282+github-actions[bot]@users.noreply.github.com', true)
+      } 
+    }
   } finally {
     // Remove auth
     if (authHelper) {
