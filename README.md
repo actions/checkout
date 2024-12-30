@@ -129,6 +129,18 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ```
 <!-- end usage -->
 
+# Outputs
+
+The action sets some outputs after a successful run
+```yaml
+outputs:
+  ref:
+    description: 'The branch, tag or SHA that was checked out'
+
+  commit:
+    description: 'The commit SHA that was checked out'
+```
+
 # Scenarios
 
 - [Fetch only the root files](#Fetch-only-the-root-files)
