@@ -11,3 +11,4 @@ if [[ "$(git -C ./basic status --porcelain)" != "" ]]; then
     git diff
     exit 1
 fi
+
