@@ -42,7 +42,7 @@ export interface IGitCommandManager {
   ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
-  init(): Promise<void>
+  init(repoSHA256?: boolean): Promise<void>
   isDetached(): Promise<boolean>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
@@ -327,8 +327,13 @@ class GitCommandManager {
     return this.workingDirectory
   }
 
-  async init(): Promise<void> {
-    await this.execGit(['init', this.workingDirectory])
+  async init(repoSHA256?: boolean): Promise<void> {
+    const args = ['init']
+    if (repoSHA256) {
+      args.push(`--object-format=sha256`)
+    }
+    args.push(this.workingDirectory)
+    await this.execGit(args)
   }
 
   async isDetached(): Promise<boolean> {
