@@ -312,7 +312,9 @@ jobs:
           git push
 ```
 
-## Recommended permissions
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+# Recommended permissions
 
 When using the `checkout` action in your GitHub Actions workflow, it is recommended to set the following `GITHUB_TOKEN` permissions to ensure proper functionality, unless alternative auth is provided via the `token` or `ssh-key` inputs:
 
@@ -320,9 +322,6 @@ When using the `checkout` action in your GitHub Actions workflow, it is recommen
 permissions:
   contents: read
 ```
-
-*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
-
 
 # License
 
