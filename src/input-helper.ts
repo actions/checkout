@@ -42,6 +42,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     result.repositoryPath
   )
   if (
+    !core.getInput('allow-path-outside-workspace') &&
     !(result.repositoryPath + path.sep).startsWith(
       githubWorkspacePath + path.sep
     )
