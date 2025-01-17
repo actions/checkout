@@ -21,6 +21,13 @@ describe('input-helper tests', () => {
     jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
       return inputs[name]
     })
+    // Mock getMultilineInput
+    jest.spyOn(core, 'getMultilineInput').mockImplementation((name: string) => {
+      const input: string[] = (inputs[name] || '')
+        .split('\n')
+        .filter(x => x !== '')
+      return input.map(inp => inp.trim())
+    })
 
     // Mock error/warning/info/debug
     jest.spyOn(core, 'error').mockImplementation(jest.fn())
@@ -87,6 +94,7 @@ describe('input-helper tests', () => {
     expect(settings.showProgress).toBe(true)
     expect(settings.lfs).toBe(false)
     expect(settings.ref).toBe('refs/heads/some-ref')
+    expect(settings.submoduleDirectories).toStrictEqual([])
     expect(settings.repositoryName).toBe('some-repo')
     expect(settings.repositoryOwner).toBe('some-owner')
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
@@ -143,5 +151,14 @@ describe('input-helper tests', () => {
   it('sets workflow organization ID', async () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
+  })
+  it('sets submoduleDirectories', async () => {
+    inputs['submodule-directories'] = 'submodule1\nsubmodule2'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.submoduleDirectories).toStrictEqual([
+      'submodule1',
+      'submodule2'
+    ])
+    expect(settings.submodules).toBe(true)
   })
 })
