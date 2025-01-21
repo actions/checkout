@@ -80,9 +80,9 @@ export interface IGitSourceSettings {
   authToken: string
 
   /**
-   * Indicates whether to set a default user name and email in the local git config
+   * A github user slug to set a default user name and email in the local git config
    */
-  configureUser: boolean
+  gitUser: string
 
   /**
    * The SSH key to configure

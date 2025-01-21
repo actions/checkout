@@ -1814,8 +1814,7 @@ function getInputs() {
         // Auth token
         result.authToken = core.getInput('token', { required: true });
         // Configure user
-        result.configureUser = 
-            (core.getInput('configure-user') || 'true').toUpperCase() === 'TRUE'
+        result.gitUser = (core.getInput('git-user') || 'github-action[bot]')
         // SSH
         result.sshKey = core.getInput('ssh-key');
         result.sshKnownHosts = core.getInput('ssh-known-hosts');

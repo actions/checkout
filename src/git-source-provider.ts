@@ -274,12 +274,14 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       settings.commit,
       settings.githubServerUrl
     )
-    if (settings.configureUser) {
+    if (settings.gitUser) {
       if (!await git.configExists('user.name', true)) {
-        await git.config('user.name', 'github-action[bot]', true)
+        await git.config('user.name', settings.gitUser, true)
       }
       if (!await git.configExists('user.email', true)) {
-        await git.config('user.email', '41898282+github-actions[bot]@users.noreply.github.com', true)
+
+        const userId = await githubApiHelper.getUserId(settings.gitUser, settings.authToken, settings.githubServerUrl);
+        await git.config('user.email', `${userId}+${settings.gitUser}@users.noreply.github.com`, true)
       } 
     }
   } finally {
