@@ -1357,6 +1357,15 @@ function getSource(settings) {
             core.setOutput('commit', commitSHA.trim());
             // Check for incorrect pull request merge commit
             yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.githubServerUrl);
+            if (settings.gitUser) {
+                if (!(yield git.configExists('user.name', true))) {
+                    yield git.config('user.name', settings.gitUser, true);
+                }
+                if (!(yield git.configExists('user.email', true))) {
+                    const userId = yield githubApiHelper.getUserId(settings.gitUser, settings.authToken, settings.githubServerUrl);
+                    yield git.config('user.email', `${userId}+${settings.gitUser}@users.noreply.github.com`, true);
+                }
+            }
         }
         finally {
             // Remove auth
@@ -1546,6 +1555,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.downloadRepository = downloadRepository;
 exports.getDefaultBranch = getDefaultBranch;
+exports.getUserId = getUserId;
 const assert = __importStar(__nccwpck_require__(9491));
 const core = __importStar(__nccwpck_require__(2186));
 const fs = __importStar(__nccwpck_require__(7147));
@@ -1661,6 +1671,15 @@ function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
             ref: commit || ref
         });
         return Buffer.from(response.data); // response.data is ArrayBuffer
+    });
+}
+function getUserId(username, authToken, baseUrl) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = github.getOctokit(authToken, {
+            baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
+        });
+        const user = yield octokit.rest.users.getByUsername({ username, });
+        return user.data.id;
     });
 }
 
@@ -1813,8 +1832,8 @@ function getInputs() {
         core.debug(`recursive submodules = ${result.nestedSubmodules}`);
         // Auth token
         result.authToken = core.getInput('token', { required: true });
-        // Configure user
-        result.gitUser = (core.getInput('git-user') || 'github-action[bot]')
+        // Git user
+        result.gitUser = core.getInput('git-user') || 'github-action[bot]';
         // SSH
         result.sshKey = core.getInput('ssh-key');
         result.sshKnownHosts = core.getInput('ssh-known-hosts');

@@ -152,6 +152,6 @@ export async function getUserId(
   const octokit = github.getOctokit(authToken, {
     baseUrl: getServerApiUrl(baseUrl)
   })
-  const user = await octokit.rest.users.getByUsername({username,});
+  const user = await octokit.rest.users.getByUsername({username})
   return user.data.id
 }
