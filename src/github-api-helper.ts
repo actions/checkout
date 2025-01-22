@@ -143,3 +143,15 @@ async function downloadArchive(
   })
   return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer
 }
+
+export async function getUserId(
+  username: string,
+  authToken: string,
+  baseUrl?: string
+): Promise<number> {
+  const octokit = github.getOctokit(authToken, {
+    baseUrl: getServerApiUrl(baseUrl)
+  })
+  const user = await octokit.rest.users.getByUsername({username})
+  return user.data.id
+}
