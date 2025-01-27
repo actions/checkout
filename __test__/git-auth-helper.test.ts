@@ -763,6 +763,7 @@ async function setup(testName: string): Promise<void> {
     lfsInstall: jest.fn(),
     log1: jest.fn(),
     remoteAdd: jest.fn(),
+    referenceAdd: jest.fn(),
     removeEnvironmentVariable: jest.fn((name: string) => delete git.env[name]),
     revParse: jest.fn(),
     setEnvironmentVariable: jest.fn((name: string, value: string) => {
@@ -824,7 +825,8 @@ async function setup(testName: string): Promise<void> {
     sshUser: '',
     workflowOrganizationId: 123456,
     setSafeDirectory: true,
-    githubServerUrl: githubServerUrl
+    githubServerUrl: githubServerUrl,
+    reference: '/some/path'
   }
 }
 

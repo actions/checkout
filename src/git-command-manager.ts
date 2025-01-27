@@ -48,6 +48,7 @@ export interface IGitCommandManager {
   lfsInstall(): Promise<void>
   log1(format?: string): Promise<string>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
+  referenceAdd(reference: string): Promise<void>
   removeEnvironmentVariable(name: string): void
   revParse(ref: string): Promise<string>
   setEnvironmentVariable(name: string, value: string): void
@@ -362,6 +363,15 @@ class GitCommandManager {
 
   async remoteAdd(remoteName: string, remoteUrl: string): Promise<void> {
     await this.execGit(['remote', 'add', remoteName, remoteUrl])
+  }
+
+  async referenceAdd(alternateObjects: string): Promise<void> {
+    const alternatePath = path.join(
+      this.workingDirectory,
+      '.git/objects/info/alternates'
+    )
+    core.info(`Adding a git alternate to reference repo at ${alternateObjects}`)
+    await fs.promises.writeFile(alternatePath, `${alternateObjects}\n`)
   }
 
   removeEnvironmentVariable(name: string): void {
