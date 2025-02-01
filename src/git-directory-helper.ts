@@ -64,11 +64,11 @@ export async function prepareExistingDirectory(
       if (ref) {
         ref = ref.startsWith('refs/') ? ref : `refs/heads/${ref}`
         if (ref.startsWith('refs/heads/')) {
-          const upperName1 = ref.toUpperCase().substr('REFS/HEADS/'.length)
+          const upperName1 = ref.toUpperCase().slice('REFS/HEADS/'.length)
           const upperName1Slash = `${upperName1}/`
           branches = await git.branchList(true)
           for (const branch of branches) {
-            const upperName2 = branch.substr('origin/'.length).toUpperCase()
+            const upperName2 = branch.slice('origin/'.length).toUpperCase()
             const upperName2Slash = `${upperName2}/`
             if (
               upperName1.startsWith(upperName2Slash) ||
