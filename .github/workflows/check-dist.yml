@@ -17,8 +17,12 @@ on:
       - '**.md'
   workflow_dispatch:
 
+permissions: read-all
+
 jobs:
   check-dist:
+    permissions:
+      contents: read # for actions/checkout to fetch code
     runs-on: ubuntu-latest
 
     steps:
