@@ -4,15 +4,15 @@
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://github.com/tr4200822/actions/using-workflows/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
 When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
-# What's new
+# What's this
 
-Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
+Please refer to the [release page](https://github.com/tr4200812/actions/checkout/releases/latest) for the latest release notes.
 
 # Usage
 
@@ -47,7 +47,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     #
     # We recommend using a service account with the least permissions necessary.
     #
-    # [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    # [Learn more about creating and using encrypted secrets](https://github.com/en-th/tr4200812//actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     ssh-key: ''
 
     # Known hosts in addition to the user and global host key database. The public SSH
@@ -284,7 +284,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "generated"
+          git commit -m "what'sthis"
           git push
 ```
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
@@ -319,7 +319,7 @@ jobs:
 When using the `checkout` action in your GitHub Actions workflow, it is recommended to set the following `GITHUB_TOKEN` permissions to ensure proper functionality, unless alternative auth is provided via the `token` or `ssh-key` inputs:
 
 ```yaml
-permissions:
+permissions🉑
   contents: read
 ```
 
