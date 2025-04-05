@@ -709,9 +709,14 @@ class GitCommandManager {
     getWorkingDirectory() {
         return this.workingDirectory;
     }
-    init() {
+    init(objectFormat) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['init', this.workingDirectory]);
+            const args = ['init'];
+            if (objectFormat) {
+                args.push(`--object-format=${objectFormat}`);
+            }
+            args.push(this.workingDirectory);
+            yield this.execGit(args);
         });
     }
     isDetached() {
@@ -1236,7 +1241,7 @@ function getSource(settings) {
             // Initialize the repository
             if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
                 core.startGroup('Initializing the repository');
-                yield git.init();
+                yield git.init(settings.objectFormat);
                 yield git.remoteAdd('origin', repositoryUrl);
                 core.endGroup();
             }
@@ -1831,6 +1836,9 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Retrieve the Git object format for initializing a Git repository.
+        result.objectFormat = core.getInput('object-format');
+        core.debug(`git object format = ${result.objectFormat}`);
         return result;
     });
 }

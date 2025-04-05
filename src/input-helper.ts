@@ -161,5 +161,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // Retrieve the Git object format for initializing a Git repository.
+  result.objectFormat = core.getInput('object-format')
+  core.debug(`git object format = ${result.objectFormat}`)
+
   return result
 }
