@@ -588,6 +588,8 @@ class GitCommandManager {
     disableSparseCheckout() {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.execGit(['sparse-checkout', 'disable']);
+            // Ensures that a previously enabled 'sparse-checkout' (e.g. via sparseCheckoutNonConeMode) is also disabled in the config.
+            yield this.execGit(['config', 'core.sparseCheckout', 'false']);
             // Disabling 'sparse-checkout` leaves behind an undesirable side-effect in config (even in a pristine environment).
             yield this.tryConfigUnset('extensions.worktreeConfig', false);
         });
