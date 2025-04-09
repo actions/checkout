@@ -70,6 +70,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         settings.repositoryPath,
         repositoryUrl,
         settings.clean,
+        settings.exclude_from_clean,
         settings.ref
       )
     }

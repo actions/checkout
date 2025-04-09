@@ -57,7 +57,7 @@ export interface IGitCommandManager {
   submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
   submoduleStatus(): Promise<boolean>
   tagExists(pattern: string): Promise<boolean>
-  tryClean(): Promise<boolean>
+  tryClean(exclude_from_clean: string | undefined): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
@@ -434,8 +434,13 @@ class GitCommandManager {
     return !!output.stdout.trim()
   }
 
-  async tryClean(): Promise<boolean> {
-    const output = await this.execGit(['clean', '-ffdx'], true)
+  async tryClean(exclude_from_clean: string | undefined): Promise<boolean> {
+    let output
+    if (exclude_from_clean === undefined) {
+      output = await this.execGit(['clean', '-ffdx'], true)
+    } else {
+      output = await this.execGit(['clean', '-ffdx', '-e', exclude_from_clean], true)
+    }
     return output.exitCode === 0
   }
 
