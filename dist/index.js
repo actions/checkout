@@ -819,9 +819,15 @@ class GitCommandManager {
             return !!output.stdout.trim();
         });
     }
-    tryClean() {
+    tryClean(exclude_from_clean) {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['clean', '-ffdx'], true);
+            let output;
+            if (exclude_from_clean) {
+                output = yield this.execGit(['clean', '-ffdx', '-e', exclude_from_clean], true);
+            }
+            else {
+                output = yield this.execGit(['clean', '-ffdx'], true);
+            }
             return output.exitCode === 0;
         });
     }
@@ -1025,7 +1031,7 @@ const fs = __importStar(__nccwpck_require__(7147));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref) {
+function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, exclude_from_clean, ref) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
@@ -1094,7 +1100,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 // Clean
                 if (clean) {
                     core.startGroup('Cleaning the repository');
-                    if (!(yield git.tryClean())) {
+                    if (!(yield git.tryClean(exclude_from_clean))) {
                         core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
                         remove = true;
                     }
@@ -1216,7 +1222,7 @@ function getSource(settings) {
             }
             // Prepare existing directory, otherwise recreate
             if (isExisting) {
-                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
+                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.exclude_from_clean, settings.ref);
             }
             if (!git) {
                 // Downloading using REST API
@@ -1766,6 +1772,9 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        // Exclude from clean
+        result.exclude_from_clean = core.getInput('exclude_from_clean');
+        core.debug(`exclude_from_clean = ${result.exclude_from_clean}`);
         // Filter
         const filter = core.getInput('filter');
         if (filter) {

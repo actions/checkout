@@ -30,6 +30,11 @@ export interface IGitSourceSettings {
   clean: boolean
 
   /**
+   * Indicates path to exclude when cleaning
+   */
+  exclude_from_clean: string
+
+  /**
    * The filter determining which objects to include
    */
   filter: string | undefined

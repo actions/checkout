@@ -1,5 +1,8 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
+Changes compared to https://github.com/actions/checkout:
+- Can exclude path when cleaning repository (see `exclude_from_clean` argument)
+
 # Checkout V4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
@@ -77,6 +80,9 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
     # Default: true
     clean: ''
+
+    # The path to exclude from cleaning
+    exclude_from_clean: ''
 
     # Partially clone against a given filter. Overrides sparse-checkout if set.
     # Default: null
