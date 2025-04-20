@@ -1,4 +1,4 @@
-[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
+bc1qj0e4e4ktnzhlx56wmcats0pm8p472zq7regc9y[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
 # Checkout V4
 
@@ -326,3 +326,4 @@ permissions:
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
+bc1qj0e4e4ktnzhlx56wmcats0pm8p472zq7regc9y
