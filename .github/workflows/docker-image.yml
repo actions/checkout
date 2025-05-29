@@ -1,3 +1,6 @@
+git add .
+git commit -m "Ready for publish"
+git push origin main
 name: Docker Image CI
 
 on:
