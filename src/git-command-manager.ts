@@ -261,8 +261,12 @@ class GitCommandManager {
     }
   ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
-    if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
-      args.push(options.fetchTags ? '--tags' : '--no-tags')
+    const hasTagsRefSpec = refSpec.some(x => x === refHelper.tagsRefSpec)
+    const needsSeparateTagFetch = this.gitVersion.toString().startsWith('2.48') && options.fetchTags && !hasTagsRefSpec
+
+    if (!hasTagsRefSpec) {
+      // For git 2.48, skip --tags here if we need separate fetch
+      args.push(needsSeparateTagFetch || !options.fetchTags ? '--no-tags' : '--tags')
     }
 
     args.push('--prune', '--no-recurse-submodules')
@@ -293,6 +297,19 @@ class GitCommandManager {
     await retryHelper.execute(async () => {
       await that.execGit(args)
     })
+
+    // Separate tag fetch for git 2.48
+    if (needsSeparateTagFetch) {
+      const tagArgs = ['-c', 'protocol.version=2', 'fetch', '--tags', '--prune']
+      if (options.showProgress) {
+        tagArgs.push('--progress')
+      }
+      tagArgs.push('origin')
+
+      await retryHelper.execute(async () => {
+        await that.execGit(tagArgs)
+      })
+    }
   }
 
   async getDefaultBranch(repositoryUrl: string): Promise<string> {
