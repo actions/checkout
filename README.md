@@ -265,12 +265,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 > - `${{ github.token }}` is scoped to the current repository, so if you want to checkout a different repository that is private you will need to provide your own [PAT](https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line).
 
 
-## Checkout pull request HEAD commit instead of merge commit
+## Checkout pull request HEAD instead of merge commit
 
 ```yaml
 - uses: actions/checkout@v4
   with:
-    ref: ${{ github.event.pull_request.head.sha }}
+    ref: ${{ github.event.pull_request.head.ref }}
 ```
 
 ## Checkout pull request on closed event
@@ -331,6 +331,12 @@ jobs:
 ```
 
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+# Outputs
+
+The `checkout` action provides the following outputs that can be referenced in later steps:
+- `ref`, the Git ref that was checked out (not available if the checkout resulted in a detached `HEAD`)
+- `sha`, the SHA of the commit that was checked out
 
 # Recommended permissions
 
