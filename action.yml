@@ -104,6 +104,6 @@ outputs:
   commit:
     description: 'The commit SHA that was checked out'
 runs:
-  using: node20
+  using: node24
   main: dist/index.js
   post: dist/index.js
