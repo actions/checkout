@@ -2,10 +2,11 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
+import * as workflowContextHelper from './workflow-context-helper'
 import {IGitSourceSettings} from './git-source-settings'
 
-export function getInputs(): IGitSourceSettings {
-  const result = ({} as unknown) as IGitSourceSettings
+export async function getInputs(): Promise<IGitSourceSettings> {
+  const result = {} as unknown as IGitSourceSettings
 
   // GitHub workspace
   let githubWorkspacePath = process.env['GITHUB_WORKSPACE']
@@ -81,11 +82,24 @@ export function getInputs(): IGitSourceSettings {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
-  if (core.getInput('fetch-depth') && core.getInput('shallow-since')) {
-    throw new Error(
-      '`fetch-depth` and `shallow-since` cannot be used at the same time'
-    )
+  // Filter
+  const filter = core.getInput('filter')
+  if (filter) {
+    result.filter = filter
   }
+
+  core.debug(`filter = ${result.filter}`)
+
+  // Sparse checkout
+  const sparseCheckout = core.getMultilineInput('sparse-checkout')
+  if (sparseCheckout.length) {
+    result.sparseCheckout = sparseCheckout
+    core.debug(`sparse checkout = ${result.sparseCheckout}`)
+  }
+
+  result.sparseCheckoutConeMode =
+    (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+    'TRUE'
 
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
@@ -95,8 +109,23 @@ export function getInputs(): IGitSourceSettings {
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
   // Shallow since
+  if (core.getInput('fetch-depth') && core.getInput('shallow-since')) {
+    throw new Error(
+      '`fetch-depth` and `shallow-since` cannot be used at the same time'
+    )
+  }
   result.shallowSince = core.getInput('shallow-since')
   core.debug(`shallow since = ${result.shallowSince}`)
+  
+  // Fetch tags
+  result.fetchTags =
+    (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
+  core.debug(`fetch tags = ${result.fetchTags}`)
+
+  // Show fetch progress
+  result.showProgress =
+    (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
+  core.debug(`show progress = ${result.showProgress}`)
 
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
@@ -123,10 +152,23 @@ export function getInputs(): IGitSourceSettings {
   result.sshKnownHosts = core.getInput('ssh-known-hosts')
   result.sshStrict =
     (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE'
+  result.sshUser = core.getInput('ssh-user')
 
   // Persist credentials
   result.persistCredentials =
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
+
+  // Workflow organization ID
+  result.workflowOrganizationId =
+    await workflowContextHelper.getOrganizationId()
+
+  // Set safe.directory in git global config.
+  result.setSafeDirectory =
+    (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE'
+
+  // Determine the GitHub URL that the repository is being hosted from
+  result.githubServerUrl = core.getInput('github-server-url')
+  core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
   return result
 }

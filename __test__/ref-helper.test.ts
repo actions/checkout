@@ -7,11 +7,11 @@ let git: IGitCommandManager
 
 describe('ref-helper tests', () => {
   beforeEach(() => {
-    git = ({} as unknown) as IGitCommandManager
+    git = {} as unknown as IGitCommandManager
   })
 
   it('getCheckoutInfo requires git', async () => {
-    const git = (null as unknown) as IGitCommandManager
+    const git = null as unknown as IGitCommandManager
     try {
       await refHelper.getCheckoutInfo(git, 'refs/heads/my/branch', commit)
       throw new Error('Should not reach here')
@@ -64,6 +64,26 @@ describe('ref-helper tests', () => {
       commit
     )
     expect(checkoutInfo.ref).toBe('refs/tags/my-tag')
+    expect(checkoutInfo.startPoint).toBeFalsy()
+  })
+
+  it('getCheckoutInfo refs/', async () => {
+    const checkoutInfo = await refHelper.getCheckoutInfo(
+      git,
+      'refs/gh/queue/main/pr-123',
+      commit
+    )
+    expect(checkoutInfo.ref).toBe(commit)
+    expect(checkoutInfo.startPoint).toBeFalsy()
+  })
+
+  it('getCheckoutInfo refs/ without commit', async () => {
+    const checkoutInfo = await refHelper.getCheckoutInfo(
+      git,
+      'refs/non-standard-ref',
+      ''
+    )
+    expect(checkoutInfo.ref).toBe('refs/non-standard-ref')
     expect(checkoutInfo.startPoint).toBeFalsy()
   })
 

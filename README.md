@@ -1,40 +1,42 @@
-<p align="center">
-  <a href="https://github.com/actions/checkout"><img alt="GitHub Actions status" src="https://github.com/actions/checkout/workflows/test-local/badge.svg"></a>
-</p>
+[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout V2
+# Checkout V4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
-Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://help.github.com/en/articles/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
+Only a single commit is fetched by default, for the ref/SHA that triggered the workflow. Set `fetch-depth: 0` to fetch all history for all branches and tags. Refer [here](https://docs.github.com/actions/using-workflows/events-that-trigger-workflows) to learn which commit `$GITHUB_SHA` points to for different events.
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
 When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
+### Note
+
+Thank you for your interest in this GitHub action, however, right now we are not taking contributions. 
+
+We continue to focus our resources on strategic areas that help our customers be successful while making developers' lives easier. While GitHub Actions remains a key part of this vision, we are allocating resources towards other areas of Actions and are not taking contributions to this repository at this time. The GitHub public roadmap is the best place to follow along for any updates on features we’re working on and what stage they’re in.
+
+We are taking the following steps to better direct requests related to GitHub Actions, including:
+
+1. We will be directing questions and support requests to our [Community Discussions area](https://github.com/orgs/community/discussions/categories/actions)
+
+2. High Priority bugs can be reported through Community Discussions or you can report these to our support team https://support.github.com/contact/bug-report.
+
+3. Security Issues should be handled as per our [security.md](security.md)
+
+We will still provide security updates for this project and fix major breaking changes during this time.
+
+You are welcome to still raise bugs in this repo.
+
 # What's new
 
-- Improved performance
-  - Fetches only a single commit by default
-- Script authenticated git commands
-  - Auth token persisted in the local git config
-- Supports SSH
-- Creates a local branch
-  - No longer detached HEAD when checking out a branch
-- Improved layout
-  - The input `path` is always relative to $GITHUB_WORKSPACE
-  - Aligns better with container actions, where $GITHUB_WORKSPACE gets mapped in
-- Fallback to REST API download
-  - When Git 2.18 or higher is not in the PATH, the REST API will be used to download the files
-  - When using a job container, the container's PATH is used
-
-Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous versions.
+Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
 
 # Usage
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v4
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -78,6 +80,11 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     ssh-strict: ''
 
+    # The user to use when connecting to the remote SSH host. By default 'git' is
+    # used.
+    # Default: git
+    ssh-user: ''
+
     # Whether to configure the token or SSH key with the local git config
     # Default: true
     persist-credentials: ''
@@ -89,8 +96,29 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     # Default: true
     clean: ''
 
+    # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Default: null
+    filter: ''
+
+    # Do a sparse checkout on given patterns. Each pattern should be separated with
+    # new lines.
+    # Default: null
+    sparse-checkout: ''
+
+    # Specifies whether to use cone-mode when doing a sparse checkout.
+    # Default: true
+    sparse-checkout-cone-mode: ''
+
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
     fetch-depth: ''
+
+    # Whether to fetch tags, even if fetch-depth > 0.
+    # Default: false
+    fetch-tags: ''
+
+    # Whether to show progress status output when fetching.
+    # Default: true
+    show-progress: ''
 
     # Date like `2days` or `1970-01-01`. Fetch a history after the specified time.
     shallow-since: ''
@@ -107,11 +135,25 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
     #
     # Default: false
     submodules: ''
+
+    # Add repository path as safe.directory for Git global config by running `git
+    # config --global --add safe.directory <path>`
+    # Default: true
+    set-safe-directory: ''
+
+    # The base URL for the GitHub instance that you are trying to clone from, will use
+    # environment defaults to fetch from the same instance that the workflow is
+    # running from unless specified. Example URLs are https://github.com or
+    # https://my-ghes-server.example.com
+    github-server-url: ''
 ```
 <!-- end usage -->
 
 # Scenarios
 
+- [Fetch only the root files](#Fetch-only-the-root-files)
+- [Fetch only the root files and `.github` and `src` folder](#Fetch-only-the-root-files-and-github-and-src-folder)
+- [Fetch only a single file](#Fetch-only-a-single-file)
 - [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
 - [Checkout a different branch](#Checkout-a-different-branch)
 - [Checkout HEAD^](#Checkout-HEAD)
@@ -121,11 +163,40 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 - [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
 - [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
 - [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
+- [Push a commit to a PR using the built-in token](#Push-a-commit-to-a-PR-using-the-built-in-token)
+
+## Fetch only the root files
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    sparse-checkout: .
+```
+
+## Fetch only the root files and `.github` and `src` folder
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    sparse-checkout: |
+      .github
+      src
+```
+
+## Fetch only a single file
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    sparse-checkout: |
+      README.md
+    sparse-checkout-cone-mode: false
+```
 
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v4
   with:
     fetch-depth: 0
 ```
@@ -133,7 +204,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v4
   with:
     ref: my-branch
 ```
@@ -141,7 +212,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v4
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -151,43 +222,45 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     repository: my-org/my-tools
     path: my-tools
 ```
+> - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (nested)
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
 
 - name: Checkout tools repo
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     repository: my-org/my-tools
     path: my-tools
 ```
+> - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (private)
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v2
+  uses: actions/checkout@v4
   with:
     repository: my-org/my-private-tools
-    token: ${{ secrets.GitHub_PAT }} # `GitHub_PAT` is a secret that contains your PAT
+    token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
     path: my-tools
 ```
 
@@ -197,7 +270,7 @@ Refer [here](https://github.com/actions/checkout/blob/v1/README.md) for previous
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v2
+- uses: actions/checkout@v4
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -213,7 +286,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 ```
 
 ## Push a commit using the built-in token
@@ -224,14 +297,50 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: |
           date > generated.txt
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "generated"
           git push
+```
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+## Push a commit to a PR using the built-in token
+
+In a pull request trigger, `ref` is required as GitHub Actions checks out in detached HEAD mode, meaning it doesn’t check out your branch by default.
+
+```yaml
+on: pull_request
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - run: |
+          date > generated.txt
+          # Note: the following account information will not work on GHES
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "generated"
+          git push
+```
+
+*NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+# Recommended permissions
+
+When using the `checkout` action in your GitHub Actions workflow, it is recommended to set the following `GITHUB_TOKEN` permissions to ensure proper functionality, unless alternative auth is provided via the `token` or `ssh-key` inputs:
+
+```yaml
+permissions:
+  contents: read
 ```
 
 # License

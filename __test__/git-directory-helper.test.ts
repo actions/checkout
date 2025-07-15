@@ -281,6 +281,65 @@ describe('git-directory-helper tests', () => {
     expect(git.branchDelete).toHaveBeenCalledWith(false, 'local-branch-2')
   })
 
+  const cleanWhenSubmoduleStatusIsFalse =
+    'cleans when submodule status is false'
+
+  it(cleanWhenSubmoduleStatusIsFalse, async () => {
+    // Arrange
+    await setup(cleanWhenSubmoduleStatusIsFalse)
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+
+    //mock bad submodule
+
+    const submoduleStatus = git.submoduleStatus as jest.Mock<any, any>
+    submoduleStatus.mockImplementation(async (remote: boolean) => {
+      return false
+    })
+
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      repositoryUrl,
+      clean,
+      ref
+    )
+
+    // Assert
+    const files = await fs.promises.readdir(repositoryPath)
+    expect(files).toHaveLength(0)
+    expect(git.tryClean).toHaveBeenCalled()
+  })
+
+  const doesNotCleanWhenSubmoduleStatusIsTrue =
+    'does not clean when submodule status is true'
+
+  it(doesNotCleanWhenSubmoduleStatusIsTrue, async () => {
+    // Arrange
+    await setup(doesNotCleanWhenSubmoduleStatusIsTrue)
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+
+    const submoduleStatus = git.submoduleStatus as jest.Mock<any, any>
+    submoduleStatus.mockImplementation(async (remote: boolean) => {
+      return true
+    })
+
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      repositoryUrl,
+      clean,
+      ref
+    )
+
+    // Assert
+
+    const files = await fs.promises.readdir(repositoryPath)
+    expect(files.sort()).toEqual(['.git', 'my-file'])
+    expect(git.tryClean).toHaveBeenCalled()
+  })
+
   const removesLockFiles = 'removes lock files'
   it(removesLockFiles, async () => {
     // Arrange
@@ -403,6 +462,9 @@ async function setup(testName: string): Promise<void> {
     branchList: jest.fn(async () => {
       return []
     }),
+    disableSparseCheckout: jest.fn(),
+    sparseCheckout: jest.fn(),
+    sparseCheckoutNonConeMode: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(),
@@ -423,6 +485,9 @@ async function setup(testName: string): Promise<void> {
     submoduleForeach: jest.fn(),
     submoduleSync: jest.fn(),
     submoduleUpdate: jest.fn(),
+    submoduleStatus: jest.fn(async () => {
+      return true
+    }),
     tagExists: jest.fn(),
     tryClean: jest.fn(async () => {
       return true
@@ -436,6 +501,7 @@ async function setup(testName: string): Promise<void> {
     }),
     tryReset: jest.fn(async () => {
       return true
-    })
+    }),
+    version: jest.fn()
   }
 }

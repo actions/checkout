@@ -20,6 +20,7 @@ let tempHomedir: string
 let git: IGitCommandManager & {env: {[key: string]: string}}
 let settings: IGitSourceSettings
 let sshPath: string
+let githubServerUrl: string
 
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {
@@ -67,11 +68,18 @@ describe('git-auth-helper tests', () => {
     }
   })
 
-  const configureAuth_configuresAuthHeader =
-    'configureAuth configures auth header'
-  it(configureAuth_configuresAuthHeader, async () => {
+  async function testAuthHeader(
+    testName: string,
+    serverUrl: string | undefined = undefined
+  ) {
     // Arrange
-    await setup(configureAuth_configuresAuthHeader)
+    let expectedServerUrl = 'https://github.com'
+    if (serverUrl) {
+      githubServerUrl = serverUrl
+      expectedServerUrl = githubServerUrl
+    }
+
+    await setup(testName)
     expect(settings.authToken).toBeTruthy() // sanity check
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
 
@@ -88,9 +96,33 @@ describe('git-auth-helper tests', () => {
     ).toString('base64')
     expect(
       configContent.indexOf(
-        `http.https://github.com/.extraheader AUTHORIZATION: basic ${basicCredential}`
+        `http.${expectedServerUrl}/.extraheader AUTHORIZATION: basic ${basicCredential}`
       )
     ).toBeGreaterThanOrEqual(0)
+  }
+
+  const configureAuth_configuresAuthHeader =
+    'configureAuth configures auth header'
+  it(configureAuth_configuresAuthHeader, async () => {
+    await testAuthHeader(configureAuth_configuresAuthHeader)
+  })
+
+  const configureAuth_AcceptsGitHubServerUrl =
+    'inject https://my-ghes-server.com as github server url'
+  it(configureAuth_AcceptsGitHubServerUrl, async () => {
+    await testAuthHeader(
+      configureAuth_AcceptsGitHubServerUrl,
+      'https://my-ghes-server.com'
+    )
+  })
+
+  const configureAuth_AcceptsGitHubServerUrlSetToGHEC =
+    'inject https://github.com as github server url'
+  it(configureAuth_AcceptsGitHubServerUrlSetToGHEC, async () => {
+    await testAuthHeader(
+      configureAuth_AcceptsGitHubServerUrl,
+      'https://github.com'
+    )
   })
 
   const configureAuth_configuresAuthHeaderEvenWhenPersistCredentialsFalse =
@@ -137,8 +169,9 @@ describe('git-auth-helper tests', () => {
 
     // Mock fs.promises.readFile
     const realReadFile = fs.promises.readFile
-    jest.spyOn(fs.promises, 'readFile').mockImplementation(
-      async (file: any, options: any): Promise<Buffer> => {
+    jest
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (file: any, options: any): Promise<Buffer> => {
         const userKnownHostsPath = path.join(
           os.homedir(),
           '.ssh',
@@ -149,8 +182,7 @@ describe('git-auth-helper tests', () => {
         }
 
         return await realReadFile(file, options)
-      }
-    )
+      })
 
     // Act
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -518,12 +550,17 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(4)
       expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
         /unset-all.*insteadOf/
       )
       expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/url.*insteadOf/)
+      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(
+        /url.*insteadOf.*git@github.com:/
+      )
+      expect(mockSubmoduleForeach.mock.calls[3][0]).toMatch(
+        /url.*insteadOf.*org-123456@github.com:/
+      )
     }
   )
 
@@ -638,10 +675,11 @@ describe('git-auth-helper tests', () => {
     expect(gitConfigContent.indexOf('http.')).toBeLessThan(0)
   })
 
-  const removeGlobalAuth_removesOverride = 'removeGlobalAuth removes override'
-  it(removeGlobalAuth_removesOverride, async () => {
+  const removeGlobalConfig_removesOverride =
+    'removeGlobalConfig removes override'
+  it(removeGlobalConfig_removesOverride, async () => {
     // Arrange
-    await setup(removeGlobalAuth_removesOverride)
+    await setup(removeGlobalConfig_removesOverride)
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
     await authHelper.configureAuth()
     await authHelper.configureGlobalAuth()
@@ -650,7 +688,7 @@ describe('git-auth-helper tests', () => {
     await fs.promises.stat(path.join(git.env['HOME'], '.gitconfig'))
 
     // Act
-    await authHelper.removeGlobalAuth()
+    await authHelper.removeGlobalConfig()
 
     // Assert
     expect(git.env['HOME']).toBeUndefined()
@@ -689,6 +727,9 @@ async function setup(testName: string): Promise<void> {
     branchDelete: jest.fn(),
     branchExists: jest.fn(),
     branchList: jest.fn(),
+    disableSparseCheckout: jest.fn(),
+    sparseCheckout: jest.fn(),
+    sparseCheckoutNonConeMode: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(
@@ -732,6 +773,9 @@ async function setup(testName: string): Promise<void> {
       return ''
     }),
     submoduleSync: jest.fn(),
+    submoduleStatus: jest.fn(async () => {
+      return true
+    }),
     submoduleUpdate: jest.fn(),
     tagExists: jest.fn(),
     tryClean: jest.fn(),
@@ -752,15 +796,21 @@ async function setup(testName: string): Promise<void> {
     ),
     tryDisableAutomaticGarbageCollection: jest.fn(),
     tryGetFetchUrl: jest.fn(),
-    tryReset: jest.fn()
+    tryReset: jest.fn(),
+    version: jest.fn()
   }
 
   settings = {
     authToken: 'some auth token',
     clean: true,
     commit: '',
+    filter: undefined,
+    sparseCheckout: [],
+    sparseCheckoutConeMode: true,
     fetchDepth: 1,
     shallowSince: '',
+    fetchTags: false,
+    showProgress: true,
     lfs: false,
     submodules: false,
     nestedSubmodules: false,
@@ -771,7 +821,11 @@ async function setup(testName: string): Promise<void> {
     repositoryPath: '',
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
-    sshStrict: true
+    sshStrict: true,
+    sshUser: '',
+    workflowOrganizationId: 123456,
+    setSafeDirectory: true,
+    githubServerUrl: githubServerUrl
   }
 }
 

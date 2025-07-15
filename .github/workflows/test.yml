@@ -7,14 +7,19 @@ on:
       - main
       - releases/*
 
+
+# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow,
+# these refer to "test-data" branches on this actions/checkout repo.
+# (For example, test-data/v2/basic -> https://github.com/actions/checkout/tree/test-data/v2/basic)
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
-          node-version: 12.x
-      - uses: actions/checkout@v2
+          node-version: 20.x
+      - uses: actions/checkout@v4.1.6
       - run: npm ci
       - run: npm run build
       - run: npm run format-check
@@ -32,7 +37,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4.1.6
 
       # Basic checkout
       - name: Checkout basic
@@ -71,6 +76,53 @@ jobs:
       - name: Verify side by side
         shell: bash
         run: __test__/verify-side-by-side.sh
+
+      # Filter
+      - name: Fetch filter
+        uses: ./
+        with:
+          filter: 'blob:none'
+          path: fetch-filter
+
+      - name: Verify fetch filter
+        run: __test__/verify-fetch-filter.sh
+
+      # Sparse checkout
+      - name: Sparse checkout
+        uses: ./
+        with:
+          sparse-checkout: |
+            __test__
+            .github
+            dist
+          path: sparse-checkout
+
+      - name: Verify sparse checkout
+        run: __test__/verify-sparse-checkout.sh
+
+      # Disabled sparse checkout in existing checkout
+      - name: Disabled sparse checkout
+        uses: ./
+        with:
+          path: sparse-checkout
+
+      - name: Verify disabled sparse checkout
+        shell: bash
+        run: set -x && ls -l sparse-checkout/src/git-command-manager.ts
+
+      # Sparse checkout (non-cone mode)
+      - name: Sparse checkout (non-cone mode)
+        uses: ./
+        with:
+          sparse-checkout: |
+            /__test__/
+            /.github/
+            /dist/
+          sparse-checkout-cone-mode: false
+          path: sparse-checkout-non-cone-mode
+
+      - name: Verify sparse checkout (non-cone mode)
+        run: __test__/verify-sparse-checkout-non-cone-mode.sh
 
       # LFS
       - name: Checkout LFS
@@ -138,11 +190,11 @@ jobs:
   test-proxy:
     runs-on: ubuntu-latest
     container:
-      image: alpine/git:latest
+      image: ghcr.io/actions/test-ubuntu-git:main.20240221.114913.703z
       options: --dns 127.0.0.1
     services:
       squid-proxy:
-        image: datadog/squid:latest
+        image: ubuntu/squid:latest
         ports:
           - 3128:3128
     env:
@@ -150,7 +202,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4.1.6
 
       # Basic checkout using git
       - name: Checkout basic
@@ -182,7 +234,7 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4.1.6
 
       # Basic checkout using git
       - name: Checkout basic
@@ -205,3 +257,75 @@ jobs:
           path: basic
       - name: Verify basic
         run: __test__/verify-basic.sh --archive
+
+  test-git-container:
+    runs-on: ubuntu-latest
+    container: bitnami/git:latest
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v4.1.6
+        with:
+          path: localClone
+
+      # Basic checkout using git
+      - name: Checkout basic
+        uses: ./localClone
+        with:
+          ref: test-data/v2/basic
+      - name: Verify basic
+        run: |
+          if [ ! -f "./basic-file.txt" ]; then
+              echo "Expected basic file does not exist"
+              exit 1
+          fi
+
+          # Verify .git folder
+          if [ ! -d "./.git" ]; then
+            echo "Expected ./.git folder to exist"
+            exit 1
+          fi
+
+          # Verify auth token
+          git config --global --add safe.directory "*"
+          git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+
+      # needed to make checkout post cleanup succeed
+      - name: Fix Checkout v4
+        uses: actions/checkout@v4.1.6
+        with:
+          path: localClone
+
+  test-output:
+    runs-on: ubuntu-latest
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v4.1.6
+
+      # Basic checkout using git
+      - name: Checkout basic
+        id: checkout
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+
+      # Verify output
+      - name: Verify output
+        run: |
+          echo "Commit: ${{ steps.checkout.outputs.commit }}"
+          echo "Ref: ${{ steps.checkout.outputs.ref }}"
+
+          if [ "${{ steps.checkout.outputs.ref }}" != "test-data/v2/basic" ]; then
+            echo "Expected ref to be test-data/v2/basic"
+            exit 1
+          fi
+
+          if [ "${{ steps.checkout.outputs.commit }}" != "82f71901cf8c021332310dcc8cdba84c4193ff5d" ]; then
+            echo "Expected commit to be 82f71901cf8c021332310dcc8cdba84c4193ff5d"
+            exit 1
+          fi
+
+      # needed to make checkout post cleanup succeed
+      - name: Fix Checkout
+        uses: actions/checkout@v4.1.6
