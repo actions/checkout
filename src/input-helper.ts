@@ -116,7 +116,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   }
   result.shallowSince = core.getInput('shallow-since')
   core.debug(`shallow since = ${result.shallowSince}`)
-  
+
   // Fetch tags
   result.fetchTags =
     (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'

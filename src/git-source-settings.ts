@@ -54,7 +54,7 @@ export interface IGitSourceSettings {
    */
   shallowSince: string
 
-  /** 
+  /**
    *  Fetch tags, even if fetchDepth > 0 (default: false)
    */
   fetchTags: boolean
