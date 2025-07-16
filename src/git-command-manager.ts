@@ -33,16 +33,13 @@ export interface IGitCommandManager {
   configExists(configKey: string, globalConfig?: boolean): Promise<boolean>
   fetch(
     refSpec: string[],
-    fetchDepth?: number,
-    shallowSince?: string,
     options: {
-      filter?: string,
-      fetchDepth?: number,
-      shallowSince?: string,
-      fetchTags?: boolean,
+      filter?: string
+      fetchDepth?: number
+      shallowSince?: string
+      fetchTags?: boolean
       showProgress?: boolean
     }
-
   ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getWorkingDirectory(): string
@@ -58,6 +55,7 @@ export interface IGitCommandManager {
   shaExists(sha: string): Promise<boolean>
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
+  submoduleStatus(): Promise<boolean>
   submoduleUpdate(
     fetchDepth: number,
     recursive: boolean,
@@ -262,8 +260,8 @@ class GitCommandManager {
     refSpec: string[],
     options: {
       filter?: string
-      fetchDepth?: number, 
-      shallowSince?: string,
+      fetchDepth?: number
+      shallowSince?: string
       fetchTags?: boolean
       showProgress?: boolean
     }
@@ -284,7 +282,9 @@ class GitCommandManager {
 
     if (options.shallowSince) {
       args.push(`--shallow-since=${options.shallowSince}`)
-    } else if (options.fetchDepth && options.fetchDepth > 0) {
+    }
+
+    if (options.fetchDepth && options.fetchDepth > 0) {
       args.push(`--depth=${options.fetchDepth}`)
     } else if (
       fshelper.fileExistsSync(
@@ -429,6 +429,7 @@ class GitCommandManager {
     if (fetchDepth > 0) {
       args.push(`--depth=${fetchDepth}`)
     }
+
     if (shallowSince) {
       args.push(`--shallow-since=${shallowSince}`)
     }
