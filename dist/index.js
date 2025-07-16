@@ -666,7 +666,7 @@ class GitCommandManager {
             if (options.shallowSince) {
                 args.push(`--shallow-since=${options.shallowSince}`);
             }
-            else if (options.fetchDepth && options.fetchDepth > 0) {
+            if (options.fetchDepth && options.fetchDepth > 0) {
                 args.push(`--depth=${options.fetchDepth}`);
             }
             else if (fshelper.fileExistsSync(path.join(this.workingDirectory, '.git', 'shallow'))) {
