@@ -57,6 +57,8 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
+  exclude_from_clean:
+    description: 'The path to exclude from cleaning'
   filter:
     description: >
       Partially clone against a given filter.
