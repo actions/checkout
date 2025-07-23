@@ -1,6 +1,6 @@
 import * as assert from 'assert'
-import * as refHelper from '../lib/ref-helper'
-import {IGitCommandManager} from '../lib/git-command-manager'
+import * as refHelper from '../src/ref-helper'
+import {IGitCommandManager} from '../src/git-command-manager'
 
 const commit = '1234567890123456789012345678901234567890'
 let git: IGitCommandManager
