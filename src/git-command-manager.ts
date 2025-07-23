@@ -328,7 +328,11 @@ class GitCommandManager {
   }
 
   async init(): Promise<void> {
-    await this.execGit(['init', this.workingDirectory])
+    await this.execGit([
+      'init',
+      '--initial-branch=silence_warning_about_default_branch',
+      this.workingDirectory
+    ])
   }
 
   async isDetached(): Promise<boolean> {
