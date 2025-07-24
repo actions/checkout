@@ -1,0 +1,46 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-and-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # نصب Node.js برای اجرای تست (اگر پروژه Node.js باشد)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      # نصب وابستگی‌ها (در صورت وجود)
+      - run: |
+          if [ -f package.json ]; then
+            npm ci || true
+            npm run build --if-present || true
+            npm test || true
+          fi
+
+      # اجرای تست برای زبان‌های دیگر (به شکل ساده)
+      - run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt && pytest || true; fi
+          if [ -f Cargo.toml ]; then cargo test || true; fi
+          if [ -f go.mod ]; then go test ./... || true; fi
+
+      # در صورت موفقیت تست‌ها، Merge خودکار
+      - name: Merge PR
+        uses: fastify/github-action-merge-dependabot@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: squash

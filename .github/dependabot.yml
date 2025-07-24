@@ -1,20 +1,88 @@
----
 version: 2
-
 updates:
-- package-ecosystem: "npm"
-  directory: "/"
-  schedule:
-    interval: "weekly"
-  groups:
-    minor-npm-dependencies:
-      # NPM: Only group minor and patch updates (we want to carefully review major updates)
-      update-types: [minor, patch]
-- package-ecosystem: "github-actions"
-  directory: "/"
-  schedule:
-    interval: "weekly"
-  groups:
-    minor-actions-dependencies:
-      # GitHub Actions: Only group minor and patch updates (we want to carefully review major updates)
-      update-types: [minor, patch]
+  # Node.js (npm, yarn, pnpm)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels: ["dependencies", "automerge"]
+    reviewers: ["your-github-username"]
+    assignees: ["your-github-username"]
+
+  # Python (pip)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "python"]
+
+  # Rust (cargo)
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "rust"]
+
+  # Go modules
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "go"]
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "docker"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["ci", "dependencies"]
+
+  # PHP (Composer)
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "php"]
+
+  # Ruby (Bundler)
+  - package-ecosystem: "bundler"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "ruby"]
+
+  # Java (Maven)
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "java"]
+
+  # .NET (NuGet)
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels: ["dependencies", "dotnet"]
+
+  # Security-focused updates
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "direct"
+    labels: ["security", "automerge"]
+    commit-message:
+      prefix: "security"

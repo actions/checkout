@@ -1,0 +1,23 @@
+https://github.com/Dev-Re2906/checkout/compare/v4.2.1...v4.2.2
+
+git add .
+git commit -m "Ready for publish"
+git push origin main
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
