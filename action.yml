@@ -98,6 +98,11 @@ inputs:
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false
+  object-format:
+    description: >
+      Use the given object format when creating local repository. Specifically, use
+      'sha256' to checkout a SHA-256 repository.
+    default: null
 outputs:
   ref:
     description: 'The branch, tag or SHA that was checked out'
