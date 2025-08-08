@@ -314,7 +314,7 @@ class GitCommandManager {
         line = line.trim()
         if (line.startsWith('ref:') || line.endsWith('HEAD')) {
           return line
-            .substr('ref:'.length, line.length - 'ref:'.length - 'HEAD'.length)
+            .slice('ref:'.length, line.length - 'HEAD'.length)
             .trim()
         }
       }
