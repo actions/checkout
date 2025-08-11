@@ -1141,7 +1141,9 @@ function prepareExistingDirectory(git_1, repositoryPath_1, repositoryUrl_1, clea
             // We still need to make sure we have a git repository to work with
             if (!git) {
                 core.info(`Initializing git repository to prepare for checkout with preserved changes`);
-                yield fs.promises.mkdir(path.join(repositoryPath, '.git'), { recursive: true });
+                yield fs.promises.mkdir(path.join(repositoryPath, '.git'), {
+                    recursive: true
+                });
             }
         }
     });
@@ -1888,7 +1890,9 @@ function getInputs() {
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
         // Preserve local changes
-        result.preserveLocalChanges = (core.getInput('preserve-local-changes') || 'false').toUpperCase() === 'TRUE';
+        result.preserveLocalChanges =
+            (core.getInput('preserve-local-changes') || 'false').toUpperCase() ===
+                'TRUE';
         core.debug(`preserveLocalChanges = ${result.preserveLocalChanges}`);
         // Filter
         const filter = core.getInput('filter');
