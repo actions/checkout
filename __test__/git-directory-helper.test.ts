@@ -143,12 +143,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(git.tryClean).toHaveBeenCalled()
     expect(core.warning).toHaveBeenCalled()
     expect(git.tryReset).not.toHaveBeenCalled()
@@ -170,12 +171,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       differentRepositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(core.warning).not.toHaveBeenCalled()
     expect(git.isDetached).not.toHaveBeenCalled()
   })
@@ -221,12 +223,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(git.tryClean).toHaveBeenCalled()
     expect(git.tryReset).toHaveBeenCalled()
     expect(core.warning).toHaveBeenCalled()
@@ -246,12 +249,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(core.warning).not.toHaveBeenCalled()
   })
 
@@ -302,12 +306,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(git.tryClean).toHaveBeenCalled()
   })
 
