@@ -97,9 +97,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     clean: ''
 
     # Whether to preserve local changes during checkout. If true, tries to preserve
-    # local files that are not tracked by Git. By default, all files will be overwritten.
+    # local files that are not tracked by Git. By default, all files will be
+    # overwritten.
     # Default: false
-    preserveLocalChanges: ''
+    preserve-local-changes: ''
 
     # Partially clone against a given filter. Overrides sparse-checkout if set.
     # Default: null
@@ -349,7 +350,7 @@ steps:
     uses: actions/checkout@v5
     with:
       clean: false
-      preserveLocalChanges: true
+      preserve-local-changes: true
 ```
 
 # Recommended permissions

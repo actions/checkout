@@ -57,7 +57,7 @@ inputs:
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: 'true'
-  preserveLocalChanges:
+  preserve-local-changes:
     description: 'Whether to preserve local changes during checkout. If true, tries to preserve local files that are not tracked by Git. By default, all files will be overwritten.'
     default: 'false'
   filter:

@@ -609,9 +609,17 @@ class GitCommandManager {
             yield fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
         });
     }
-    checkout(ref, startPoint) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['checkout', '--progress', '--force'];
+    checkout(ref_1, startPoint_1) {
+        return __awaiter(this, arguments, void 0, function* (ref, startPoint, options = []) {
+            const args = ['checkout', '--progress'];
+            // Add custom options (like --merge) if provided
+            if (options.length > 0) {
+                args.push(...options);
+            }
+            else {
+                // Default behavior - use force
+                args.push('--force');
+            }
             if (startPoint) {
                 args.push('-B', ref, startPoint);
             }
@@ -1329,7 +1337,16 @@ function getSource(settings) {
             }
             // Checkout
             core.startGroup('Checking out the ref');
-            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            if (settings.preserveLocalChanges) {
+                core.info('Attempting to preserve local changes during checkout');
+                // Use --merge to preserve local changes if possible
+                // This will fail if there are merge conflicts, but that's expected behavior
+                yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint, ['--merge']);
+            }
+            else {
+                // Use the default behavior with --force
+                yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            }
             core.endGroup();
             // Submodules
             if (settings.submodules) {
@@ -1766,6 +1783,9 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        // Preserve local changes
+        result.preserveLocalChanges = (core.getInput('preserve-local-changes') || 'false').toUpperCase() === 'TRUE';
+        core.debug(`preserveLocalChanges = ${result.preserveLocalChanges}`);
         // Filter
         const filter = core.getInput('filter');
         if (filter) {
