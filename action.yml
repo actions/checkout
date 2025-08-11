@@ -56,7 +56,10 @@ inputs:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
-    default: true
+    default: 'true'
+  preserveLocalChanges:
+    description: 'Whether to preserve local changes during checkout. If true, tries to preserve local files that are not tracked by Git. By default, all files will be overwritten.'
+    default: 'false'
   filter:
     description: >
       Partially clone against a given filter.

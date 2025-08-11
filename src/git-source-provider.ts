@@ -229,7 +229,15 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Checkout
     core.startGroup('Checking out the ref')
-    await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    if (settings.preserveLocalChanges) {
+      core.info('Attempting to preserve local changes during checkout')
+      // Use --merge to preserve local changes if possible
+      // This will fail if there are merge conflicts, but that's expected behavior
+      await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint, ['--merge'])
+    } else {
+      // Use the default behavior with --force
+      await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    }
     core.endGroup()
 
     // Submodules

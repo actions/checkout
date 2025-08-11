@@ -96,6 +96,11 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     clean: ''
 
+    # Whether to preserve local changes during checkout. If true, tries to preserve
+    # local files that are not tracked by Git. By default, all files will be overwritten.
+    # Default: false
+    preserveLocalChanges: ''
+
     # Partially clone against a given filter. Overrides sparse-checkout if set.
     # Default: null
     filter: ''
@@ -331,6 +336,21 @@ jobs:
 ```
 
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
+
+## Preserve local changes during checkout
+
+```yaml
+steps:
+  - name: Create file before checkout
+    shell: pwsh
+    run: New-Item -Path . -Name "example.txt" -ItemType "File"
+    
+  - name: Checkout with preserving local changes
+    uses: actions/checkout@v5
+    with:
+      clean: false
+      preserveLocalChanges: true
+```
 
 # Recommended permissions
 
