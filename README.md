@@ -1,5 +1,9 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
+# Checkout V5
+
+Checkout v5 now supports Node.js 24
+
 # Checkout V4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
@@ -36,7 +40,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -149,24 +153,32 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 # Scenarios
 
-- [Fetch only the root files](#Fetch-only-the-root-files)
-- [Fetch only the root files and `.github` and `src` folder](#Fetch-only-the-root-files-and-github-and-src-folder)
-- [Fetch only a single file](#Fetch-only-a-single-file)
-- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
-- [Checkout a different branch](#Checkout-a-different-branch)
-- [Checkout HEAD^](#Checkout-HEAD)
-- [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
-- [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
-- [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
-- [Push a commit to a PR using the built-in token](#Push-a-commit-to-a-PR-using-the-built-in-token)
+- [Checkout V5](#checkout-v5)
+- [Checkout V4](#checkout-v4)
+    - [Note](#note)
+- [What's new](#whats-new)
+- [Usage](#usage)
+- [Scenarios](#scenarios)
+  - [Fetch only the root files](#fetch-only-the-root-files)
+  - [Fetch only the root files and `.github` and `src` folder](#fetch-only-the-root-files-and-github-and-src-folder)
+  - [Fetch only a single file](#fetch-only-a-single-file)
+  - [Fetch all history for all tags and branches](#fetch-all-history-for-all-tags-and-branches)
+  - [Checkout a different branch](#checkout-a-different-branch)
+  - [Checkout HEAD^](#checkout-head)
+  - [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
+  - [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
+  - [Checkout multiple repos (private)](#checkout-multiple-repos-private)
+  - [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
+  - [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
+  - [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
+  - [Push a commit to a PR using the built-in token](#push-a-commit-to-a-pr-using-the-built-in-token)
+- [Recommended permissions](#recommended-permissions)
+- [License](#license)
 
 ## Fetch only the root files
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     sparse-checkout: .
 ```
@@ -174,7 +186,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files and `.github` and `src` folder
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     sparse-checkout: |
       .github
@@ -184,7 +196,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only a single file
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     sparse-checkout: |
       README.md
@@ -194,7 +206,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     fetch-depth: 0
 ```
@@ -202,7 +214,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     ref: my-branch
 ```
@@ -210,7 +222,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -220,12 +232,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v5
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v4
+  uses: actions/checkout@v5
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -236,10 +248,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v5
 
 - name: Checkout tools repo
-  uses: actions/checkout@v4
+  uses: actions/checkout@v5
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -250,12 +262,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v5
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v4
+  uses: actions/checkout@v5
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -268,7 +280,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v5
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -284,7 +296,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 ```
 
 ## Push a commit using the built-in token
@@ -295,7 +307,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
@@ -317,7 +329,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
       - run: |

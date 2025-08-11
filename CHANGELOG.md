@@ -1,5 +1,9 @@
 # Changelog
 
+## V5.0.0
+* Update actions checkout to use node 24 by @salmanmkc in https://github.com/actions/checkout/pull/2226
+
+
 ## V4.3.0
 * docs: update README.md by @motss in https://github.com/actions/checkout/pull/1971
 * Add internal repos for checking out multiple repositories by @mouismail in https://github.com/actions/checkout/pull/1977
