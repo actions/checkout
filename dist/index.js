@@ -1033,13 +1033,17 @@ const fs = __importStar(__nccwpck_require__(7147));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref) {
-    return __awaiter(this, void 0, void 0, function* () {
+function prepareExistingDirectory(git_1, repositoryPath_1, repositoryUrl_1, clean_1, ref_1) {
+    return __awaiter(this, arguments, void 0, function* (git, repositoryPath, repositoryUrl, clean, ref, preserveLocalChanges = false) {
         var _a;
         assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
         assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined');
         // Indicates whether to delete the directory contents
         let remove = false;
+        // If preserveLocalChanges is true, log it
+        if (preserveLocalChanges) {
+            core.info(`Preserve local changes is enabled, will attempt to keep local files`);
+        }
         // Check whether using git or REST API
         if (!git) {
             remove = true;
@@ -1120,12 +1124,24 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 remove = true;
             }
         }
-        if (remove) {
+        if (remove && !preserveLocalChanges) {
             // Delete the contents of the directory. Don't delete the directory itself
             // since it might be the current working directory.
             core.info(`Deleting the contents of '${repositoryPath}'`);
             for (const file of yield fs.promises.readdir(repositoryPath)) {
+                // Skip .git directory as we need it to determine if a file is tracked
+                if (file === '.git') {
+                    continue;
+                }
                 yield io.rmRF(path.join(repositoryPath, file));
+            }
+        }
+        else if (remove && preserveLocalChanges) {
+            core.info(`Skipping deletion of directory contents due to preserve-local-changes setting`);
+            // We still need to make sure we have a git repository to work with
+            if (!git) {
+                core.info(`Initializing git repository to prepare for checkout with preserved changes`);
+                yield fs.promises.mkdir(path.join(repositoryPath, '.git'), { recursive: true });
             }
         }
     });
@@ -1224,7 +1240,7 @@ function getSource(settings) {
             }
             // Prepare existing directory, otherwise recreate
             if (isExisting) {
-                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
+                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref, settings.preserveLocalChanges);
             }
             if (!git) {
                 // Downloading using REST API
