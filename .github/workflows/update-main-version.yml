@@ -11,6 +11,7 @@ on:
         type: choice
         description: The major version to update
         options:
+          - v5
           - v4
           - v3
           - v2
