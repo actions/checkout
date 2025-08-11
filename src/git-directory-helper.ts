@@ -122,6 +122,20 @@ export async function prepareExistingDirectory(
     }
   }
 
+  // Check repository conditions
+  let isLocalGitRepo = git && fsHelper.directoryExistsSync(path.join(repositoryPath, '.git'));
+  let repoUrl = isLocalGitRepo ? await git?.tryGetFetchUrl() : '';
+  let isSameRepository = repositoryUrl === repoUrl;
+  let differentRepoUrl = !isSameRepository;
+
+  // Repository URL has changed
+  if (differentRepoUrl) {
+    if (preserveLocalChanges) {
+      core.warning(`Repository URL has changed from '${repoUrl}' to '${repositoryUrl}'. Local changes will be preserved as requested.`);
+    }
+    remove = true; // Mark for removal, but actual removal will respect preserveLocalChanges
+  }
+
   if (remove && !preserveLocalChanges) {
     // Delete the contents of the directory. Don't delete the directory itself
     // since it might be the current working directory.
