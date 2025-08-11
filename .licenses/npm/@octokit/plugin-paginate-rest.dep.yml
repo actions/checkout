@@ -1,9 +1,9 @@
 ---
 name: "@octokit/plugin-paginate-rest"
-version: 9.2.1
+version: 9.2.2
 type: npm
 summary: Octokit plugin to paginate REST API endpoint responses
-homepage: 
+homepage:
 license: mit
 licenses:
 - sources: LICENSE
