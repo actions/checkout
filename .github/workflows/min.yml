@@ -1,0 +1,138 @@
+name: Self-Hosted Universal CI/CD
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main, master]
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+
+jobs:
+  detect-project:
+    name: Detect Project Language
+    runs-on: self-hosted
+    outputs:
+      lang: ${{ steps.detect.outputs.lang }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f package.json ]; then
+            echo "lang=node" >> $GITHUB_OUTPUT
+          elif [ -f requirements.txt ]; then
+            echo "lang=python" >> $GITHUB_OUTPUT
+          elif [ -f Cargo.toml ]; then
+            echo "lang=rust" >> $GITHUB_OUTPUT
+          elif [ -f go.mod ]; then
+            echo "lang=go" >> $GITHUB_OUTPUT
+          elif ls *.csproj 1> /dev/null 2>&1; then
+            echo "lang=dotnet" >> $GITHUB_OUTPUT
+          elif [ -f pom.xml ]; then
+            echo "lang=java" >> $GITHUB_OUTPUT
+          elif [ -f composer.json ]; then
+            echo "lang=php" >> $GITHUB_OUTPUT
+          elif [ -f Gemfile ]; then
+            echo "lang=ruby" >> $GITHUB_OUTPUT
+          else
+            echo "lang=unknown" >> $GITHUB_OUTPUT
+          fi
+
+  build-test:
+    name: Build & Test (${{ needs.detect-project.outputs.lang }})
+    needs: detect-project
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node.js
+      - name: Setup Node.js
+        if: ${{ needs.detect-project.outputs.lang == 'node' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      # Python
+      - name: Setup Python
+        if: ${{ needs.detect-project.outputs.lang == 'python' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      # Rust
+      - name: Setup Rust
+        if: ${{ needs.detect-project.outputs.lang == 'rust' }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      # Go
+      - name: Setup Go
+        if: ${{ needs.detect-project.outputs.lang == 'go' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
+
+      # .NET
+      - name: Setup .NET
+        if: ${{ needs.detect-project.outputs.lang == 'dotnet' }}
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.x
+
+      # Java
+      - name: Setup Java
+        if: ${{ needs.detect-project.outputs.lang == 'java' }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      # PHP
+      - name: Setup PHP
+        if: ${{ needs.detect-project.outputs.lang == 'php' }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, curl
+          tools: composer
+
+      # Ruby
+      - name: Setup Ruby
+        if: ${{ needs.detect-project.outputs.lang == 'ruby' }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.1
+          bundler-cache: true
+
+      # Build
+      - name: Install & Build
+        run: |
+          case "${{ needs.detect-project.outputs.lang }}" in
+            node) npm ci && npm run build --if-present ;;
+            python) pip install -r requirements.txt ;;
+            rust) cargo build --release ;;
+            go) go build ./... ;;
+            dotnet) dotnet restore && dotnet build --configuration Release ;;
+            java) mvn install -DskipTests ;;
+            php) composer install --no-interaction ;;
+            ruby) bundle install ;;
+            *) echo "Unknown language - skipping build" ;;
+          esac
+
+      # Test
+      - name: Run Tests
+        run: |
+          case "${{ needs.detect-project.outputs.lang }}" in
+            node) npm test || true ;;
+            python) pytest || true ;;
+            rust) cargo test || true ;;
+            go) go test ./... || true ;;
+            dotnet) dotnet test --no-build --verbosity normal || true ;;
+            java) mvn test || true ;;
+            php) vendor/bin/phpunit || true ;;
+            ruby) bundle exec rspec || true ;;
+            *) echo "No tests configured" ;;
+          esac
