@@ -19,10 +19,12 @@ export async function prepareExistingDirectory(
 
   // Indicates whether to delete the directory contents
   let remove = false
-  
+
   // If preserveLocalChanges is true, log it
   if (preserveLocalChanges) {
-    core.info(`Preserve local changes is enabled, will attempt to keep local files`)
+    core.info(
+      `Preserve local changes is enabled, will attempt to keep local files`
+    )
   }
 
   // Check whether using git or REST API
@@ -132,11 +134,17 @@ export async function prepareExistingDirectory(
       await io.rmRF(path.join(repositoryPath, file))
     }
   } else if (remove && preserveLocalChanges) {
-    core.info(`Skipping deletion of directory contents due to preserve-local-changes setting`)
+    core.info(
+      `Skipping deletion of directory contents due to preserve-local-changes setting`
+    )
     // We still need to make sure we have a git repository to work with
     if (!git) {
-      core.info(`Initializing git repository to prepare for checkout with preserved changes`)
-      await fs.promises.mkdir(path.join(repositoryPath, '.git'), { recursive: true })
+      core.info(
+        `Initializing git repository to prepare for checkout with preserved changes`
+      )
+      await fs.promises.mkdir(path.join(repositoryPath, '.git'), {
+        recursive: true
+      })
     }
   }
 }

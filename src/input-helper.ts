@@ -83,7 +83,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   core.debug(`clean = ${result.clean}`)
 
   // Preserve local changes
-  result.preserveLocalChanges = (core.getInput('preserve-local-changes') || 'false').toUpperCase() === 'TRUE'
+  result.preserveLocalChanges =
+    (core.getInput('preserve-local-changes') || 'false').toUpperCase() ===
+    'TRUE'
   core.debug(`preserveLocalChanges = ${result.preserveLocalChanges}`)
 
   // Filter

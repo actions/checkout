@@ -232,17 +232,17 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     core.startGroup('Checking out the ref')
     if (settings.preserveLocalChanges) {
       core.info('Attempting to preserve local changes during checkout')
-      
+
       // List and store local files before checkout
       const fs = require('fs')
       const path = require('path')
       const localFiles = new Map()
-      
+
       try {
         // Get all files in the workspace that aren't in the .git directory
         const workspacePath = process.cwd()
         core.info(`Current workspace path: ${workspacePath}`)
-        
+
         // List all files in the current directory using fs
         const listFilesRecursively = (dir: string): string[] => {
           let results: string[] = []
@@ -252,7 +252,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
             const relativePath = path.relative(workspacePath, fullPath)
             // Skip .git directory
             if (relativePath.startsWith('.git')) return
-            
+
             const stat = fs.statSync(fullPath)
             if (stat && stat.isDirectory()) {
               // Recursively explore subdirectories
@@ -270,17 +270,17 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
           })
           return results
         }
-        
+
         const localFilesList = listFilesRecursively(workspacePath)
         core.info(`Found ${localFilesList.length} local files to preserve:`)
         localFilesList.forEach(file => core.info(`  - ${file}`))
       } catch (error) {
         core.warning(`Failed to list local files: ${error}`)
       }
-      
+
       // Perform normal checkout
       await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
-      
+
       // Restore local files that were not tracked by git
       core.info('Restoring local files after checkout')
       try {
@@ -290,16 +290,16 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
           silent: true,
           ignoreReturnCode: true
         }
-        
+
         for (const [filePath, content] of localFiles.entries()) {
           // Check if file exists in git using a child process instead of git.execGit
-          const { exec } = require('@actions/exec')
+          const {exec} = require('@actions/exec')
           let exitCode = 0
           const output = {
             stdout: '',
             stderr: ''
           }
-          
+
           // Capture output
           const options = {
             ...execOptions,
@@ -312,14 +312,18 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
               }
             }
           }
-          
-          exitCode = await exec('git', ['ls-files', '--error-unmatch', filePath], options)
-          
+
+          exitCode = await exec(
+            'git',
+            ['ls-files', '--error-unmatch', filePath],
+            options
+          )
+
           if (exitCode !== 0) {
             // File is not tracked by git, safe to restore
             const fullPath = path.join(process.cwd(), filePath)
             // Ensure directory exists
-            fs.mkdirSync(path.dirname(fullPath), { recursive: true })
+            fs.mkdirSync(path.dirname(fullPath), {recursive: true})
             fs.writeFileSync(fullPath, content)
             core.info(`Restored local file: ${filePath}`)
             restoredCount++

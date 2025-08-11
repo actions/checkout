@@ -209,7 +209,7 @@ class GitCommandManager {
     options: string[] = []
   ): Promise<void> {
     const args = ['checkout', '--progress']
-    
+
     // Add custom options (like --merge) if provided
     if (options.length > 0) {
       args.push(...options)
@@ -217,7 +217,7 @@ class GitCommandManager {
       // Default behavior - use force
       args.push('--force')
     }
-    
+
     if (startPoint) {
       args.push('-B', ref, startPoint)
     } else {
