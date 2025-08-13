@@ -2,7 +2,11 @@
 
 # Checkout V5
 
-Checkout v5 now supports Node.js 24
+## What's new
+
+- Updated to the node24 runtime
+  - This requires a minimum Actions Runner version of [v2.327.1](https://github.com/actions/runner/releases/tag/v2.327.1) to run.
+
 
 # Checkout V4
 
@@ -154,9 +158,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 # Scenarios
 
 - [Checkout V5](#checkout-v5)
+  - [What's new](#whats-new)
 - [Checkout V4](#checkout-v4)
     - [Note](#note)
-- [What's new](#whats-new)
+- [What's new](#whats-new-1)
 - [Usage](#usage)
 - [Scenarios](#scenarios)
   - [Fetch only the root files](#fetch-only-the-root-files)
