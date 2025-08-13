@@ -261,8 +261,12 @@ class GitCommandManager {
     }
   ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
-    if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
-      args.push('--no-tags')
+    if (options.fetchTags) {
+      args.push('--tags')
+    } else {
+      if (!refSpec.some(x => x === refHelper.tagsRefSpec)) {
+        args.push('--no-tags')
+      }
     }
 
     args.push('--prune', '--no-recurse-submodules')
