@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import * as fs from 'fs'
-import * as gitDirectoryHelper from '../lib/git-directory-helper'
+import * as gitDirectoryHelper from '../src/git-directory-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
-import {IGitCommandManager} from '../lib/git-command-manager'
+import {IGitCommandManager} from '../src/git-command-manager'
 
 const testWorkspace = path.join(__dirname, '_temp', 'git-directory-helper')
 let repositoryPath: string
