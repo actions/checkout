@@ -711,6 +711,7 @@ class GitCommandManager {
     }
     init() {
         return __awaiter(this, void 0, void 0, function* () {
+            yield this.config('init.defaultBranch', 'main', true, true);
             yield this.execGit(['init', this.workingDirectory]);
         });
     }
