@@ -118,4 +118,14 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * Timeout in seconds for individual git/network operations (0 disables)
+   */
+  timeout?: number
+
+  /**
+   * Maximum number of retry attempts for flaky operations (min 1)
+   */
+  retry?: number
 }

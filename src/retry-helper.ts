@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 
-const defaultMaxAttempts = 3
+const parsedRetry = Math.floor(Number(process.env['INPUT_RETRY'] || ''))
+const defaultMaxAttempts = !isNaN(parsedRetry) && parsedRetry > 0 ? parsedRetry : 3
 const defaultMinSeconds = 10
 const defaultMaxSeconds = 20
 

@@ -257,6 +257,14 @@ class GitAuthHelper {
     this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(
       this.sshKeyPath
     )}"`
+    // Apply SSH ConnectTimeout if input timeout is set
+    const parsedTimeout = Math.floor(
+      Number(process.env['INPUT_TIMEOUT'] || '0')
+    )
+    if (!isNaN(parsedTimeout) && parsedTimeout > 0) {
+      // OpenSSH ConnectTimeout is in seconds
+      this.sshCommand += ` -o ConnectTimeout=${parsedTimeout}`
+    }
     if (this.settings.sshStrict) {
       this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no'
     }

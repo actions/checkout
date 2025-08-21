@@ -161,5 +161,23 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  // Retry attempts (min 1)
+  const retryInput = core.getInput('retry') || '3'
+  let retry = Math.floor(Number(retryInput))
+  if (isNaN(retry) || retry < 1) {
+    retry = 1
+  }
+  result.retry = retry
+  core.debug(`retry = ${result.retry}`)
+
+  // Timeout seconds (0 disables)
+  const timeoutInput = core.getInput('timeout') || '0'
+  let timeout = Math.floor(Number(timeoutInput))
+  if (isNaN(timeout) || timeout < 0) {
+    timeout = 0
+  }
+  result.timeout = timeout
+  core.debug(`timeout = ${result.timeout}`)
+
   return result
 }

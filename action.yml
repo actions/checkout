@@ -77,6 +77,12 @@ inputs:
   fetch-tags:
     description: 'Whether to fetch tags, even if fetch-depth > 0.'
     default: false
+  timeout:
+    description: 'Timeout in seconds for individual git/network operations (0 disables).'
+    default: 0
+  retry:
+    description: 'Maximum number of retry attempts for flaky operations (min 1).'
+    default: 3
   show-progress:
     description: 'Whether to show progress status output when fetching.'
     default: true

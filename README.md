@@ -125,6 +125,14 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: false
     fetch-tags: ''
 
+    # Timeout in seconds for individual git/network operations (0 disables).
+    # Default: 0
+    timeout: ''
+
+    # Maximum number of retry attempts for flaky operations (min 1).
+    # Default: 3
+    retry: ''
+
     # Whether to show progress status output when fetching.
     # Default: true
     show-progress: ''

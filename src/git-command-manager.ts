@@ -539,6 +539,14 @@ class GitCommandManager {
       listeners: mergedListeners
     }
 
+    // Apply timeout from input (seconds -> ms). 0 disables.
+    const parsedTimeout = Math.floor(
+      Number(process.env['INPUT_TIMEOUT'] || '0')
+    )
+    if (!isNaN(parsedTimeout) && parsedTimeout > 0) {
+      ;(options as any).timeout = parsedTimeout * 1000
+    }
+
     result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
     result.stdout = stdout.join('')
 

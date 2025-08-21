@@ -339,6 +339,12 @@ class GitAuthHelper {
             // Configure GIT_SSH_COMMAND
             const sshPath = yield io.which('ssh', true);
             this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
+            // Apply SSH ConnectTimeout if input timeout is set
+            const parsedTimeout = Math.floor(Number(process.env['INPUT_TIMEOUT'] || '0'));
+            if (!isNaN(parsedTimeout) && parsedTimeout > 0) {
+                // OpenSSH ConnectTimeout is in seconds
+                this.sshCommand += ` -o ConnectTimeout=${parsedTimeout}`;
+            }
             if (this.settings.sshStrict) {
                 this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
             }
@@ -898,6 +904,12 @@ class GitCommandManager {
                 ignoreReturnCode: allowAllExitCodes,
                 listeners: mergedListeners
             };
+            // Apply timeout from input (seconds -> ms). 0 disables.
+            const parsedTimeout = Math.floor(Number(process.env['INPUT_TIMEOUT'] || '0'));
+            if (!isNaN(parsedTimeout) && parsedTimeout > 0) {
+                ;
+                options.timeout = parsedTimeout * 1000;
+            }
             result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
             result.stdout = stdout.join('');
             core.debug(result.exitCode.toString());
@@ -1831,6 +1843,22 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Retry attempts (min 1)
+        const retryInput = core.getInput('retry') || '3';
+        let retry = Math.floor(Number(retryInput));
+        if (isNaN(retry) || retry < 1) {
+            retry = 1;
+        }
+        result.retry = retry;
+        core.debug(`retry = ${result.retry}`);
+        // Timeout seconds (0 disables)
+        const timeoutInput = core.getInput('timeout') || '0';
+        let timeout = Math.floor(Number(timeoutInput));
+        if (isNaN(timeout) || timeout < 0) {
+            timeout = 0;
+        }
+        result.timeout = timeout;
+        core.debug(`timeout = ${result.timeout}`);
         return result;
     });
 }
@@ -2263,7 +2291,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetryHelper = void 0;
 exports.execute = execute;
 const core = __importStar(__nccwpck_require__(2186));
-const defaultMaxAttempts = 3;
+const parsedRetry = Math.floor(Number(process.env['INPUT_RETRY'] || ''));
+const defaultMaxAttempts = !isNaN(parsedRetry) && parsedRetry > 0 ? parsedRetry : 3;
 const defaultMinSeconds = 10;
 const defaultMaxSeconds = 20;
 class RetryHelper {
