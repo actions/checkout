@@ -35,7 +35,6 @@ exports.existsSync = existsSync;
 exports.fileExistsSync = fileExistsSync;
 const fs = __importStar(__nccwpck_require__(7147));
 function directoryExistsSync(path, required) {
-    var _a;
     if (!path) {
         throw new Error("Arg 'path' must not be empty");
     }
@@ -44,13 +43,13 @@ function directoryExistsSync(path, required) {
         stats = fs.statSync(path);
     }
     catch (error) {
-        if ((error === null || error === void 0 ? void 0 : error.code) === 'ENOENT') {
+        if (error?.code === 'ENOENT') {
             if (!required) {
                 return false;
             }
             throw new Error(`Directory '${path}' does not exist`);
         }
-        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
+        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error?.message ?? error}`);
     }
     if (stats.isDirectory()) {
         return true;
@@ -61,7 +60,6 @@ function directoryExistsSync(path, required) {
     throw new Error(`Directory '${path}' does not exist`);
 }
 function existsSync(path) {
-    var _a;
     if (!path) {
         throw new Error("Arg 'path' must not be empty");
     }
@@ -69,15 +67,14 @@ function existsSync(path) {
         fs.statSync(path);
     }
     catch (error) {
-        if ((error === null || error === void 0 ? void 0 : error.code) === 'ENOENT') {
+        if (error?.code === 'ENOENT') {
             return false;
         }
-        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
+        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error?.message ?? error}`);
     }
     return true;
 }
 function fileExistsSync(path) {
-    var _a;
     if (!path) {
         throw new Error("Arg 'path' must not be empty");
     }
@@ -86,10 +83,10 @@ function fileExistsSync(path) {
         stats = fs.statSync(path);
     }
     catch (error) {
-        if ((error === null || error === void 0 ? void 0 : error.code) === 'ENOENT') {
+        if (error?.code === 'ENOENT') {
             return false;
         }
-        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
+        throw new Error(`Encountered an error when checking whether path '${path}' exists: ${error?.message ?? error}`);
     }
     if (!stats.isDirectory()) {
         return true;
@@ -128,15 +125,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createAuthHelper = createAuthHelper;
 const assert = __importStar(__nccwpck_require__(9491));
@@ -156,12 +144,18 @@ function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
 }
 class GitAuthHelper {
+    git;
+    settings;
+    tokenConfigKey;
+    tokenConfigValue;
+    tokenPlaceholderConfigValue;
+    insteadOfKey;
+    insteadOfValues = [];
+    sshCommand = '';
+    sshKeyPath = '';
+    sshKnownHostsPath = '';
+    temporaryHomePath = '';
     constructor(gitCommandManager, gitSourceSettings) {
-        this.insteadOfValues = [];
-        this.sshCommand = '';
-        this.sshKeyPath = '';
-        this.sshKnownHostsPath = '';
-        this.temporaryHomePath = '';
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
         // Token auth header
@@ -178,257 +172,230 @@ class GitAuthHelper {
             this.insteadOfValues.push(`org-${this.settings.workflowOrganizationId}@github.com:`);
         }
     }
-    configureAuth() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Remove possible previous values
-            yield this.removeAuth();
-            // Configure new values
-            yield this.configureSsh();
-            yield this.configureToken();
-        });
+    async configureAuth() {
+        // Remove possible previous values
+        await this.removeAuth();
+        // Configure new values
+        await this.configureSsh();
+        await this.configureToken();
     }
-    configureTempGlobalConfig() {
-        return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            // Already setup global config
-            if (((_a = this.temporaryHomePath) === null || _a === void 0 ? void 0 : _a.length) > 0) {
-                return path.join(this.temporaryHomePath, '.gitconfig');
-            }
-            // Create a temp home directory
-            const runnerTemp = process.env['RUNNER_TEMP'] || '';
-            assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
-            const uniqueId = (0, uuid_1.v4)();
-            this.temporaryHomePath = path.join(runnerTemp, uniqueId);
-            yield fs.promises.mkdir(this.temporaryHomePath, { recursive: true });
-            // Copy the global git config
-            const gitConfigPath = path.join(process.env['HOME'] || os.homedir(), '.gitconfig');
-            const newGitConfigPath = path.join(this.temporaryHomePath, '.gitconfig');
-            let configExists = false;
-            try {
-                yield fs.promises.stat(gitConfigPath);
-                configExists = true;
-            }
-            catch (err) {
-                if ((err === null || err === void 0 ? void 0 : err.code) !== 'ENOENT') {
-                    throw err;
-                }
-            }
-            if (configExists) {
-                core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`);
-                yield io.cp(gitConfigPath, newGitConfigPath);
-            }
-            else {
-                yield fs.promises.writeFile(newGitConfigPath, '');
-            }
-            // Override HOME
-            core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
-            this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
-            return newGitConfigPath;
-        });
-    }
-    configureGlobalAuth() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // 'configureTempGlobalConfig' noops if already set, just returns the path
-            const newGitConfigPath = yield this.configureTempGlobalConfig();
-            try {
-                // Configure the token
-                yield this.configureToken(newGitConfigPath, true);
-                // Configure HTTPS instead of SSH
-                yield this.git.tryConfigUnset(this.insteadOfKey, true);
-                if (!this.settings.sshKey) {
-                    for (const insteadOfValue of this.insteadOfValues) {
-                        yield this.git.config(this.insteadOfKey, insteadOfValue, true, true);
-                    }
-                }
-            }
-            catch (err) {
-                // Unset in case somehow written to the real global config
-                core.info('Encountered an error when attempting to configure token. Attempting unconfigure.');
-                yield this.git.tryConfigUnset(this.tokenConfigKey, true);
+    async configureTempGlobalConfig() {
+        // Already setup global config
+        if (this.temporaryHomePath?.length > 0) {
+            return path.join(this.temporaryHomePath, '.gitconfig');
+        }
+        // Create a temp home directory
+        const runnerTemp = process.env['RUNNER_TEMP'] || '';
+        assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
+        const uniqueId = (0, uuid_1.v4)();
+        this.temporaryHomePath = path.join(runnerTemp, uniqueId);
+        await fs.promises.mkdir(this.temporaryHomePath, { recursive: true });
+        // Copy the global git config
+        const gitConfigPath = path.join(process.env['HOME'] || os.homedir(), '.gitconfig');
+        const newGitConfigPath = path.join(this.temporaryHomePath, '.gitconfig');
+        let configExists = false;
+        try {
+            await fs.promises.stat(gitConfigPath);
+            configExists = true;
+        }
+        catch (err) {
+            if (err?.code !== 'ENOENT') {
                 throw err;
             }
-        });
+        }
+        if (configExists) {
+            core.info(`Copying '${gitConfigPath}' to '${newGitConfigPath}'`);
+            await io.cp(gitConfigPath, newGitConfigPath);
+        }
+        else {
+            await fs.promises.writeFile(newGitConfigPath, '');
+        }
+        // Override HOME
+        core.info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
+        this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
+        return newGitConfigPath;
     }
-    configureSubmoduleAuth() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Remove possible previous HTTPS instead of SSH
-            yield this.removeGitConfig(this.insteadOfKey, true);
-            if (this.settings.persistCredentials) {
-                // Configure a placeholder value. This approach avoids the credential being captured
-                // by process creation audit events, which are commonly logged. For more information,
-                // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-                const output = yield this.git.submoduleForeach(
-                // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
-                `sh -c "git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`, this.settings.nestedSubmodules);
-                // Replace the placeholder
-                const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
-                for (const configPath of configPaths) {
-                    core.debug(`Replacing token placeholder in '${configPath}'`);
-                    yield this.replaceTokenPlaceholder(configPath);
-                }
-                if (this.settings.sshKey) {
-                    // Configure core.sshCommand
-                    yield this.git.submoduleForeach(`git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`, this.settings.nestedSubmodules);
-                }
-                else {
-                    // Configure HTTPS instead of SSH
-                    for (const insteadOfValue of this.insteadOfValues) {
-                        yield this.git.submoduleForeach(`git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`, this.settings.nestedSubmodules);
-                    }
-                }
-            }
-        });
-    }
-    removeAuth() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.removeSsh();
-            yield this.removeToken();
-        });
-    }
-    removeGlobalConfig() {
-        return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            if (((_a = this.temporaryHomePath) === null || _a === void 0 ? void 0 : _a.length) > 0) {
-                core.debug(`Unsetting HOME override`);
-                this.git.removeEnvironmentVariable('HOME');
-                yield io.rmRF(this.temporaryHomePath);
-            }
-        });
-    }
-    configureSsh() {
-        return __awaiter(this, void 0, void 0, function* () {
+    async configureGlobalAuth() {
+        // 'configureTempGlobalConfig' noops if already set, just returns the path
+        const newGitConfigPath = await this.configureTempGlobalConfig();
+        try {
+            // Configure the token
+            await this.configureToken(newGitConfigPath, true);
+            // Configure HTTPS instead of SSH
+            await this.git.tryConfigUnset(this.insteadOfKey, true);
             if (!this.settings.sshKey) {
-                return;
-            }
-            // Write key
-            const runnerTemp = process.env['RUNNER_TEMP'] || '';
-            assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
-            const uniqueId = (0, uuid_1.v4)();
-            this.sshKeyPath = path.join(runnerTemp, uniqueId);
-            stateHelper.setSshKeyPath(this.sshKeyPath);
-            yield fs.promises.mkdir(runnerTemp, { recursive: true });
-            yield fs.promises.writeFile(this.sshKeyPath, this.settings.sshKey.trim() + '\n', { mode: 0o600 });
-            // Remove inherited permissions on Windows
-            if (IS_WINDOWS) {
-                const icacls = yield io.which('icacls.exe');
-                yield exec.exec(`"${icacls}" "${this.sshKeyPath}" /grant:r "${process.env['USERDOMAIN']}\\${process.env['USERNAME']}:F"`);
-                yield exec.exec(`"${icacls}" "${this.sshKeyPath}" /inheritance:r`);
-            }
-            // Write known hosts
-            const userKnownHostsPath = path.join(os.homedir(), '.ssh', 'known_hosts');
-            let userKnownHosts = '';
-            try {
-                userKnownHosts = (yield fs.promises.readFile(userKnownHostsPath)).toString();
-            }
-            catch (err) {
-                if ((err === null || err === void 0 ? void 0 : err.code) !== 'ENOENT') {
-                    throw err;
+                for (const insteadOfValue of this.insteadOfValues) {
+                    await this.git.config(this.insteadOfKey, insteadOfValue, true, true);
                 }
             }
-            let knownHosts = '';
-            if (userKnownHosts) {
-                knownHosts += `# Begin from ${userKnownHostsPath}\n${userKnownHosts}\n# End from ${userKnownHostsPath}\n`;
-            }
-            if (this.settings.sshKnownHosts) {
-                knownHosts += `# Begin from input known hosts\n${this.settings.sshKnownHosts}\n# end from input known hosts\n`;
-            }
-            knownHosts += `# Begin implicitly added github.com\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=\n# End implicitly added github.com\n`;
-            this.sshKnownHostsPath = path.join(runnerTemp, `${uniqueId}_known_hosts`);
-            stateHelper.setSshKnownHostsPath(this.sshKnownHostsPath);
-            yield fs.promises.writeFile(this.sshKnownHostsPath, knownHosts);
-            // Configure GIT_SSH_COMMAND
-            const sshPath = yield io.which('ssh', true);
-            this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
-            if (this.settings.sshStrict) {
-                this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
-            }
-            this.sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(this.sshKnownHostsPath)}"`;
-            core.info(`Temporarily overriding GIT_SSH_COMMAND=${this.sshCommand}`);
-            this.git.setEnvironmentVariable('GIT_SSH_COMMAND', this.sshCommand);
-            // Configure core.sshCommand
-            if (this.settings.persistCredentials) {
-                yield this.git.config(SSH_COMMAND_KEY, this.sshCommand);
-            }
-        });
+        }
+        catch (err) {
+            // Unset in case somehow written to the real global config
+            core.info('Encountered an error when attempting to configure token. Attempting unconfigure.');
+            await this.git.tryConfigUnset(this.tokenConfigKey, true);
+            throw err;
+        }
     }
-    configureToken(configPath, globalConfig) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Validate args
-            assert.ok((configPath && globalConfig) || (!configPath && !globalConfig), 'Unexpected configureToken parameter combinations');
-            // Default config path
-            if (!configPath && !globalConfig) {
-                configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
-            }
+    async configureSubmoduleAuth() {
+        // Remove possible previous HTTPS instead of SSH
+        await this.removeGitConfig(this.insteadOfKey, true);
+        if (this.settings.persistCredentials) {
             // Configure a placeholder value. This approach avoids the credential being captured
             // by process creation audit events, which are commonly logged. For more information,
             // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
-            yield this.git.config(this.tokenConfigKey, this.tokenPlaceholderConfigValue, globalConfig);
-            // Replace the placeholder
-            yield this.replaceTokenPlaceholder(configPath || '');
-        });
-    }
-    replaceTokenPlaceholder(configPath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            assert.ok(configPath, 'configPath is not defined');
-            let content = (yield fs.promises.readFile(configPath)).toString();
-            const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue);
-            if (placeholderIndex < 0 ||
-                placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)) {
-                throw new Error(`Unable to replace auth placeholder in ${configPath}`);
-            }
-            assert.ok(this.tokenConfigValue, 'tokenConfigValue is not defined');
-            content = content.replace(this.tokenPlaceholderConfigValue, this.tokenConfigValue);
-            yield fs.promises.writeFile(configPath, content);
-        });
-    }
-    removeSsh() {
-        return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            // SSH key
-            const keyPath = this.sshKeyPath || stateHelper.SshKeyPath;
-            if (keyPath) {
-                try {
-                    yield io.rmRF(keyPath);
-                }
-                catch (err) {
-                    core.debug(`${(_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : err}`);
-                    core.warning(`Failed to remove SSH key '${keyPath}'`);
-                }
-            }
-            // SSH known hosts
-            const knownHostsPath = this.sshKnownHostsPath || stateHelper.SshKnownHostsPath;
-            if (knownHostsPath) {
-                try {
-                    yield io.rmRF(knownHostsPath);
-                }
-                catch (_b) {
-                    // Intentionally empty
-                }
-            }
-            // SSH command
-            yield this.removeGitConfig(SSH_COMMAND_KEY);
-        });
-    }
-    removeToken() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // HTTP extra header
-            yield this.removeGitConfig(this.tokenConfigKey);
-        });
-    }
-    removeGitConfig(configKey_1) {
-        return __awaiter(this, arguments, void 0, function* (configKey, submoduleOnly = false) {
-            if (!submoduleOnly) {
-                if ((yield this.git.configExists(configKey)) &&
-                    !(yield this.git.tryConfigUnset(configKey))) {
-                    // Load the config contents
-                    core.warning(`Failed to remove '${configKey}' from the git config`);
-                }
-            }
-            const pattern = regexpHelper.escape(configKey);
-            yield this.git.submoduleForeach(
+            const output = await this.git.submoduleForeach(
             // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
-            `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`, true);
-        });
+            `sh -c "git config --local '${this.tokenConfigKey}' '${this.tokenPlaceholderConfigValue}' && git config --local --show-origin --name-only --get-regexp remote.origin.url"`, this.settings.nestedSubmodules);
+            // Replace the placeholder
+            const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
+            for (const configPath of configPaths) {
+                core.debug(`Replacing token placeholder in '${configPath}'`);
+                await this.replaceTokenPlaceholder(configPath);
+            }
+            if (this.settings.sshKey) {
+                // Configure core.sshCommand
+                await this.git.submoduleForeach(`git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`, this.settings.nestedSubmodules);
+            }
+            else {
+                // Configure HTTPS instead of SSH
+                for (const insteadOfValue of this.insteadOfValues) {
+                    await this.git.submoduleForeach(`git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`, this.settings.nestedSubmodules);
+                }
+            }
+        }
+    }
+    async removeAuth() {
+        await this.removeSsh();
+        await this.removeToken();
+    }
+    async removeGlobalConfig() {
+        if (this.temporaryHomePath?.length > 0) {
+            core.debug(`Unsetting HOME override`);
+            this.git.removeEnvironmentVariable('HOME');
+            await io.rmRF(this.temporaryHomePath);
+        }
+    }
+    async configureSsh() {
+        if (!this.settings.sshKey) {
+            return;
+        }
+        // Write key
+        const runnerTemp = process.env['RUNNER_TEMP'] || '';
+        assert.ok(runnerTemp, 'RUNNER_TEMP is not defined');
+        const uniqueId = (0, uuid_1.v4)();
+        this.sshKeyPath = path.join(runnerTemp, uniqueId);
+        stateHelper.setSshKeyPath(this.sshKeyPath);
+        await fs.promises.mkdir(runnerTemp, { recursive: true });
+        await fs.promises.writeFile(this.sshKeyPath, this.settings.sshKey.trim() + '\n', { mode: 0o600 });
+        // Remove inherited permissions on Windows
+        if (IS_WINDOWS) {
+            const icacls = await io.which('icacls.exe');
+            await exec.exec(`"${icacls}" "${this.sshKeyPath}" /grant:r "${process.env['USERDOMAIN']}\\${process.env['USERNAME']}:F"`);
+            await exec.exec(`"${icacls}" "${this.sshKeyPath}" /inheritance:r`);
+        }
+        // Write known hosts
+        const userKnownHostsPath = path.join(os.homedir(), '.ssh', 'known_hosts');
+        let userKnownHosts = '';
+        try {
+            userKnownHosts = (await fs.promises.readFile(userKnownHostsPath)).toString();
+        }
+        catch (err) {
+            if (err?.code !== 'ENOENT') {
+                throw err;
+            }
+        }
+        let knownHosts = '';
+        if (userKnownHosts) {
+            knownHosts += `# Begin from ${userKnownHostsPath}\n${userKnownHosts}\n# End from ${userKnownHostsPath}\n`;
+        }
+        if (this.settings.sshKnownHosts) {
+            knownHosts += `# Begin from input known hosts\n${this.settings.sshKnownHosts}\n# end from input known hosts\n`;
+        }
+        knownHosts += `# Begin implicitly added github.com\ngithub.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=\n# End implicitly added github.com\n`;
+        this.sshKnownHostsPath = path.join(runnerTemp, `${uniqueId}_known_hosts`);
+        stateHelper.setSshKnownHostsPath(this.sshKnownHostsPath);
+        await fs.promises.writeFile(this.sshKnownHostsPath, knownHosts);
+        // Configure GIT_SSH_COMMAND
+        const sshPath = await io.which('ssh', true);
+        this.sshCommand = `"${sshPath}" -i "$RUNNER_TEMP/${path.basename(this.sshKeyPath)}"`;
+        if (this.settings.sshStrict) {
+            this.sshCommand += ' -o StrictHostKeyChecking=yes -o CheckHostIP=no';
+        }
+        this.sshCommand += ` -o "UserKnownHostsFile=$RUNNER_TEMP/${path.basename(this.sshKnownHostsPath)}"`;
+        core.info(`Temporarily overriding GIT_SSH_COMMAND=${this.sshCommand}`);
+        this.git.setEnvironmentVariable('GIT_SSH_COMMAND', this.sshCommand);
+        // Configure core.sshCommand
+        if (this.settings.persistCredentials) {
+            await this.git.config(SSH_COMMAND_KEY, this.sshCommand);
+        }
+    }
+    async configureToken(configPath, globalConfig) {
+        // Validate args
+        assert.ok((configPath && globalConfig) || (!configPath && !globalConfig), 'Unexpected configureToken parameter combinations');
+        // Default config path
+        if (!configPath && !globalConfig) {
+            configPath = path.join(this.git.getWorkingDirectory(), '.git', 'config');
+        }
+        // Configure a placeholder value. This approach avoids the credential being captured
+        // by process creation audit events, which are commonly logged. For more information,
+        // refer to https://docs.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing
+        await this.git.config(this.tokenConfigKey, this.tokenPlaceholderConfigValue, globalConfig);
+        // Replace the placeholder
+        await this.replaceTokenPlaceholder(configPath || '');
+    }
+    async replaceTokenPlaceholder(configPath) {
+        assert.ok(configPath, 'configPath is not defined');
+        let content = (await fs.promises.readFile(configPath)).toString();
+        const placeholderIndex = content.indexOf(this.tokenPlaceholderConfigValue);
+        if (placeholderIndex < 0 ||
+            placeholderIndex != content.lastIndexOf(this.tokenPlaceholderConfigValue)) {
+            throw new Error(`Unable to replace auth placeholder in ${configPath}`);
+        }
+        assert.ok(this.tokenConfigValue, 'tokenConfigValue is not defined');
+        content = content.replace(this.tokenPlaceholderConfigValue, this.tokenConfigValue);
+        await fs.promises.writeFile(configPath, content);
+    }
+    async removeSsh() {
+        // SSH key
+        const keyPath = this.sshKeyPath || stateHelper.SshKeyPath;
+        if (keyPath) {
+            try {
+                await io.rmRF(keyPath);
+            }
+            catch (err) {
+                core.debug(`${err?.message ?? err}`);
+                core.warning(`Failed to remove SSH key '${keyPath}'`);
+            }
+        }
+        // SSH known hosts
+        const knownHostsPath = this.sshKnownHostsPath || stateHelper.SshKnownHostsPath;
+        if (knownHostsPath) {
+            try {
+                await io.rmRF(knownHostsPath);
+            }
+            catch {
+                // Intentionally empty
+            }
+        }
+        // SSH command
+        await this.removeGitConfig(SSH_COMMAND_KEY);
+    }
+    async removeToken() {
+        // HTTP extra header
+        await this.removeGitConfig(this.tokenConfigKey);
+    }
+    async removeGitConfig(configKey, submoduleOnly = false) {
+        if (!submoduleOnly) {
+            if ((await this.git.configExists(configKey)) &&
+                !(await this.git.tryConfigUnset(configKey))) {
+                // Load the config contents
+                core.warning(`Failed to remove '${configKey}' from the git config`);
+            }
+        }
+        const pattern = regexpHelper.escape(configKey);
+        await this.git.submoduleForeach(
+        // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
+        `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`, true);
     }
 }
 
@@ -463,15 +430,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
 exports.createCommandManager = createCommandManager;
@@ -490,263 +448,224 @@ const git_version_1 = __nccwpck_require__(3142);
 // sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
 exports.MinimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.28');
-function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
-    });
+async function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
+    return await GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
 }
 class GitCommandManager {
+    gitEnv = {
+        GIT_TERMINAL_PROMPT: '0', // Disable git prompt
+        GCM_INTERACTIVE: 'Never' // Disable prompting for git credential manager
+    };
+    gitPath = '';
+    lfs = false;
+    doSparseCheckout = false;
+    workingDirectory = '';
+    gitVersion = new git_version_1.GitVersion();
     // Private constructor; use createCommandManager()
-    constructor() {
-        this.gitEnv = {
-            GIT_TERMINAL_PROMPT: '0', // Disable git prompt
-            GCM_INTERACTIVE: 'Never' // Disable prompting for git credential manager
+    constructor() { }
+    async branchDelete(remote, branch) {
+        const args = ['branch', '--delete', '--force'];
+        if (remote) {
+            args.push('--remote');
+        }
+        args.push(branch);
+        await this.execGit(args);
+    }
+    async branchExists(remote, pattern) {
+        const args = ['branch', '--list'];
+        if (remote) {
+            args.push('--remote');
+        }
+        args.push(pattern);
+        const output = await this.execGit(args);
+        return !!output.stdout.trim();
+    }
+    async branchList(remote) {
+        const result = [];
+        // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
+        // "branch --list" is more difficult when in a detached HEAD state.
+        // TODO(https://github.com/actions/checkout/issues/786): this implementation uses
+        // "rev-parse --symbolic-full-name" because there is a bug
+        // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names. When
+        // 2.18 is no longer supported, we can switch back to --symbolic.
+        const args = ['rev-parse', '--symbolic-full-name'];
+        if (remote) {
+            args.push('--remotes=origin');
+        }
+        else {
+            args.push('--branches');
+        }
+        const stderr = [];
+        const errline = [];
+        const stdout = [];
+        const stdline = [];
+        const listeners = {
+            stderr: (data) => {
+                stderr.push(data.toString());
+            },
+            errline: (data) => {
+                errline.push(data.toString());
+            },
+            stdout: (data) => {
+                stdout.push(data.toString());
+            },
+            stdline: (data) => {
+                stdline.push(data.toString());
+            }
         };
-        this.gitPath = '';
-        this.lfs = false;
-        this.doSparseCheckout = false;
-        this.workingDirectory = '';
-        this.gitVersion = new git_version_1.GitVersion();
-    }
-    branchDelete(remote, branch) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['branch', '--delete', '--force'];
-            if (remote) {
-                args.push('--remote');
+        // Suppress the output in order to avoid flooding annotations with innocuous errors.
+        await this.execGit(args, false, true, listeners);
+        core.debug(`stderr callback is: ${stderr}`);
+        core.debug(`errline callback is: ${errline}`);
+        core.debug(`stdout callback is: ${stdout}`);
+        core.debug(`stdline callback is: ${stdline}`);
+        for (let branch of stdline) {
+            branch = branch.trim();
+            if (!branch) {
+                continue;
             }
-            args.push(branch);
-            yield this.execGit(args);
+            if (branch.startsWith('refs/heads/')) {
+                branch = branch.substring('refs/heads/'.length);
+            }
+            else if (branch.startsWith('refs/remotes/')) {
+                branch = branch.substring('refs/remotes/'.length);
+            }
+            result.push(branch);
+        }
+        return result;
+    }
+    async disableSparseCheckout() {
+        await this.execGit(['sparse-checkout', 'disable']);
+        // Disabling 'sparse-checkout` leaves behind an undesirable side-effect in config (even in a pristine environment).
+        await this.tryConfigUnset('extensions.worktreeConfig', false);
+    }
+    async sparseCheckout(sparseCheckout) {
+        await this.execGit(['sparse-checkout', 'set', ...sparseCheckout]);
+    }
+    async sparseCheckoutNonConeMode(sparseCheckout) {
+        await this.execGit(['config', 'core.sparseCheckout', 'true']);
+        const output = await this.execGit([
+            'rev-parse',
+            '--git-path',
+            'info/sparse-checkout'
+        ]);
+        const sparseCheckoutPath = path.join(this.workingDirectory, output.stdout.trimRight());
+        await fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
+    }
+    async checkout(ref, startPoint) {
+        const args = ['checkout', '--progress', '--force'];
+        if (startPoint) {
+            args.push('-B', ref, startPoint);
+        }
+        else {
+            args.push(ref);
+        }
+        await this.execGit(args);
+    }
+    async checkoutDetach() {
+        const args = ['checkout', '--detach'];
+        await this.execGit(args);
+    }
+    async config(configKey, configValue, globalConfig, add) {
+        const args = ['config', globalConfig ? '--global' : '--local'];
+        if (add) {
+            args.push('--add');
+        }
+        args.push(...[configKey, configValue]);
+        await this.execGit(args);
+    }
+    async configExists(configKey, globalConfig) {
+        const pattern = regexpHelper.escape(configKey);
+        const output = await this.execGit([
+            'config',
+            globalConfig ? '--global' : '--local',
+            '--name-only',
+            '--get-regexp',
+            pattern
+        ], true);
+        return output.exitCode === 0;
+    }
+    async fetch(refSpec, options) {
+        const args = ['-c', 'protocol.version=2', 'fetch'];
+        if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
+            args.push('--no-tags');
+        }
+        args.push('--prune', '--no-recurse-submodules');
+        if (options.showProgress) {
+            args.push('--progress');
+        }
+        if (options.filter) {
+            args.push(`--filter=${options.filter}`);
+        }
+        if (options.fetchDepth && options.fetchDepth > 0) {
+            args.push(`--depth=${options.fetchDepth}`);
+        }
+        else if (fshelper.fileExistsSync(path.join(this.workingDirectory, '.git', 'shallow'))) {
+            args.push('--unshallow');
+        }
+        args.push('origin');
+        for (const arg of refSpec) {
+            args.push(arg);
+        }
+        const that = this;
+        await retryHelper.execute(async () => {
+            await that.execGit(args);
         });
     }
-    branchExists(remote, pattern) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['branch', '--list'];
-            if (remote) {
-                args.push('--remote');
-            }
-            args.push(pattern);
-            const output = yield this.execGit(args);
-            return !!output.stdout.trim();
-        });
-    }
-    branchList(remote) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const result = [];
-            // Note, this implementation uses "rev-parse --symbolic-full-name" because the output from
-            // "branch --list" is more difficult when in a detached HEAD state.
-            // TODO(https://github.com/actions/checkout/issues/786): this implementation uses
-            // "rev-parse --symbolic-full-name" because there is a bug
-            // in Git 2.18 that causes "rev-parse --symbolic" to output symbolic full names. When
-            // 2.18 is no longer supported, we can switch back to --symbolic.
-            const args = ['rev-parse', '--symbolic-full-name'];
-            if (remote) {
-                args.push('--remotes=origin');
-            }
-            else {
-                args.push('--branches');
-            }
-            const stderr = [];
-            const errline = [];
-            const stdout = [];
-            const stdline = [];
-            const listeners = {
-                stderr: (data) => {
-                    stderr.push(data.toString());
-                },
-                errline: (data) => {
-                    errline.push(data.toString());
-                },
-                stdout: (data) => {
-                    stdout.push(data.toString());
-                },
-                stdline: (data) => {
-                    stdline.push(data.toString());
-                }
-            };
-            // Suppress the output in order to avoid flooding annotations with innocuous errors.
-            yield this.execGit(args, false, true, listeners);
-            core.debug(`stderr callback is: ${stderr}`);
-            core.debug(`errline callback is: ${errline}`);
-            core.debug(`stdout callback is: ${stdout}`);
-            core.debug(`stdline callback is: ${stdline}`);
-            for (let branch of stdline) {
-                branch = branch.trim();
-                if (!branch) {
-                    continue;
-                }
-                if (branch.startsWith('refs/heads/')) {
-                    branch = branch.substring('refs/heads/'.length);
-                }
-                else if (branch.startsWith('refs/remotes/')) {
-                    branch = branch.substring('refs/remotes/'.length);
-                }
-                result.push(branch);
-            }
-            return result;
-        });
-    }
-    disableSparseCheckout() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['sparse-checkout', 'disable']);
-            // Disabling 'sparse-checkout` leaves behind an undesirable side-effect in config (even in a pristine environment).
-            yield this.tryConfigUnset('extensions.worktreeConfig', false);
-        });
-    }
-    sparseCheckout(sparseCheckout) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['sparse-checkout', 'set', ...sparseCheckout]);
-        });
-    }
-    sparseCheckoutNonConeMode(sparseCheckout) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['config', 'core.sparseCheckout', 'true']);
-            const output = yield this.execGit([
-                'rev-parse',
-                '--git-path',
-                'info/sparse-checkout'
+    async getDefaultBranch(repositoryUrl) {
+        let output;
+        await retryHelper.execute(async () => {
+            output = await this.execGit([
+                'ls-remote',
+                '--quiet',
+                '--exit-code',
+                '--symref',
+                repositoryUrl,
+                'HEAD'
             ]);
-            const sparseCheckoutPath = path.join(this.workingDirectory, output.stdout.trimRight());
-            yield fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
         });
-    }
-    checkout(ref, startPoint) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['checkout', '--progress', '--force'];
-            if (startPoint) {
-                args.push('-B', ref, startPoint);
-            }
-            else {
-                args.push(ref);
-            }
-            yield this.execGit(args);
-        });
-    }
-    checkoutDetach() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['checkout', '--detach'];
-            yield this.execGit(args);
-        });
-    }
-    config(configKey, configValue, globalConfig, add) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['config', globalConfig ? '--global' : '--local'];
-            if (add) {
-                args.push('--add');
-            }
-            args.push(...[configKey, configValue]);
-            yield this.execGit(args);
-        });
-    }
-    configExists(configKey, globalConfig) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const pattern = regexpHelper.escape(configKey);
-            const output = yield this.execGit([
-                'config',
-                globalConfig ? '--global' : '--local',
-                '--name-only',
-                '--get-regexp',
-                pattern
-            ], true);
-            return output.exitCode === 0;
-        });
-    }
-    fetch(refSpec, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['-c', 'protocol.version=2', 'fetch'];
-            if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
-                args.push('--no-tags');
-            }
-            args.push('--prune', '--no-recurse-submodules');
-            if (options.showProgress) {
-                args.push('--progress');
-            }
-            if (options.filter) {
-                args.push(`--filter=${options.filter}`);
-            }
-            if (options.fetchDepth && options.fetchDepth > 0) {
-                args.push(`--depth=${options.fetchDepth}`);
-            }
-            else if (fshelper.fileExistsSync(path.join(this.workingDirectory, '.git', 'shallow'))) {
-                args.push('--unshallow');
-            }
-            args.push('origin');
-            for (const arg of refSpec) {
-                args.push(arg);
-            }
-            const that = this;
-            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                yield that.execGit(args);
-            }));
-        });
-    }
-    getDefaultBranch(repositoryUrl) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let output;
-            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                output = yield this.execGit([
-                    'ls-remote',
-                    '--quiet',
-                    '--exit-code',
-                    '--symref',
-                    repositoryUrl,
-                    'HEAD'
-                ]);
-            }));
-            if (output) {
-                // Satisfy compiler, will always be set
-                for (let line of output.stdout.trim().split('\n')) {
-                    line = line.trim();
-                    if (line.startsWith('ref:') || line.endsWith('HEAD')) {
-                        return line
-                            .substr('ref:'.length, line.length - 'ref:'.length - 'HEAD'.length)
-                            .trim();
-                    }
+        if (output) {
+            // Satisfy compiler, will always be set
+            for (let line of output.stdout.trim().split('\n')) {
+                line = line.trim();
+                if (line.startsWith('ref:') || line.endsWith('HEAD')) {
+                    return line
+                        .substr('ref:'.length, line.length - 'ref:'.length - 'HEAD'.length)
+                        .trim();
                 }
             }
-            throw new Error('Unexpected output when retrieving default branch');
-        });
+        }
+        throw new Error('Unexpected output when retrieving default branch');
     }
     getWorkingDirectory() {
         return this.workingDirectory;
     }
-    init() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['init', this.workingDirectory]);
+    async init() {
+        await this.execGit(['init', this.workingDirectory]);
+    }
+    async isDetached() {
+        // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
+        const output = await this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], true);
+        return !output.stdout.trim().startsWith('refs/heads/');
+    }
+    async lfsFetch(ref) {
+        const args = ['lfs', 'fetch', 'origin', ref];
+        const that = this;
+        await retryHelper.execute(async () => {
+            await that.execGit(args);
         });
     }
-    isDetached() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
-            const output = yield this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], true);
-            return !output.stdout.trim().startsWith('refs/heads/');
-        });
+    async lfsInstall() {
+        await this.execGit(['lfs', 'install', '--local']);
     }
-    lfsFetch(ref) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['lfs', 'fetch', 'origin', ref];
-            const that = this;
-            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                yield that.execGit(args);
-            }));
-        });
+    async log1(format) {
+        const args = format ? ['log', '-1', format] : ['log', '-1'];
+        const silent = format ? false : true;
+        const output = await this.execGit(args, false, silent);
+        return output.stdout;
     }
-    lfsInstall() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['lfs', 'install', '--local']);
-        });
-    }
-    log1(format) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = format ? ['log', '-1', format] : ['log', '-1'];
-            const silent = format ? false : true;
-            const output = yield this.execGit(args, false, silent);
-            return output.stdout;
-        });
-    }
-    remoteAdd(remoteName, remoteUrl) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.execGit(['remote', 'add', remoteName, remoteUrl]);
-        });
+    async remoteAdd(remoteName, remoteUrl) {
+        await this.execGit(['remote', 'add', remoteName, remoteUrl]);
     }
     removeEnvironmentVariable(name) {
         delete this.gitEnv[name];
@@ -757,224 +676,190 @@ class GitCommandManager {
      * @param {string} ref  For example: 'refs/heads/main' or '/refs/tags/v1'
      * @returns {Promise<string>}
      */
-    revParse(ref) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['rev-parse', ref]);
-            return output.stdout.trim();
-        });
+    async revParse(ref) {
+        const output = await this.execGit(['rev-parse', ref]);
+        return output.stdout.trim();
     }
     setEnvironmentVariable(name, value) {
         this.gitEnv[name] = value;
     }
-    shaExists(sha) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['rev-parse', '--verify', '--quiet', `${sha}^{object}`];
-            const output = yield this.execGit(args, true);
-            return output.exitCode === 0;
-        });
+    async shaExists(sha) {
+        const args = ['rev-parse', '--verify', '--quiet', `${sha}^{object}`];
+        const output = await this.execGit(args, true);
+        return output.exitCode === 0;
     }
-    submoduleForeach(command, recursive) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['submodule', 'foreach'];
-            if (recursive) {
-                args.push('--recursive');
+    async submoduleForeach(command, recursive) {
+        const args = ['submodule', 'foreach'];
+        if (recursive) {
+            args.push('--recursive');
+        }
+        args.push(command);
+        const output = await this.execGit(args);
+        return output.stdout;
+    }
+    async submoduleSync(recursive) {
+        const args = ['submodule', 'sync'];
+        if (recursive) {
+            args.push('--recursive');
+        }
+        await this.execGit(args);
+    }
+    async submoduleUpdate(fetchDepth, recursive) {
+        const args = ['-c', 'protocol.version=2'];
+        args.push('submodule', 'update', '--init', '--force');
+        if (fetchDepth > 0) {
+            args.push(`--depth=${fetchDepth}`);
+        }
+        if (recursive) {
+            args.push('--recursive');
+        }
+        await this.execGit(args);
+    }
+    async submoduleStatus() {
+        const output = await this.execGit(['submodule', 'status'], true);
+        core.debug(output.stdout);
+        return output.exitCode === 0;
+    }
+    async tagExists(pattern) {
+        const output = await this.execGit(['tag', '--list', pattern]);
+        return !!output.stdout.trim();
+    }
+    async tryClean() {
+        const output = await this.execGit(['clean', '-ffdx'], true);
+        return output.exitCode === 0;
+    }
+    async tryConfigUnset(configKey, globalConfig) {
+        const output = await this.execGit([
+            'config',
+            globalConfig ? '--global' : '--local',
+            '--unset-all',
+            configKey
+        ], true);
+        return output.exitCode === 0;
+    }
+    async tryDisableAutomaticGarbageCollection() {
+        const output = await this.execGit(['config', '--local', 'gc.auto', '0'], true);
+        return output.exitCode === 0;
+    }
+    async tryGetFetchUrl() {
+        const output = await this.execGit(['config', '--local', '--get', 'remote.origin.url'], true);
+        if (output.exitCode !== 0) {
+            return '';
+        }
+        const stdout = output.stdout.trim();
+        if (stdout.includes('\n')) {
+            return '';
+        }
+        return stdout;
+    }
+    async tryReset() {
+        const output = await this.execGit(['reset', '--hard', 'HEAD'], true);
+        return output.exitCode === 0;
+    }
+    async version() {
+        return this.gitVersion;
+    }
+    static async createCommandManager(workingDirectory, lfs, doSparseCheckout) {
+        const result = new GitCommandManager();
+        await result.initializeCommandManager(workingDirectory, lfs, doSparseCheckout);
+        return result;
+    }
+    async execGit(args, allowAllExitCodes = false, silent = false, customListeners = {}) {
+        fshelper.directoryExistsSync(this.workingDirectory, true);
+        const result = new GitOutput();
+        const env = {};
+        for (const key of Object.keys(process.env)) {
+            env[key] = process.env[key];
+        }
+        for (const key of Object.keys(this.gitEnv)) {
+            env[key] = this.gitEnv[key];
+        }
+        const defaultListener = {
+            stdout: (data) => {
+                stdout.push(data.toString());
             }
-            args.push(command);
-            const output = yield this.execGit(args);
-            return output.stdout;
-        });
+        };
+        const mergedListeners = { ...defaultListener, ...customListeners };
+        const stdout = [];
+        const options = {
+            cwd: this.workingDirectory,
+            env,
+            silent,
+            ignoreReturnCode: allowAllExitCodes,
+            listeners: mergedListeners
+        };
+        result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options);
+        result.stdout = stdout.join('');
+        core.debug(result.exitCode.toString());
+        core.debug(result.stdout);
+        return result;
     }
-    submoduleSync(recursive) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['submodule', 'sync'];
-            if (recursive) {
-                args.push('--recursive');
+    async initializeCommandManager(workingDirectory, lfs, doSparseCheckout) {
+        this.workingDirectory = workingDirectory;
+        // Git-lfs will try to pull down assets if any of the local/user/system setting exist.
+        // If the user didn't enable `LFS` in their pipeline definition, disable LFS fetch/checkout.
+        this.lfs = lfs;
+        if (!this.lfs) {
+            this.gitEnv['GIT_LFS_SKIP_SMUDGE'] = '1';
+        }
+        this.gitPath = await io.which('git', true);
+        // Git version
+        core.debug('Getting git version');
+        this.gitVersion = new git_version_1.GitVersion();
+        let gitOutput = await this.execGit(['version']);
+        let stdout = gitOutput.stdout.trim();
+        if (!stdout.includes('\n')) {
+            const match = stdout.match(/\d+\.\d+(\.\d+)?/);
+            if (match) {
+                this.gitVersion = new git_version_1.GitVersion(match[0]);
             }
-            yield this.execGit(args);
-        });
-    }
-    submoduleUpdate(fetchDepth, recursive) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['-c', 'protocol.version=2'];
-            args.push('submodule', 'update', '--init', '--force');
-            if (fetchDepth > 0) {
-                args.push(`--depth=${fetchDepth}`);
-            }
-            if (recursive) {
-                args.push('--recursive');
-            }
-            yield this.execGit(args);
-        });
-    }
-    submoduleStatus() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['submodule', 'status'], true);
-            core.debug(output.stdout);
-            return output.exitCode === 0;
-        });
-    }
-    tagExists(pattern) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['tag', '--list', pattern]);
-            return !!output.stdout.trim();
-        });
-    }
-    tryClean() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['clean', '-ffdx'], true);
-            return output.exitCode === 0;
-        });
-    }
-    tryConfigUnset(configKey, globalConfig) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit([
-                'config',
-                globalConfig ? '--global' : '--local',
-                '--unset-all',
-                configKey
-            ], true);
-            return output.exitCode === 0;
-        });
-    }
-    tryDisableAutomaticGarbageCollection() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--local', 'gc.auto', '0'], true);
-            return output.exitCode === 0;
-        });
-    }
-    tryGetFetchUrl() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--local', '--get', 'remote.origin.url'], true);
-            if (output.exitCode !== 0) {
-                return '';
-            }
-            const stdout = output.stdout.trim();
-            if (stdout.includes('\n')) {
-                return '';
-            }
-            return stdout;
-        });
-    }
-    tryReset() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['reset', '--hard', 'HEAD'], true);
-            return output.exitCode === 0;
-        });
-    }
-    version() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.gitVersion;
-        });
-    }
-    static createCommandManager(workingDirectory, lfs, doSparseCheckout) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const result = new GitCommandManager();
-            yield result.initializeCommandManager(workingDirectory, lfs, doSparseCheckout);
-            return result;
-        });
-    }
-    execGit(args_1) {
-        return __awaiter(this, arguments, void 0, function* (args, allowAllExitCodes = false, silent = false, customListeners = {}) {
-            fshelper.directoryExistsSync(this.workingDirectory, true);
-            const result = new GitOutput();
-            const env = {};
-            for (const key of Object.keys(process.env)) {
-                env[key] = process.env[key];
-            }
-            for (const key of Object.keys(this.gitEnv)) {
-                env[key] = this.gitEnv[key];
-            }
-            const defaultListener = {
-                stdout: (data) => {
-                    stdout.push(data.toString());
-                }
-            };
-            const mergedListeners = Object.assign(Object.assign({}, defaultListener), customListeners);
-            const stdout = [];
-            const options = {
-                cwd: this.workingDirectory,
-                env,
-                silent,
-                ignoreReturnCode: allowAllExitCodes,
-                listeners: mergedListeners
-            };
-            result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
-            result.stdout = stdout.join('');
-            core.debug(result.exitCode.toString());
-            core.debug(result.stdout);
-            return result;
-        });
-    }
-    initializeCommandManager(workingDirectory, lfs, doSparseCheckout) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.workingDirectory = workingDirectory;
-            // Git-lfs will try to pull down assets if any of the local/user/system setting exist.
-            // If the user didn't enable `LFS` in their pipeline definition, disable LFS fetch/checkout.
-            this.lfs = lfs;
-            if (!this.lfs) {
-                this.gitEnv['GIT_LFS_SKIP_SMUDGE'] = '1';
-            }
-            this.gitPath = yield io.which('git', true);
-            // Git version
-            core.debug('Getting git version');
-            this.gitVersion = new git_version_1.GitVersion();
-            let gitOutput = yield this.execGit(['version']);
-            let stdout = gitOutput.stdout.trim();
+        }
+        if (!this.gitVersion.isValid()) {
+            throw new Error('Unable to determine git version');
+        }
+        // Minimum git version
+        if (!this.gitVersion.checkMinimum(exports.MinimumGitVersion)) {
+            throw new Error(`Minimum required git version is ${exports.MinimumGitVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`);
+        }
+        if (this.lfs) {
+            // Git-lfs version
+            core.debug('Getting git-lfs version');
+            let gitLfsVersion = new git_version_1.GitVersion();
+            const gitLfsPath = await io.which('git-lfs', true);
+            gitOutput = await this.execGit(['lfs', 'version']);
+            stdout = gitOutput.stdout.trim();
             if (!stdout.includes('\n')) {
                 const match = stdout.match(/\d+\.\d+(\.\d+)?/);
                 if (match) {
-                    this.gitVersion = new git_version_1.GitVersion(match[0]);
+                    gitLfsVersion = new git_version_1.GitVersion(match[0]);
                 }
             }
-            if (!this.gitVersion.isValid()) {
-                throw new Error('Unable to determine git version');
+            if (!gitLfsVersion.isValid()) {
+                throw new Error('Unable to determine git-lfs version');
             }
-            // Minimum git version
-            if (!this.gitVersion.checkMinimum(exports.MinimumGitVersion)) {
-                throw new Error(`Minimum required git version is ${exports.MinimumGitVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`);
+            // Minimum git-lfs version
+            // Note:
+            // - Auth header not supported before 2.1
+            const minimumGitLfsVersion = new git_version_1.GitVersion('2.1');
+            if (!gitLfsVersion.checkMinimum(minimumGitLfsVersion)) {
+                throw new Error(`Minimum required git-lfs version is ${minimumGitLfsVersion}. Your git-lfs ('${gitLfsPath}') is ${gitLfsVersion}`);
             }
-            if (this.lfs) {
-                // Git-lfs version
-                core.debug('Getting git-lfs version');
-                let gitLfsVersion = new git_version_1.GitVersion();
-                const gitLfsPath = yield io.which('git-lfs', true);
-                gitOutput = yield this.execGit(['lfs', 'version']);
-                stdout = gitOutput.stdout.trim();
-                if (!stdout.includes('\n')) {
-                    const match = stdout.match(/\d+\.\d+(\.\d+)?/);
-                    if (match) {
-                        gitLfsVersion = new git_version_1.GitVersion(match[0]);
-                    }
-                }
-                if (!gitLfsVersion.isValid()) {
-                    throw new Error('Unable to determine git-lfs version');
-                }
-                // Minimum git-lfs version
-                // Note:
-                // - Auth header not supported before 2.1
-                const minimumGitLfsVersion = new git_version_1.GitVersion('2.1');
-                if (!gitLfsVersion.checkMinimum(minimumGitLfsVersion)) {
-                    throw new Error(`Minimum required git-lfs version is ${minimumGitLfsVersion}. Your git-lfs ('${gitLfsPath}') is ${gitLfsVersion}`);
-                }
+        }
+        this.doSparseCheckout = doSparseCheckout;
+        if (this.doSparseCheckout) {
+            if (!this.gitVersion.checkMinimum(exports.MinimumGitSparseCheckoutVersion)) {
+                throw new Error(`Minimum Git version required for sparse checkout is ${exports.MinimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`);
             }
-            this.doSparseCheckout = doSparseCheckout;
-            if (this.doSparseCheckout) {
-                if (!this.gitVersion.checkMinimum(exports.MinimumGitSparseCheckoutVersion)) {
-                    throw new Error(`Minimum Git version required for sparse checkout is ${exports.MinimumGitSparseCheckoutVersion}. Your git ('${this.gitPath}') is ${this.gitVersion}`);
-                }
-            }
-            // Set the user agent
-            const gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`;
-            core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
-            this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
-        });
+        }
+        // Set the user agent
+        const gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`;
+        core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
+        this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
     }
 }
 class GitOutput {
-    constructor() {
-        this.stdout = '';
-        this.exitCode = 0;
-    }
+    stdout = '';
+    exitCode = 0;
 }
 
 
@@ -1008,15 +893,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareExistingDirectory = prepareExistingDirectory;
 const assert = __importStar(__nccwpck_require__(9491));
@@ -1025,102 +901,99 @@ const fs = __importStar(__nccwpck_require__(7147));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref) {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
-        assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined');
-        // Indicates whether to delete the directory contents
-        let remove = false;
-        // Check whether using git or REST API
-        if (!git) {
-            remove = true;
-        }
-        // Fetch URL does not match
-        else if (!fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
-            repositoryUrl !== (yield git.tryGetFetchUrl())) {
-            remove = true;
-        }
-        else {
-            // Delete any index.lock and shallow.lock left by a previously canceled run or crashed git process
-            const lockPaths = [
-                path.join(repositoryPath, '.git', 'index.lock'),
-                path.join(repositoryPath, '.git', 'shallow.lock')
-            ];
-            for (const lockPath of lockPaths) {
-                try {
-                    yield io.rmRF(lockPath);
-                }
-                catch (error) {
-                    core.debug(`Unable to delete '${lockPath}'. ${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
-                }
-            }
+async function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref) {
+    assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
+    assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined');
+    // Indicates whether to delete the directory contents
+    let remove = false;
+    // Check whether using git or REST API
+    if (!git) {
+        remove = true;
+    }
+    // Fetch URL does not match
+    else if (!fsHelper.directoryExistsSync(path.join(repositoryPath, '.git')) ||
+        repositoryUrl !== (await git.tryGetFetchUrl())) {
+        remove = true;
+    }
+    else {
+        // Delete any index.lock and shallow.lock left by a previously canceled run or crashed git process
+        const lockPaths = [
+            path.join(repositoryPath, '.git', 'index.lock'),
+            path.join(repositoryPath, '.git', 'shallow.lock')
+        ];
+        for (const lockPath of lockPaths) {
             try {
-                core.startGroup('Removing previously created refs, to avoid conflicts');
-                // Checkout detached HEAD
-                if (!(yield git.isDetached())) {
-                    yield git.checkoutDetach();
-                }
-                // Remove all refs/heads/*
-                let branches = yield git.branchList(false);
-                for (const branch of branches) {
-                    yield git.branchDelete(false, branch);
-                }
-                // Remove any conflicting refs/remotes/origin/*
-                // Example 1: Consider ref is refs/heads/foo and previously fetched refs/remotes/origin/foo/bar
-                // Example 2: Consider ref is refs/heads/foo/bar and previously fetched refs/remotes/origin/foo
-                if (ref) {
-                    ref = ref.startsWith('refs/') ? ref : `refs/heads/${ref}`;
-                    if (ref.startsWith('refs/heads/')) {
-                        const upperName1 = ref.toUpperCase().substr('REFS/HEADS/'.length);
-                        const upperName1Slash = `${upperName1}/`;
-                        branches = yield git.branchList(true);
-                        for (const branch of branches) {
-                            const upperName2 = branch.substr('origin/'.length).toUpperCase();
-                            const upperName2Slash = `${upperName2}/`;
-                            if (upperName1.startsWith(upperName2Slash) ||
-                                upperName2.startsWith(upperName1Slash)) {
-                                yield git.branchDelete(true, branch);
-                            }
+                await io.rmRF(lockPath);
+            }
+            catch (error) {
+                core.debug(`Unable to delete '${lockPath}'. ${error?.message ?? error}`);
+            }
+        }
+        try {
+            core.startGroup('Removing previously created refs, to avoid conflicts');
+            // Checkout detached HEAD
+            if (!(await git.isDetached())) {
+                await git.checkoutDetach();
+            }
+            // Remove all refs/heads/*
+            let branches = await git.branchList(false);
+            for (const branch of branches) {
+                await git.branchDelete(false, branch);
+            }
+            // Remove any conflicting refs/remotes/origin/*
+            // Example 1: Consider ref is refs/heads/foo and previously fetched refs/remotes/origin/foo/bar
+            // Example 2: Consider ref is refs/heads/foo/bar and previously fetched refs/remotes/origin/foo
+            if (ref) {
+                ref = ref.startsWith('refs/') ? ref : `refs/heads/${ref}`;
+                if (ref.startsWith('refs/heads/')) {
+                    const upperName1 = ref.toUpperCase().substr('REFS/HEADS/'.length);
+                    const upperName1Slash = `${upperName1}/`;
+                    branches = await git.branchList(true);
+                    for (const branch of branches) {
+                        const upperName2 = branch.substr('origin/'.length).toUpperCase();
+                        const upperName2Slash = `${upperName2}/`;
+                        if (upperName1.startsWith(upperName2Slash) ||
+                            upperName2.startsWith(upperName1Slash)) {
+                            await git.branchDelete(true, branch);
                         }
                     }
                 }
-                core.endGroup();
-                // Check for submodules and delete any existing files if submodules are present
-                if (!(yield git.submoduleStatus())) {
-                    remove = true;
-                    core.info('Bad Submodules found, removing existing files');
-                }
-                // Clean
-                if (clean) {
-                    core.startGroup('Cleaning the repository');
-                    if (!(yield git.tryClean())) {
-                        core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
-                        remove = true;
-                    }
-                    else if (!(yield git.tryReset())) {
-                        remove = true;
-                    }
-                    core.endGroup();
-                    if (remove) {
-                        core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
-                    }
-                }
             }
-            catch (error) {
-                core.warning(`Unable to prepare the existing repository. The repository will be recreated instead.`);
+            core.endGroup();
+            // Check for submodules and delete any existing files if submodules are present
+            if (!(await git.submoduleStatus())) {
                 remove = true;
+                core.info('Bad Submodules found, removing existing files');
+            }
+            // Clean
+            if (clean) {
+                core.startGroup('Cleaning the repository');
+                if (!(await git.tryClean())) {
+                    core.debug(`The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`);
+                    remove = true;
+                }
+                else if (!(await git.tryReset())) {
+                    remove = true;
+                }
+                core.endGroup();
+                if (remove) {
+                    core.warning(`Unable to clean or reset the repository. The repository will be recreated instead.`);
+                }
             }
         }
-        if (remove) {
-            // Delete the contents of the directory. Don't delete the directory itself
-            // since it might be the current working directory.
-            core.info(`Deleting the contents of '${repositoryPath}'`);
-            for (const file of yield fs.promises.readdir(repositoryPath)) {
-                yield io.rmRF(path.join(repositoryPath, file));
-            }
+        catch (error) {
+            core.warning(`Unable to prepare the existing repository. The repository will be recreated instead.`);
+            remove = true;
         }
-    });
+    }
+    if (remove) {
+        // Delete the contents of the directory. Don't delete the directory itself
+        // since it might be the current working directory.
+        core.info(`Deleting the contents of '${repositoryPath}'`);
+        for (const file of await fs.promises.readdir(repositoryPath)) {
+            await io.rmRF(path.join(repositoryPath, file));
+        }
+    }
 }
 
 
@@ -1154,15 +1027,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSource = getSource;
 exports.cleanup = cleanup;
@@ -1178,249 +1042,243 @@ const refHelper = __importStar(__nccwpck_require__(8601));
 const stateHelper = __importStar(__nccwpck_require__(4866));
 const urlHelper = __importStar(__nccwpck_require__(9437));
 const git_command_manager_1 = __nccwpck_require__(738);
-function getSource(settings) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Repository URL
-        core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
-        const repositoryUrl = urlHelper.getFetchUrl(settings);
-        // Remove conflicting file path
-        if (fsHelper.fileExistsSync(settings.repositoryPath)) {
-            yield io.rmRF(settings.repositoryPath);
-        }
-        // Create directory
-        let isExisting = true;
-        if (!fsHelper.directoryExistsSync(settings.repositoryPath)) {
-            isExisting = false;
-            yield io.mkdirP(settings.repositoryPath);
-        }
-        // Git command manager
-        core.startGroup('Getting Git version info');
-        const git = yield getGitCommandManager(settings);
-        core.endGroup();
-        let authHelper = null;
-        try {
-            if (git) {
-                authHelper = gitAuthHelper.createAuthHelper(git, settings);
-                if (settings.setSafeDirectory) {
-                    // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
-                    // Otherwise all git commands we run in a container fail
-                    yield authHelper.configureTempGlobalConfig();
-                    core.info(`Adding repository directory to the temporary git global config as a safe directory`);
-                    yield git
-                        .config('safe.directory', settings.repositoryPath, true, true)
-                        .catch(error => {
-                        core.info(`Failed to initialize safe directory with error: ${error}`);
-                    });
-                    stateHelper.setSafeDirectory();
-                }
-            }
-            // Prepare existing directory, otherwise recreate
-            if (isExisting) {
-                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
-            }
-            if (!git) {
-                // Downloading using REST API
-                core.info(`The repository will be downloaded using the GitHub REST API`);
-                core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
-                if (settings.submodules) {
-                    throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
-                }
-                else if (settings.sshKey) {
-                    throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
-                }
-                yield githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath, settings.githubServerUrl);
-                return;
-            }
-            // Save state for POST action
-            stateHelper.setRepositoryPath(settings.repositoryPath);
-            // Initialize the repository
-            if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
-                core.startGroup('Initializing the repository');
-                yield git.init();
-                yield git.remoteAdd('origin', repositoryUrl);
-                core.endGroup();
-            }
-            // Disable automatic garbage collection
-            core.startGroup('Disabling automatic garbage collection');
-            if (!(yield git.tryDisableAutomaticGarbageCollection())) {
-                core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
-            }
-            core.endGroup();
-            // If we didn't initialize it above, do it now
-            if (!authHelper) {
-                authHelper = gitAuthHelper.createAuthHelper(git, settings);
-            }
-            // Configure auth
-            core.startGroup('Setting up auth');
-            yield authHelper.configureAuth();
-            core.endGroup();
-            // Determine the default branch
-            if (!settings.ref && !settings.commit) {
-                core.startGroup('Determining the default branch');
-                if (settings.sshKey) {
-                    settings.ref = yield git.getDefaultBranch(repositoryUrl);
-                }
-                else {
-                    settings.ref = yield githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.githubServerUrl);
-                }
-                core.endGroup();
-            }
-            // LFS install
-            if (settings.lfs) {
-                yield git.lfsInstall();
-            }
-            // Fetch
-            core.startGroup('Fetching the repository');
-            const fetchOptions = {};
-            if (settings.filter) {
-                fetchOptions.filter = settings.filter;
-            }
-            else if (settings.sparseCheckout) {
-                fetchOptions.filter = 'blob:none';
-            }
-            if (settings.fetchDepth <= 0) {
-                // Fetch all branches and tags
-                let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
-                yield git.fetch(refSpec, fetchOptions);
-                // When all history is fetched, the ref we're interested in may have moved to a different
-                // commit (push or force push). If so, fetch again with a targeted refspec.
-                if (!(yield refHelper.testRef(git, settings.ref, settings.commit))) {
-                    refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                    yield git.fetch(refSpec, fetchOptions);
-                }
-            }
-            else {
-                fetchOptions.fetchDepth = settings.fetchDepth;
-                fetchOptions.fetchTags = settings.fetchTags;
-                const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
-                yield git.fetch(refSpec, fetchOptions);
-            }
-            core.endGroup();
-            // Checkout info
-            core.startGroup('Determining the checkout info');
-            const checkoutInfo = yield refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
-            core.endGroup();
-            // LFS fetch
-            // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
-            // Explicit lfs fetch will fetch lfs objects in parallel.
-            // For sparse checkouts, let `checkout` fetch the needed objects lazily.
-            if (settings.lfs && !settings.sparseCheckout) {
-                core.startGroup('Fetching LFS objects');
-                yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
-                core.endGroup();
-            }
-            // Sparse checkout
-            if (!settings.sparseCheckout) {
-                let gitVersion = yield git.version();
-                // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
-                if (gitVersion.checkMinimum(git_command_manager_1.MinimumGitSparseCheckoutVersion)) {
-                    yield git.disableSparseCheckout();
-                }
-            }
-            else {
-                core.startGroup('Setting up sparse checkout');
-                if (settings.sparseCheckoutConeMode) {
-                    yield git.sparseCheckout(settings.sparseCheckout);
-                }
-                else {
-                    yield git.sparseCheckoutNonConeMode(settings.sparseCheckout);
-                }
-                core.endGroup();
-            }
-            // Checkout
-            core.startGroup('Checking out the ref');
-            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
-            core.endGroup();
-            // Submodules
-            if (settings.submodules) {
-                // Temporarily override global config
-                core.startGroup('Setting up auth for fetching submodules');
-                yield authHelper.configureGlobalAuth();
-                core.endGroup();
-                // Checkout submodules
-                core.startGroup('Fetching submodules');
-                yield git.submoduleSync(settings.nestedSubmodules);
-                yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
-                yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
-                core.endGroup();
-                // Persist credentials
-                if (settings.persistCredentials) {
-                    core.startGroup('Persisting credentials for submodules');
-                    yield authHelper.configureSubmoduleAuth();
-                    core.endGroup();
-                }
-            }
-            // Get commit information
-            const commitInfo = yield git.log1();
-            // Log commit sha
-            const commitSHA = yield git.log1('--format=%H');
-            core.setOutput('commit', commitSHA.trim());
-            // Check for incorrect pull request merge commit
-            yield refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.githubServerUrl);
-        }
-        finally {
-            // Remove auth
-            if (authHelper) {
-                if (!settings.persistCredentials) {
-                    core.startGroup('Removing auth');
-                    yield authHelper.removeAuth();
-                    core.endGroup();
-                }
-                authHelper.removeGlobalConfig();
-            }
-        }
-    });
-}
-function cleanup(repositoryPath) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Repo exists?
-        if (!repositoryPath ||
-            !fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))) {
-            return;
-        }
-        let git;
-        try {
-            git = yield gitCommandManager.createCommandManager(repositoryPath, false, false);
-        }
-        catch (_a) {
-            return;
-        }
-        // Remove auth
-        const authHelper = gitAuthHelper.createAuthHelper(git);
-        try {
-            if (stateHelper.PostSetSafeDirectory) {
+async function getSource(settings) {
+    // Repository URL
+    core.info(`Syncing repository: ${settings.repositoryOwner}/${settings.repositoryName}`);
+    const repositoryUrl = urlHelper.getFetchUrl(settings);
+    // Remove conflicting file path
+    if (fsHelper.fileExistsSync(settings.repositoryPath)) {
+        await io.rmRF(settings.repositoryPath);
+    }
+    // Create directory
+    let isExisting = true;
+    if (!fsHelper.directoryExistsSync(settings.repositoryPath)) {
+        isExisting = false;
+        await io.mkdirP(settings.repositoryPath);
+    }
+    // Git command manager
+    core.startGroup('Getting Git version info');
+    const git = await getGitCommandManager(settings);
+    core.endGroup();
+    let authHelper = null;
+    try {
+        if (git) {
+            authHelper = gitAuthHelper.createAuthHelper(git, settings);
+            if (settings.setSafeDirectory) {
                 // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
                 // Otherwise all git commands we run in a container fail
-                yield authHelper.configureTempGlobalConfig();
+                await authHelper.configureTempGlobalConfig();
                 core.info(`Adding repository directory to the temporary git global config as a safe directory`);
-                yield git
-                    .config('safe.directory', repositoryPath, true, true)
+                await git
+                    .config('safe.directory', settings.repositoryPath, true, true)
                     .catch(error => {
                     core.info(`Failed to initialize safe directory with error: ${error}`);
                 });
+                stateHelper.setSafeDirectory();
             }
-            yield authHelper.removeAuth();
         }
-        finally {
-            yield authHelper.removeGlobalConfig();
+        // Prepare existing directory, otherwise recreate
+        if (isExisting) {
+            await gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
         }
-    });
+        if (!git) {
+            // Downloading using REST API
+            core.info(`The repository will be downloaded using the GitHub REST API`);
+            core.info(`To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH`);
+            if (settings.submodules) {
+                throw new Error(`Input 'submodules' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+            }
+            else if (settings.sshKey) {
+                throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${gitCommandManager.MinimumGitVersion} or higher to the PATH.`);
+            }
+            await githubApiHelper.downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath, settings.githubServerUrl);
+            return;
+        }
+        // Save state for POST action
+        stateHelper.setRepositoryPath(settings.repositoryPath);
+        // Initialize the repository
+        if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
+            core.startGroup('Initializing the repository');
+            await git.init();
+            await git.remoteAdd('origin', repositoryUrl);
+            core.endGroup();
+        }
+        // Disable automatic garbage collection
+        core.startGroup('Disabling automatic garbage collection');
+        if (!(await git.tryDisableAutomaticGarbageCollection())) {
+            core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
+        }
+        core.endGroup();
+        // If we didn't initialize it above, do it now
+        if (!authHelper) {
+            authHelper = gitAuthHelper.createAuthHelper(git, settings);
+        }
+        // Configure auth
+        core.startGroup('Setting up auth');
+        await authHelper.configureAuth();
+        core.endGroup();
+        // Determine the default branch
+        if (!settings.ref && !settings.commit) {
+            core.startGroup('Determining the default branch');
+            if (settings.sshKey) {
+                settings.ref = await git.getDefaultBranch(repositoryUrl);
+            }
+            else {
+                settings.ref = await githubApiHelper.getDefaultBranch(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.githubServerUrl);
+            }
+            core.endGroup();
+        }
+        // LFS install
+        if (settings.lfs) {
+            await git.lfsInstall();
+        }
+        // Fetch
+        core.startGroup('Fetching the repository');
+        const fetchOptions = {};
+        if (settings.filter) {
+            fetchOptions.filter = settings.filter;
+        }
+        else if (settings.sparseCheckout) {
+            fetchOptions.filter = 'blob:none';
+        }
+        if (settings.fetchDepth <= 0) {
+            // Fetch all branches and tags
+            let refSpec = refHelper.getRefSpecForAllHistory(settings.ref, settings.commit);
+            await git.fetch(refSpec, fetchOptions);
+            // When all history is fetched, the ref we're interested in may have moved to a different
+            // commit (push or force push). If so, fetch again with a targeted refspec.
+            if (!(await refHelper.testRef(git, settings.ref, settings.commit))) {
+                refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
+                await git.fetch(refSpec, fetchOptions);
+            }
+        }
+        else {
+            fetchOptions.fetchDepth = settings.fetchDepth;
+            fetchOptions.fetchTags = settings.fetchTags;
+            const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
+            await git.fetch(refSpec, fetchOptions);
+        }
+        core.endGroup();
+        // Checkout info
+        core.startGroup('Determining the checkout info');
+        const checkoutInfo = await refHelper.getCheckoutInfo(git, settings.ref, settings.commit);
+        core.endGroup();
+        // LFS fetch
+        // Explicit lfs-fetch to avoid slow checkout (fetches one lfs object at a time).
+        // Explicit lfs fetch will fetch lfs objects in parallel.
+        // For sparse checkouts, let `checkout` fetch the needed objects lazily.
+        if (settings.lfs && !settings.sparseCheckout) {
+            core.startGroup('Fetching LFS objects');
+            await git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
+            core.endGroup();
+        }
+        // Sparse checkout
+        if (!settings.sparseCheckout) {
+            let gitVersion = await git.version();
+            // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
+            if (gitVersion.checkMinimum(git_command_manager_1.MinimumGitSparseCheckoutVersion)) {
+                await git.disableSparseCheckout();
+            }
+        }
+        else {
+            core.startGroup('Setting up sparse checkout');
+            if (settings.sparseCheckoutConeMode) {
+                await git.sparseCheckout(settings.sparseCheckout);
+            }
+            else {
+                await git.sparseCheckoutNonConeMode(settings.sparseCheckout);
+            }
+            core.endGroup();
+        }
+        // Checkout
+        core.startGroup('Checking out the ref');
+        await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+        core.endGroup();
+        // Submodules
+        if (settings.submodules) {
+            // Temporarily override global config
+            core.startGroup('Setting up auth for fetching submodules');
+            await authHelper.configureGlobalAuth();
+            core.endGroup();
+            // Checkout submodules
+            core.startGroup('Fetching submodules');
+            await git.submoduleSync(settings.nestedSubmodules);
+            await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+            await git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
+            core.endGroup();
+            // Persist credentials
+            if (settings.persistCredentials) {
+                core.startGroup('Persisting credentials for submodules');
+                await authHelper.configureSubmoduleAuth();
+                core.endGroup();
+            }
+        }
+        // Get commit information
+        const commitInfo = await git.log1();
+        // Log commit sha
+        const commitSHA = await git.log1('--format=%H');
+        core.setOutput('commit', commitSHA.trim());
+        // Check for incorrect pull request merge commit
+        await refHelper.checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.githubServerUrl);
+    }
+    finally {
+        // Remove auth
+        if (authHelper) {
+            if (!settings.persistCredentials) {
+                core.startGroup('Removing auth');
+                await authHelper.removeAuth();
+                core.endGroup();
+            }
+            authHelper.removeGlobalConfig();
+        }
+    }
 }
-function getGitCommandManager(settings) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core.info(`Working directory is '${settings.repositoryPath}'`);
-        try {
-            return yield gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null);
+async function cleanup(repositoryPath) {
+    // Repo exists?
+    if (!repositoryPath ||
+        !fsHelper.fileExistsSync(path.join(repositoryPath, '.git', 'config'))) {
+        return;
+    }
+    let git;
+    try {
+        git = await gitCommandManager.createCommandManager(repositoryPath, false, false);
+    }
+    catch {
+        return;
+    }
+    // Remove auth
+    const authHelper = gitAuthHelper.createAuthHelper(git);
+    try {
+        if (stateHelper.PostSetSafeDirectory) {
+            // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
+            // Otherwise all git commands we run in a container fail
+            await authHelper.configureTempGlobalConfig();
+            core.info(`Adding repository directory to the temporary git global config as a safe directory`);
+            await git
+                .config('safe.directory', repositoryPath, true, true)
+                .catch(error => {
+                core.info(`Failed to initialize safe directory with error: ${error}`);
+            });
         }
-        catch (err) {
-            // Git is required for LFS
-            if (settings.lfs) {
-                throw err;
-            }
-            // Otherwise fallback to REST API
-            return undefined;
+        await authHelper.removeAuth();
+    }
+    finally {
+        await authHelper.removeGlobalConfig();
+    }
+}
+async function getGitCommandManager(settings) {
+    core.info(`Working directory is '${settings.repositoryPath}'`);
+    try {
+        return await gitCommandManager.createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null);
+    }
+    catch (err) {
+        // Git is required for LFS
+        if (settings.lfs) {
+            throw err;
         }
-    });
+        // Otherwise fallback to REST API
+        return undefined;
+    }
 }
 
 
@@ -1434,14 +1292,14 @@ function getGitCommandManager(settings) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitVersion = void 0;
 class GitVersion {
+    major = NaN;
+    minor = NaN;
+    patch = NaN;
     /**
      * Used for comparing the version of git and git-lfs against the minimum required version
      * @param version the version string, e.g. 1.2 or 1.2.3
      */
     constructor(version) {
-        this.major = NaN;
-        this.minor = NaN;
-        this.patch = NaN;
         if (version) {
             const match = version.match(/^(\d+)\.(\d+)(\.(\d+))?$/);
             if (match) {
@@ -1534,15 +1392,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.downloadRepository = downloadRepository;
 exports.getDefaultBranch = getDefaultBranch;
@@ -1557,111 +1406,105 @@ const toolCache = __importStar(__nccwpck_require__(7784));
 const uuid_1 = __nccwpck_require__(5840);
 const url_helper_1 = __nccwpck_require__(9437);
 const IS_WINDOWS = process.platform === 'win32';
-function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Determine the default branch
-        if (!ref && !commit) {
-            core.info('Determining the default branch');
-            ref = yield getDefaultBranch(authToken, owner, repo, baseUrl);
-        }
-        // Download the archive
-        let archiveData = yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-            core.info('Downloading the archive');
-            return yield downloadArchive(authToken, owner, repo, ref, commit, baseUrl);
-        }));
-        // Write archive to disk
-        core.info('Writing archive to disk');
-        const uniqueId = (0, uuid_1.v4)();
-        const archivePath = IS_WINDOWS
-            ? path.join(repositoryPath, `${uniqueId}.zip`)
-            : path.join(repositoryPath, `${uniqueId}.tar.gz`);
-        yield fs.promises.writeFile(archivePath, archiveData);
-        archiveData = Buffer.from(''); // Free memory
-        // Extract archive
-        core.info('Extracting the archive');
-        const extractPath = path.join(repositoryPath, uniqueId);
-        yield io.mkdirP(extractPath);
+async function downloadRepository(authToken, owner, repo, ref, commit, repositoryPath, baseUrl) {
+    // Determine the default branch
+    if (!ref && !commit) {
+        core.info('Determining the default branch');
+        ref = await getDefaultBranch(authToken, owner, repo, baseUrl);
+    }
+    // Download the archive
+    let archiveData = await retryHelper.execute(async () => {
+        core.info('Downloading the archive');
+        return await downloadArchive(authToken, owner, repo, ref, commit, baseUrl);
+    });
+    // Write archive to disk
+    core.info('Writing archive to disk');
+    const uniqueId = (0, uuid_1.v4)();
+    const archivePath = IS_WINDOWS
+        ? path.join(repositoryPath, `${uniqueId}.zip`)
+        : path.join(repositoryPath, `${uniqueId}.tar.gz`);
+    await fs.promises.writeFile(archivePath, archiveData);
+    archiveData = Buffer.from(''); // Free memory
+    // Extract archive
+    core.info('Extracting the archive');
+    const extractPath = path.join(repositoryPath, uniqueId);
+    await io.mkdirP(extractPath);
+    if (IS_WINDOWS) {
+        await toolCache.extractZip(archivePath, extractPath);
+    }
+    else {
+        await toolCache.extractTar(archivePath, extractPath);
+    }
+    await io.rmRF(archivePath);
+    // Determine the path of the repository content. The archive contains
+    // a top-level folder and the repository content is inside.
+    const archiveFileNames = await fs.promises.readdir(extractPath);
+    assert.ok(archiveFileNames.length == 1, 'Expected exactly one directory inside archive');
+    const archiveVersion = archiveFileNames[0]; // The top-level folder name includes the short SHA
+    core.info(`Resolved version ${archiveVersion}`);
+    const tempRepositoryPath = path.join(extractPath, archiveVersion);
+    // Move the files
+    for (const fileName of await fs.promises.readdir(tempRepositoryPath)) {
+        const sourcePath = path.join(tempRepositoryPath, fileName);
+        const targetPath = path.join(repositoryPath, fileName);
         if (IS_WINDOWS) {
-            yield toolCache.extractZip(archivePath, extractPath);
+            await io.cp(sourcePath, targetPath, { recursive: true }); // Copy on Windows (Windows Defender may have a lock)
         }
         else {
-            yield toolCache.extractTar(archivePath, extractPath);
+            await io.mv(sourcePath, targetPath);
         }
-        yield io.rmRF(archivePath);
-        // Determine the path of the repository content. The archive contains
-        // a top-level folder and the repository content is inside.
-        const archiveFileNames = yield fs.promises.readdir(extractPath);
-        assert.ok(archiveFileNames.length == 1, 'Expected exactly one directory inside archive');
-        const archiveVersion = archiveFileNames[0]; // The top-level folder name includes the short SHA
-        core.info(`Resolved version ${archiveVersion}`);
-        const tempRepositoryPath = path.join(extractPath, archiveVersion);
-        // Move the files
-        for (const fileName of yield fs.promises.readdir(tempRepositoryPath)) {
-            const sourcePath = path.join(tempRepositoryPath, fileName);
-            const targetPath = path.join(repositoryPath, fileName);
-            if (IS_WINDOWS) {
-                yield io.cp(sourcePath, targetPath, { recursive: true }); // Copy on Windows (Windows Defender may have a lock)
-            }
-            else {
-                yield io.mv(sourcePath, targetPath);
-            }
-        }
-        yield io.rmRF(extractPath);
-    });
+    }
+    await io.rmRF(extractPath);
 }
 /**
  * Looks up the default branch name
  */
-function getDefaultBranch(authToken, owner, repo, baseUrl) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-            core.info('Retrieving the default branch name');
-            const octokit = github.getOctokit(authToken, {
-                baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
-            });
-            let result;
-            try {
-                // Get the default branch from the repo info
-                const response = yield octokit.rest.repos.get({ owner, repo });
-                result = response.data.default_branch;
-                assert.ok(result, 'default_branch cannot be empty');
-            }
-            catch (err) {
-                // Handle .wiki repo
-                if ((err === null || err === void 0 ? void 0 : err.status) === 404 &&
-                    repo.toUpperCase().endsWith('.WIKI')) {
-                    result = 'master';
-                }
-                // Otherwise error
-                else {
-                    throw err;
-                }
-            }
-            // Print the default branch
-            core.info(`Default branch '${result}'`);
-            // Prefix with 'refs/heads'
-            if (!result.startsWith('refs/')) {
-                result = `refs/heads/${result}`;
-            }
-            return result;
-        }));
-    });
-}
-function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
-    return __awaiter(this, void 0, void 0, function* () {
+async function getDefaultBranch(authToken, owner, repo, baseUrl) {
+    return await retryHelper.execute(async () => {
+        core.info('Retrieving the default branch name');
         const octokit = github.getOctokit(authToken, {
             baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
         });
-        const download = IS_WINDOWS
-            ? octokit.rest.repos.downloadZipballArchive
-            : octokit.rest.repos.downloadTarballArchive;
-        const response = yield download({
-            owner: owner,
-            repo: repo,
-            ref: commit || ref
-        });
-        return Buffer.from(response.data); // response.data is ArrayBuffer
+        let result;
+        try {
+            // Get the default branch from the repo info
+            const response = await octokit.rest.repos.get({ owner, repo });
+            result = response.data.default_branch;
+            assert.ok(result, 'default_branch cannot be empty');
+        }
+        catch (err) {
+            // Handle .wiki repo
+            if (err?.status === 404 &&
+                repo.toUpperCase().endsWith('.WIKI')) {
+                result = 'master';
+            }
+            // Otherwise error
+            else {
+                throw err;
+            }
+        }
+        // Print the default branch
+        core.info(`Default branch '${result}'`);
+        // Prefix with 'refs/heads'
+        if (!result.startsWith('refs/')) {
+            result = `refs/heads/${result}`;
+        }
+        return result;
     });
+}
+async function downloadArchive(authToken, owner, repo, ref, commit, baseUrl) {
+    const octokit = github.getOctokit(authToken, {
+        baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl)
+    });
+    const download = IS_WINDOWS
+        ? octokit.rest.repos.downloadZipballArchive
+        : octokit.rest.repos.downloadTarballArchive;
+    const response = await download({
+        owner: owner,
+        repo: repo,
+        ref: commit || ref
+    });
+    return Buffer.from(response.data); // response.data is ArrayBuffer
 }
 
 
@@ -1695,15 +1538,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getInputs = getInputs;
 const core = __importStar(__nccwpck_require__(2186));
@@ -1711,128 +1545,126 @@ const fsHelper = __importStar(__nccwpck_require__(7219));
 const github = __importStar(__nccwpck_require__(5438));
 const path = __importStar(__nccwpck_require__(1017));
 const workflowContextHelper = __importStar(__nccwpck_require__(9568));
-function getInputs() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const result = {};
-        // GitHub workspace
-        let githubWorkspacePath = process.env['GITHUB_WORKSPACE'];
-        if (!githubWorkspacePath) {
-            throw new Error('GITHUB_WORKSPACE not defined');
-        }
-        githubWorkspacePath = path.resolve(githubWorkspacePath);
-        core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
-        fsHelper.directoryExistsSync(githubWorkspacePath, true);
-        // Qualified repository
-        const qualifiedRepository = core.getInput('repository') ||
-            `${github.context.repo.owner}/${github.context.repo.repo}`;
-        core.debug(`qualified repository = '${qualifiedRepository}'`);
-        const splitRepository = qualifiedRepository.split('/');
-        if (splitRepository.length !== 2 ||
-            !splitRepository[0] ||
-            !splitRepository[1]) {
-            throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
-        }
-        result.repositoryOwner = splitRepository[0];
-        result.repositoryName = splitRepository[1];
-        // Repository path
-        result.repositoryPath = core.getInput('path') || '.';
-        result.repositoryPath = path.resolve(githubWorkspacePath, result.repositoryPath);
-        if (!(result.repositoryPath + path.sep).startsWith(githubWorkspacePath + path.sep)) {
-            throw new Error(`Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`);
-        }
-        // Workflow repository?
-        const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
-            `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
-        // Source branch, source version
-        result.ref = core.getInput('ref');
-        if (!result.ref) {
-            if (isWorkflowRepository) {
-                result.ref = github.context.ref;
-                result.commit = github.context.sha;
-                // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
-                // the ref is unqualifed like "main" instead of "refs/heads/main".
-                if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
-                    result.ref = `refs/heads/${result.ref}`;
-                }
+async function getInputs() {
+    const result = {};
+    // GitHub workspace
+    let githubWorkspacePath = process.env['GITHUB_WORKSPACE'];
+    if (!githubWorkspacePath) {
+        throw new Error('GITHUB_WORKSPACE not defined');
+    }
+    githubWorkspacePath = path.resolve(githubWorkspacePath);
+    core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`);
+    fsHelper.directoryExistsSync(githubWorkspacePath, true);
+    // Qualified repository
+    const qualifiedRepository = core.getInput('repository') ||
+        `${github.context.repo.owner}/${github.context.repo.repo}`;
+    core.debug(`qualified repository = '${qualifiedRepository}'`);
+    const splitRepository = qualifiedRepository.split('/');
+    if (splitRepository.length !== 2 ||
+        !splitRepository[0] ||
+        !splitRepository[1]) {
+        throw new Error(`Invalid repository '${qualifiedRepository}'. Expected format {owner}/{repo}.`);
+    }
+    result.repositoryOwner = splitRepository[0];
+    result.repositoryName = splitRepository[1];
+    // Repository path
+    result.repositoryPath = core.getInput('path') || '.';
+    result.repositoryPath = path.resolve(githubWorkspacePath, result.repositoryPath);
+    if (!(result.repositoryPath + path.sep).startsWith(githubWorkspacePath + path.sep)) {
+        throw new Error(`Repository path '${result.repositoryPath}' is not under '${githubWorkspacePath}'`);
+    }
+    // Workflow repository?
+    const isWorkflowRepository = qualifiedRepository.toUpperCase() ===
+        `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
+    // Source branch, source version
+    result.ref = core.getInput('ref');
+    if (!result.ref) {
+        if (isWorkflowRepository) {
+            result.ref = github.context.ref;
+            result.commit = github.context.sha;
+            // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
+            // the ref is unqualifed like "main" instead of "refs/heads/main".
+            if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
+                result.ref = `refs/heads/${result.ref}`;
             }
         }
-        // SHA?
-        else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
-            result.commit = result.ref;
-            result.ref = '';
-        }
-        core.debug(`ref = '${result.ref}'`);
-        core.debug(`commit = '${result.commit}'`);
-        // Clean
-        result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
-        core.debug(`clean = ${result.clean}`);
-        // Filter
-        const filter = core.getInput('filter');
-        if (filter) {
-            result.filter = filter;
-        }
-        core.debug(`filter = ${result.filter}`);
-        // Sparse checkout
-        const sparseCheckout = core.getMultilineInput('sparse-checkout');
-        if (sparseCheckout.length) {
-            result.sparseCheckout = sparseCheckout;
-            core.debug(`sparse checkout = ${result.sparseCheckout}`);
-        }
-        result.sparseCheckoutConeMode =
-            (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
-                'TRUE';
-        // Fetch depth
-        result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
-        if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
-            result.fetchDepth = 0;
-        }
-        core.debug(`fetch depth = ${result.fetchDepth}`);
-        // Fetch tags
-        result.fetchTags =
-            (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE';
-        core.debug(`fetch tags = ${result.fetchTags}`);
-        // Show fetch progress
-        result.showProgress =
-            (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
-        core.debug(`show progress = ${result.showProgress}`);
-        // LFS
-        result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
-        core.debug(`lfs = ${result.lfs}`);
-        // Submodules
-        result.submodules = false;
-        result.nestedSubmodules = false;
-        const submodulesString = (core.getInput('submodules') || '').toUpperCase();
-        if (submodulesString == 'RECURSIVE') {
-            result.submodules = true;
-            result.nestedSubmodules = true;
-        }
-        else if (submodulesString == 'TRUE') {
-            result.submodules = true;
-        }
-        core.debug(`submodules = ${result.submodules}`);
-        core.debug(`recursive submodules = ${result.nestedSubmodules}`);
-        // Auth token
-        result.authToken = core.getInput('token', { required: true });
-        // SSH
-        result.sshKey = core.getInput('ssh-key');
-        result.sshKnownHosts = core.getInput('ssh-known-hosts');
-        result.sshStrict =
-            (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE';
-        result.sshUser = core.getInput('ssh-user');
-        // Persist credentials
-        result.persistCredentials =
-            (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
-        // Workflow organization ID
-        result.workflowOrganizationId =
-            yield workflowContextHelper.getOrganizationId();
-        // Set safe.directory in git global config.
-        result.setSafeDirectory =
-            (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
-        // Determine the GitHub URL that the repository is being hosted from
-        result.githubServerUrl = core.getInput('github-server-url');
-        core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
-        return result;
-    });
+    }
+    // SHA?
+    else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
+        result.commit = result.ref;
+        result.ref = '';
+    }
+    core.debug(`ref = '${result.ref}'`);
+    core.debug(`commit = '${result.commit}'`);
+    // Clean
+    result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
+    core.debug(`clean = ${result.clean}`);
+    // Filter
+    const filter = core.getInput('filter');
+    if (filter) {
+        result.filter = filter;
+    }
+    core.debug(`filter = ${result.filter}`);
+    // Sparse checkout
+    const sparseCheckout = core.getMultilineInput('sparse-checkout');
+    if (sparseCheckout.length) {
+        result.sparseCheckout = sparseCheckout;
+        core.debug(`sparse checkout = ${result.sparseCheckout}`);
+    }
+    result.sparseCheckoutConeMode =
+        (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+            'TRUE';
+    // Fetch depth
+    result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
+    if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
+        result.fetchDepth = 0;
+    }
+    core.debug(`fetch depth = ${result.fetchDepth}`);
+    // Fetch tags
+    result.fetchTags =
+        (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE';
+    core.debug(`fetch tags = ${result.fetchTags}`);
+    // Show fetch progress
+    result.showProgress =
+        (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
+    core.debug(`show progress = ${result.showProgress}`);
+    // LFS
+    result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE';
+    core.debug(`lfs = ${result.lfs}`);
+    // Submodules
+    result.submodules = false;
+    result.nestedSubmodules = false;
+    const submodulesString = (core.getInput('submodules') || '').toUpperCase();
+    if (submodulesString == 'RECURSIVE') {
+        result.submodules = true;
+        result.nestedSubmodules = true;
+    }
+    else if (submodulesString == 'TRUE') {
+        result.submodules = true;
+    }
+    core.debug(`submodules = ${result.submodules}`);
+    core.debug(`recursive submodules = ${result.nestedSubmodules}`);
+    // Auth token
+    result.authToken = core.getInput('token', { required: true });
+    // SSH
+    result.sshKey = core.getInput('ssh-key');
+    result.sshKnownHosts = core.getInput('ssh-known-hosts');
+    result.sshStrict =
+        (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE';
+    result.sshUser = core.getInput('ssh-user');
+    // Persist credentials
+    result.persistCredentials =
+        (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE';
+    // Workflow organization ID
+    result.workflowOrganizationId =
+        await workflowContextHelper.getOrganizationId();
+    // Set safe.directory in git global config.
+    result.setSafeDirectory =
+        (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
+    // Determine the GitHub URL that the repository is being hosted from
+    result.githubServerUrl = core.getInput('github-server-url');
+    core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+    return result;
 }
 
 
@@ -1866,15 +1698,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const coreCommand = __importStar(__nccwpck_require__(7351));
@@ -1882,38 +1705,32 @@ const gitSourceProvider = __importStar(__nccwpck_require__(9210));
 const inputHelper = __importStar(__nccwpck_require__(5480));
 const path = __importStar(__nccwpck_require__(1017));
 const stateHelper = __importStar(__nccwpck_require__(4866));
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a;
+async function run() {
+    try {
+        const sourceSettings = await inputHelper.getInputs();
         try {
-            const sourceSettings = yield inputHelper.getInputs();
-            try {
-                // Register problem matcher
-                coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
-                // Get sources
-                yield gitSourceProvider.getSource(sourceSettings);
-                core.setOutput('ref', sourceSettings.ref);
-            }
-            finally {
-                // Unregister problem matcher
-                coreCommand.issueCommand('remove-matcher', { owner: 'checkout-git' }, '');
-            }
+            // Register problem matcher
+            coreCommand.issueCommand('add-matcher', {}, path.join(__dirname, 'problem-matcher.json'));
+            // Get sources
+            await gitSourceProvider.getSource(sourceSettings);
+            core.setOutput('ref', sourceSettings.ref);
         }
-        catch (error) {
-            core.setFailed(`${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
+        finally {
+            // Unregister problem matcher
+            coreCommand.issueCommand('remove-matcher', { owner: 'checkout-git' }, '');
         }
-    });
+    }
+    catch (error) {
+        core.setFailed(`${error?.message ?? error}`);
+    }
 }
-function cleanup() {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        try {
-            yield gitSourceProvider.cleanup(stateHelper.RepositoryPath);
-        }
-        catch (error) {
-            core.warning(`${(_a = error === null || error === void 0 ? void 0 : error.message) !== null && _a !== void 0 ? _a : error}`);
-        }
-    });
+async function cleanup() {
+    try {
+        await gitSourceProvider.cleanup(stateHelper.RepositoryPath);
+    }
+    catch (error) {
+        core.warning(`${error?.message ?? error}`);
+    }
 }
 // Main
 if (!stateHelper.IsPost) {
@@ -1955,15 +1772,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.tagsRefSpec = void 0;
 exports.getCheckoutInfo = getCheckoutInfo;
@@ -1975,54 +1783,52 @@ const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const url_helper_1 = __nccwpck_require__(9437);
 exports.tagsRefSpec = '+refs/tags/*:refs/tags/*';
-function getCheckoutInfo(git, ref, commit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (!git) {
-            throw new Error('Arg git cannot be empty');
-        }
-        if (!ref && !commit) {
-            throw new Error('Args ref and commit cannot both be empty');
-        }
-        const result = {};
-        const upperRef = (ref || '').toUpperCase();
-        // SHA only
-        if (!ref) {
-            result.ref = commit;
-        }
-        // refs/heads/
-        else if (upperRef.startsWith('REFS/HEADS/')) {
-            const branch = ref.substring('refs/heads/'.length);
-            result.ref = branch;
-            result.startPoint = `refs/remotes/origin/${branch}`;
-        }
-        // refs/pull/
-        else if (upperRef.startsWith('REFS/PULL/')) {
-            const branch = ref.substring('refs/pull/'.length);
-            result.ref = `refs/remotes/pull/${branch}`;
-        }
-        // refs/tags/
-        else if (upperRef.startsWith('REFS/TAGS/')) {
+async function getCheckoutInfo(git, ref, commit) {
+    if (!git) {
+        throw new Error('Arg git cannot be empty');
+    }
+    if (!ref && !commit) {
+        throw new Error('Args ref and commit cannot both be empty');
+    }
+    const result = {};
+    const upperRef = (ref || '').toUpperCase();
+    // SHA only
+    if (!ref) {
+        result.ref = commit;
+    }
+    // refs/heads/
+    else if (upperRef.startsWith('REFS/HEADS/')) {
+        const branch = ref.substring('refs/heads/'.length);
+        result.ref = branch;
+        result.startPoint = `refs/remotes/origin/${branch}`;
+    }
+    // refs/pull/
+    else if (upperRef.startsWith('REFS/PULL/')) {
+        const branch = ref.substring('refs/pull/'.length);
+        result.ref = `refs/remotes/pull/${branch}`;
+    }
+    // refs/tags/
+    else if (upperRef.startsWith('REFS/TAGS/')) {
+        result.ref = ref;
+    }
+    // refs/
+    else if (upperRef.startsWith('REFS/')) {
+        result.ref = commit ? commit : ref;
+    }
+    // Unqualified ref, check for a matching branch or tag
+    else {
+        if (await git.branchExists(true, `origin/${ref}`)) {
             result.ref = ref;
+            result.startPoint = `refs/remotes/origin/${ref}`;
         }
-        // refs/
-        else if (upperRef.startsWith('REFS/')) {
-            result.ref = commit ? commit : ref;
+        else if (await git.tagExists(`${ref}`)) {
+            result.ref = `refs/tags/${ref}`;
         }
-        // Unqualified ref, check for a matching branch or tag
         else {
-            if (yield git.branchExists(true, `origin/${ref}`)) {
-                result.ref = ref;
-                result.startPoint = `refs/remotes/origin/${ref}`;
-            }
-            else if (yield git.tagExists(`${ref}`)) {
-                result.ref = `refs/tags/${ref}`;
-            }
-            else {
-                throw new Error(`A branch or tag with the name '${ref}' could not be found`);
-            }
+            throw new Error(`A branch or tag with the name '${ref}' could not be found`);
         }
-        return result;
-    });
+    }
+    return result;
 }
 function getRefSpecForAllHistory(ref, commit) {
     const result = ['+refs/heads/*:refs/remotes/origin/*', exports.tagsRefSpec];
@@ -2083,110 +1889,105 @@ function getRefSpec(ref, commit) {
 /**
  * Tests whether the initial fetch created the ref at the expected commit
  */
-function testRef(git, ref, commit) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (!git) {
-            throw new Error('Arg git cannot be empty');
-        }
-        if (!ref && !commit) {
-            throw new Error('Args ref and commit cannot both be empty');
-        }
-        // No SHA? Nothing to test
-        if (!commit) {
-            return true;
-        }
-        // SHA only?
-        else if (!ref) {
-            return yield git.shaExists(commit);
-        }
-        const upperRef = ref.toUpperCase();
-        // refs/heads/
-        if (upperRef.startsWith('REFS/HEADS/')) {
-            const branch = ref.substring('refs/heads/'.length);
-            return ((yield git.branchExists(true, `origin/${branch}`)) &&
-                commit === (yield git.revParse(`refs/remotes/origin/${branch}`)));
-        }
-        // refs/pull/
-        else if (upperRef.startsWith('REFS/PULL/')) {
-            // Assume matches because fetched using the commit
-            return true;
-        }
-        // refs/tags/
-        else if (upperRef.startsWith('REFS/TAGS/')) {
-            const tagName = ref.substring('refs/tags/'.length);
-            return ((yield git.tagExists(tagName)) && commit === (yield git.revParse(ref)));
-        }
-        // Unexpected
-        else {
-            core.debug(`Unexpected ref format '${ref}' when testing ref info`);
-            return true;
-        }
-    });
+async function testRef(git, ref, commit) {
+    if (!git) {
+        throw new Error('Arg git cannot be empty');
+    }
+    if (!ref && !commit) {
+        throw new Error('Args ref and commit cannot both be empty');
+    }
+    // No SHA? Nothing to test
+    if (!commit) {
+        return true;
+    }
+    // SHA only?
+    else if (!ref) {
+        return await git.shaExists(commit);
+    }
+    const upperRef = ref.toUpperCase();
+    // refs/heads/
+    if (upperRef.startsWith('REFS/HEADS/')) {
+        const branch = ref.substring('refs/heads/'.length);
+        return ((await git.branchExists(true, `origin/${branch}`)) &&
+            commit === (await git.revParse(`refs/remotes/origin/${branch}`)));
+    }
+    // refs/pull/
+    else if (upperRef.startsWith('REFS/PULL/')) {
+        // Assume matches because fetched using the commit
+        return true;
+    }
+    // refs/tags/
+    else if (upperRef.startsWith('REFS/TAGS/')) {
+        const tagName = ref.substring('refs/tags/'.length);
+        return ((await git.tagExists(tagName)) && commit === (await git.revParse(ref)));
+    }
+    // Unexpected
+    else {
+        core.debug(`Unexpected ref format '${ref}' when testing ref info`);
+        return true;
+    }
 }
-function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit, baseUrl) {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        try {
-            // GHES?
-            if ((0, url_helper_1.isGhes)(baseUrl)) {
-                return;
-            }
-            // Auth token?
-            if (!token) {
-                return;
-            }
-            // Public PR synchronize, for workflow repo?
-            if (fromPayload('repository.private') !== false ||
-                github.context.eventName !== 'pull_request' ||
-                fromPayload('action') !== 'synchronize' ||
-                repositoryOwner !== github.context.repo.owner ||
-                repositoryName !== github.context.repo.repo ||
-                ref !== github.context.ref ||
-                !ref.startsWith('refs/pull/') ||
-                commit !== github.context.sha) {
-                return;
-            }
-            // Head SHA
-            const expectedHeadSha = fromPayload('after');
-            if (!expectedHeadSha) {
-                core.debug('Unable to determine head sha');
-                return;
-            }
-            // Base SHA
-            const expectedBaseSha = fromPayload('pull_request.base.sha');
-            if (!expectedBaseSha) {
-                core.debug('Unable to determine base sha');
-                return;
-            }
-            // Expected message?
-            const expectedMessage = `Merge ${expectedHeadSha} into ${expectedBaseSha}`;
-            if (commitInfo.indexOf(expectedMessage) >= 0) {
-                return;
-            }
-            // Extract details from message
-            const match = commitInfo.match(/Merge ([0-9a-f]{40}) into ([0-9a-f]{40})/);
-            if (!match) {
-                core.debug('Unexpected message format');
-                return;
-            }
-            // Post telemetry
-            const actualHeadSha = match[1];
-            if (actualHeadSha !== expectedHeadSha) {
-                core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
-                const octokit = github.getOctokit(token, {
-                    baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl),
-                    userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
-                });
-                yield octokit.rest.repos.get({
-                    owner: repositoryOwner,
-                    repo: repositoryName
-                });
-            }
+async function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref, commit, baseUrl) {
+    try {
+        // GHES?
+        if ((0, url_helper_1.isGhes)(baseUrl)) {
+            return;
         }
-        catch (err) {
-            core.debug(`Error when validating commit info: ${(_a = err === null || err === void 0 ? void 0 : err.stack) !== null && _a !== void 0 ? _a : err}`);
+        // Auth token?
+        if (!token) {
+            return;
         }
-    });
+        // Public PR synchronize, for workflow repo?
+        if (fromPayload('repository.private') !== false ||
+            github.context.eventName !== 'pull_request' ||
+            fromPayload('action') !== 'synchronize' ||
+            repositoryOwner !== github.context.repo.owner ||
+            repositoryName !== github.context.repo.repo ||
+            ref !== github.context.ref ||
+            !ref.startsWith('refs/pull/') ||
+            commit !== github.context.sha) {
+            return;
+        }
+        // Head SHA
+        const expectedHeadSha = fromPayload('after');
+        if (!expectedHeadSha) {
+            core.debug('Unable to determine head sha');
+            return;
+        }
+        // Base SHA
+        const expectedBaseSha = fromPayload('pull_request.base.sha');
+        if (!expectedBaseSha) {
+            core.debug('Unable to determine base sha');
+            return;
+        }
+        // Expected message?
+        const expectedMessage = `Merge ${expectedHeadSha} into ${expectedBaseSha}`;
+        if (commitInfo.indexOf(expectedMessage) >= 0) {
+            return;
+        }
+        // Extract details from message
+        const match = commitInfo.match(/Merge ([0-9a-f]{40}) into ([0-9a-f]{40})/);
+        if (!match) {
+            core.debug('Unexpected message format');
+            return;
+        }
+        // Post telemetry
+        const actualHeadSha = match[1];
+        if (actualHeadSha !== expectedHeadSha) {
+            core.debug(`Expected head sha ${expectedHeadSha}; actual head sha ${actualHeadSha}`);
+            const octokit = github.getOctokit(token, {
+                baseUrl: (0, url_helper_1.getServerApiUrl)(baseUrl),
+                userAgent: `actions-checkout-tracepoint/1.0 (code=STALE_MERGE;owner=${repositoryOwner};repo=${repositoryName};pr=${fromPayload('number')};run_id=${process.env['GITHUB_RUN_ID']};expected_head_sha=${expectedHeadSha};actual_head_sha=${actualHeadSha})`
+            });
+            await octokit.rest.repos.get({
+                owner: repositoryOwner,
+                repo: repositoryName
+            });
+        }
+    }
+    catch (err) {
+        core.debug(`Error when validating commit info: ${err?.stack ?? err}`);
+    }
 }
 function fromPayload(path) {
     return select(github.context.payload, path);
@@ -2250,15 +2051,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetryHelper = void 0;
 exports.execute = execute;
@@ -2267,6 +2059,9 @@ const defaultMaxAttempts = 3;
 const defaultMinSeconds = 10;
 const defaultMaxSeconds = 20;
 class RetryHelper {
+    maxAttempts;
+    minSeconds;
+    maxSeconds;
     constructor(maxAttempts = defaultMaxAttempts, minSeconds = defaultMinSeconds, maxSeconds = defaultMaxSeconds) {
         this.maxAttempts = maxAttempts;
         this.minSeconds = Math.floor(minSeconds);
@@ -2275,43 +2070,37 @@ class RetryHelper {
             throw new Error('min seconds should be less than or equal to max seconds');
         }
     }
-    execute(action) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let attempt = 1;
-            while (attempt < this.maxAttempts) {
-                // Try
-                try {
-                    return yield action();
-                }
-                catch (err) {
-                    core.info(err === null || err === void 0 ? void 0 : err.message);
-                }
-                // Sleep
-                const seconds = this.getSleepAmount();
-                core.info(`Waiting ${seconds} seconds before trying again`);
-                yield this.sleep(seconds);
-                attempt++;
+    async execute(action) {
+        let attempt = 1;
+        while (attempt < this.maxAttempts) {
+            // Try
+            try {
+                return await action();
             }
-            // Last attempt
-            return yield action();
-        });
+            catch (err) {
+                core.info(err?.message);
+            }
+            // Sleep
+            const seconds = this.getSleepAmount();
+            core.info(`Waiting ${seconds} seconds before trying again`);
+            await this.sleep(seconds);
+            attempt++;
+        }
+        // Last attempt
+        return await action();
     }
     getSleepAmount() {
         return (Math.floor(Math.random() * (this.maxSeconds - this.minSeconds + 1)) +
             this.minSeconds);
     }
-    sleep(seconds) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise(resolve => setTimeout(resolve, seconds * 1000));
-        });
+    async sleep(seconds) {
+        return new Promise(resolve => setTimeout(resolve, seconds * 1000));
     }
 }
 exports.RetryHelper = RetryHelper;
-function execute(action) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const retryHelper = new RetryHelper();
-        return yield retryHelper.execute(action);
-    });
+async function execute(action) {
+    const retryHelper = new RetryHelper();
+    return await retryHelper.execute(action);
 }
 
 
@@ -2482,7 +2271,7 @@ function isGhes(url) {
     return !isGitHubHost && !isGitHubEnterpriseCloudHost && !isLocalHost;
 }
 function pruneSuffix(text, suffix) {
-    if (hasContent(suffix, WhitespaceMode.Preserve) && (text === null || text === void 0 ? void 0 : text.endsWith(suffix))) {
+    if (hasContent(suffix, WhitespaceMode.Preserve) && text?.endsWith(suffix)) {
         return text.substring(0, text.length - suffix.length);
     }
     return text;
@@ -2493,7 +2282,7 @@ var WhitespaceMode;
     WhitespaceMode[WhitespaceMode["Preserve"] = 1] = "Preserve";
 })(WhitespaceMode || (WhitespaceMode = {}));
 function hasContent(text, whitespaceMode) {
-    let refinedText = text !== null && text !== void 0 ? text : '';
+    let refinedText = text ?? '';
     if (whitespaceMode == WhitespaceMode.Trim) {
         refinedText = refinedText.trim();
     }
@@ -2531,15 +2320,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getOrganizationId = getOrganizationId;
 const core = __importStar(__nccwpck_require__(2186));
@@ -2547,28 +2327,25 @@ const fs = __importStar(__nccwpck_require__(7147));
 /**
  * Gets the organization ID of the running workflow or undefined if the value cannot be loaded from the GITHUB_EVENT_PATH
  */
-function getOrganizationId() {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a, _b;
-        try {
-            const eventPath = process.env.GITHUB_EVENT_PATH;
-            if (!eventPath) {
-                core.debug(`GITHUB_EVENT_PATH is not defined`);
-                return;
-            }
-            const content = yield fs.promises.readFile(eventPath, { encoding: 'utf8' });
-            const event = JSON.parse(content);
-            const id = (_b = (_a = event === null || event === void 0 ? void 0 : event.repository) === null || _a === void 0 ? void 0 : _a.owner) === null || _b === void 0 ? void 0 : _b.id;
-            if (typeof id !== 'number') {
-                core.debug('Repository owner ID not found within GITHUB event info');
-                return;
-            }
-            return id;
+async function getOrganizationId() {
+    try {
+        const eventPath = process.env.GITHUB_EVENT_PATH;
+        if (!eventPath) {
+            core.debug(`GITHUB_EVENT_PATH is not defined`);
+            return;
         }
-        catch (err) {
-            core.debug(`Unable to load organization ID from GITHUB_EVENT_PATH: ${err.message || err}`);
+        const content = await fs.promises.readFile(eventPath, { encoding: 'utf8' });
+        const event = JSON.parse(content);
+        const id = event?.repository?.owner?.id;
+        if (typeof id !== 'number') {
+            core.debug('Repository owner ID not found within GITHUB event info');
+            return;
         }
-    });
+        return id;
+    }
+    catch (err) {
+        core.debug(`Unable to load organization ID from GITHUB_EVENT_PATH: ${err.message || err}`);
+    }
 }
 
 
