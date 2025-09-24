@@ -8,7 +8,6 @@ import * as path from 'path'
 import * as regexpHelper from './regexp-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
-import {v4 as uuid} from 'uuid'
 import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
@@ -89,7 +88,7 @@ class GitAuthHelper {
     // Create a temp home directory
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
-    const uniqueId = uuid()
+    const uniqueId = crypto.randomUUID()
     this.temporaryHomePath = path.join(runnerTemp, uniqueId)
     await fs.promises.mkdir(this.temporaryHomePath, {recursive: true})
 
@@ -209,7 +208,7 @@ class GitAuthHelper {
     // Write key
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
-    const uniqueId = uuid()
+    const uniqueId = crypto.randomUUID()
     this.sshKeyPath = path.join(runnerTemp, uniqueId)
     stateHelper.setSshKeyPath(this.sshKeyPath)
     await fs.promises.mkdir(runnerTemp, {recursive: true})
