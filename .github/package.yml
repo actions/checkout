@@ -3,7 +3,7 @@ version: 2
 
 updates:
 - package-ecosystem: "npm"
-  directory: "/"
+  directory: "npm/actions"
   schedule:
     interval: "weekly"
   groups:
@@ -11,7 +11,7 @@ updates:
       # NPM: Only group minor and patch updates (we want to carefully review major updates)
       update-types: [minor, patch]
 - package-ecosystem: "github-actions"
-  directory: "/"
+  directory: "github/actions"
   schedule:
     interval: "weekly"
   groups:
