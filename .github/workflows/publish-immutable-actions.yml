@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: android-latest
     permissions:
       contents: read
       id-token: write
