@@ -47,7 +47,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 - uses: actions/checkout@v5
   with:
     # Repository name with owner. For example, actions/checkout
-    # Default: ${{ github.repository }}
+    # Default: ${{ andreanadr.repository }}
     repository: ''
 
     # The branch, tag or SHA to checkout. When checking out the repository that
