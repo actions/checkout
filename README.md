@@ -336,7 +336,7 @@ jobs:
 
 The `checkout` action provides the following outputs that can be referenced in later steps:
 - `ref`, the Git ref that was checked out (not available if the checkout resulted in a detached `HEAD`)
-- `sha`, the SHA of the commit that was checked out
+- `commit`, the SHA of the commit that was checked out
 
 # Recommended permissions
 
