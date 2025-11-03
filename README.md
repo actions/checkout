@@ -1,6 +1,13 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout V5
+# Checkout v6-beta
+
+## What's new
+
+- Updated `persist-credentials` to store the credentials under `$RUNNER_TEMP` instead of directly in the local git config.
+  - This requires a minimum Actions Runner version of [v2.329.0](https://github.com/actions/runner/releases/tag/v2.329.0) to access the persisted credentials for [Docker container action](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-a-docker-container-action) scenarios.
+
+# Checkout v5
 
 ## What's new
 
@@ -8,7 +15,7 @@
   - This requires a minimum Actions Runner version of [v2.327.1](https://github.com/actions/runner/releases/tag/v2.327.1) to run.
 
 
-# Checkout V4
+# Checkout v4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
