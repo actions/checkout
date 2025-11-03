@@ -134,6 +134,7 @@ describe('Test fetchDepth and fetchTags options', () => {
         '-c',
         'protocol.version=2',
         'fetch',
+        '--tags',
         '--prune',
         '--no-recurse-submodules',
         '--filter=filterValue',
@@ -248,6 +249,7 @@ describe('Test fetchDepth and fetchTags options', () => {
         '-c',
         'protocol.version=2',
         'fetch',
+        '--tags',
         '--prune',
         '--no-recurse-submodules',
         '--filter=filterValue',
@@ -364,6 +366,7 @@ describe('Test fetchDepth and fetchTags options', () => {
         '-c',
         'protocol.version=2',
         'fetch',
+        '--tags',
         '--prune',
         '--no-recurse-submodules',
         '--progress',
@@ -374,5 +377,227 @@ describe('Test fetchDepth and fetchTags options', () => {
       ],
       expect.any(Object)
     )
+  })
+})
+
+describe('Test git 2.48 tag fetching behavior', () => {
+  beforeEach(async () => {
+    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
+    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should perform separate tag fetch for git 2.48 when fetchTags is true', async () => {
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.48.1'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    const refSpec = ['refspec1']
+    const options = {
+      fetchTags: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    // First call: main fetch with --no-tags
+    expect(mockExec).toHaveBeenNthCalledWith(
+      2, // First call is version check
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+
+    // Second call: separate tag fetch
+    expect(mockExec).toHaveBeenNthCalledWith(
+      3,
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--tags',
+        '--prune',
+        'origin'
+      ],
+      expect.any(Object)
+    )
+
+    expect(mockExec).toHaveBeenCalledTimes(3) // version + main fetch + tag fetch
+  })
+
+  it('should perform separate tag fetch with progress for git 2.48', async () => {
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.48.0'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    const refSpec = ['refspec1']
+    const options = {
+      fetchTags: true,
+      showProgress: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    // Main fetch with --no-tags and --progress
+    expect(mockExec).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--progress',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+
+    // Separate tag fetch with --progress
+    expect(mockExec).toHaveBeenNthCalledWith(
+      3,
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--tags',
+        '--prune',
+        '--progress',
+        'origin'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should NOT perform separate tag fetch for git 2.48 when fetchTags is false', async () => {
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.48.1'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    const refSpec = ['refspec1']
+    const options = {
+      fetchTags: false
+    }
+
+    await git.fetch(refSpec, options)
+
+    // Only one fetch call with --no-tags
+    expect(mockExec).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+
+    expect(mockExec).toHaveBeenCalledTimes(2) // version + single fetch only
+  })
+
+  it('should use normal behavior for non-2.48 git versions', async () => {
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.47.0'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    const refSpec = ['refspec1']
+    const options = {
+      fetchTags: true
+    }
+
+    await git.fetch(refSpec, options)
+
+    // Single fetch with --tags
+    expect(mockExec).toHaveBeenNthCalledWith(
+      2,
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--tags',
+        '--prune',
+        '--no-recurse-submodules',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+
+    expect(mockExec).toHaveBeenCalledTimes(2) // version + single fetch only
   })
 })
