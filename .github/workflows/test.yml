@@ -302,12 +302,15 @@ jobs:
       # Clone this repo
       - name: Checkout
         uses: actions/checkout@v4.1.6
+        with:
+          path: actions-checkout
 
       # Basic checkout using git
       - name: Checkout basic
         id: checkout
-        uses: ./
+        uses: ./actions-checkout
         with:
+          path: cloned-using-local-action
           ref: test-data/v2/basic
 
       # Verify output
@@ -325,7 +328,3 @@ jobs:
             echo "Expected commit to be 82f71901cf8c021332310dcc8cdba84c4193ff5d"
             exit 1
           fi
-
-      # needed to make checkout post cleanup succeed
-      - name: Fix Checkout
-        uses: actions/checkout@v4.1.6
