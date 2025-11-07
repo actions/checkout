@@ -248,6 +248,7 @@ describe('Test fetchDepth and fetchTags options', () => {
         '-c',
         'protocol.version=2',
         'fetch',
+        '--tags',
         '--prune',
         '--no-recurse-submodules',
         '--filter=filterValue',
