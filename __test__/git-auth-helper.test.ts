@@ -675,6 +675,283 @@ describe('git-auth-helper tests', () => {
     expect(gitConfigContent.indexOf('http.')).toBeLessThan(0)
   })
 
+  const removeAuth_removesV6StyleCredentials =
+    'removeAuth removes v6 style credentials'
+  it(removeAuth_removesV6StyleCredentials, async () => {
+    // Arrange
+    await setup(removeAuth_removesV6StyleCredentials)
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+
+    // Manually create v6-style credentials that would be left by v6
+    const credentialsFileName =
+      'git-credentials-12345678-1234-1234-1234-123456789abc.config'
+    const credentialsFilePath = path.join(runnerTemp, credentialsFileName)
+    const basicCredential = Buffer.from(
+      `x-access-token:${settings.authToken}`,
+      'utf8'
+    ).toString('base64')
+    const credentialsContent = `[http "https://github.com/"]\n\textraheader = AUTHORIZATION: basic ${basicCredential}\n`
+    await fs.promises.writeFile(credentialsFilePath, credentialsContent)
+
+    // Add includeIf entries to local git config (simulating v6 configuration)
+    const hostGitDir = path.join(workspace, '.git').replace(/\\/g, '/')
+    await fs.promises.appendFile(
+      localGitConfigPath,
+      `[includeIf "gitdir:${hostGitDir}/"]\n\tpath = ${credentialsFilePath}\n`
+    )
+    await fs.promises.appendFile(
+      localGitConfigPath,
+      `[includeIf "gitdir:/github/workspace/.git/"]\n\tpath = /github/runner_temp/${credentialsFileName}\n`
+    )
+
+    // Verify v6 style config exists
+    let gitConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(gitConfigContent.indexOf('includeIf')).toBeGreaterThanOrEqual(0)
+    expect(
+      gitConfigContent.indexOf(credentialsFilePath)
+    ).toBeGreaterThanOrEqual(0)
+    await fs.promises.stat(credentialsFilePath) // Verify file exists
+
+    // Mock the git methods to handle v6 cleanup
+    const mockTryGetConfigKeys = git.tryGetConfigKeys as jest.Mock<any, any>
+    mockTryGetConfigKeys.mockResolvedValue([
+      `includeIf.gitdir:${hostGitDir}/.path`,
+      'includeIf.gitdir:/github/workspace/.git/.path'
+    ])
+
+    const mockTryGetConfigValues = git.tryGetConfigValues as jest.Mock<any, any>
+    mockTryGetConfigValues.mockImplementation(async (key: string) => {
+      if (key === `includeIf.gitdir:${hostGitDir}/.path`) {
+        return [credentialsFilePath]
+      }
+      if (key === 'includeIf.gitdir:/github/workspace/.git/.path') {
+        return [`/github/runner_temp/${credentialsFileName}`]
+      }
+      return []
+    })
+
+    const mockTryConfigUnsetValue = git.tryConfigUnsetValue as jest.Mock<
+      any,
+      any
+    >
+    mockTryConfigUnsetValue.mockImplementation(
+      async (
+        key: string,
+        value: string,
+        globalConfig?: boolean,
+        configPath?: string
+      ) => {
+        const targetPath = configPath || localGitConfigPath
+        let content = await fs.promises.readFile(targetPath, 'utf8')
+        // Remove the includeIf section
+        const lines = content
+          .split('\n')
+          .filter(line => !line.includes('includeIf') && !line.includes(value))
+        await fs.promises.writeFile(targetPath, lines.join('\n'))
+        return true
+      }
+    )
+
+    // Act
+    await authHelper.removeAuth()
+
+    // Assert includeIf entries removed from local git config
+    gitConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(gitConfigContent.indexOf('includeIf')).toBeLessThan(0)
+    expect(gitConfigContent.indexOf(credentialsFilePath)).toBeLessThan(0)
+
+    // Assert credentials config file deleted
+    try {
+      await fs.promises.stat(credentialsFilePath)
+      throw new Error('Credentials file should have been deleted')
+    } catch (err) {
+      if ((err as any)?.code !== 'ENOENT') {
+        throw err
+      }
+    }
+  })
+
+  const removeAuth_removesV6StyleCredentialsFromSubmodules =
+    'removeAuth removes v6 style credentials from submodules'
+  it(removeAuth_removesV6StyleCredentialsFromSubmodules, async () => {
+    // Arrange
+    await setup(removeAuth_removesV6StyleCredentialsFromSubmodules)
+
+    // Create fake submodule config paths
+    const submodule1Dir = path.join(workspace, '.git', 'modules', 'submodule-1')
+    const submodule1ConfigPath = path.join(submodule1Dir, 'config')
+    await fs.promises.mkdir(submodule1Dir, {recursive: true})
+    await fs.promises.writeFile(submodule1ConfigPath, '')
+
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+
+    // Create v6-style credentials file
+    const credentialsFileName =
+      'git-credentials-abcdef12-3456-7890-abcd-ef1234567890.config'
+    const credentialsFilePath = path.join(runnerTemp, credentialsFileName)
+    const basicCredential = Buffer.from(
+      `x-access-token:${settings.authToken}`,
+      'utf8'
+    ).toString('base64')
+    const credentialsContent = `[http "https://github.com/"]\n\textraheader = AUTHORIZATION: basic ${basicCredential}\n`
+    await fs.promises.writeFile(credentialsFilePath, credentialsContent)
+
+    // Add includeIf entries to submodule config
+    const submodule1GitDir = submodule1Dir.replace(/\\/g, '/')
+    await fs.promises.appendFile(
+      submodule1ConfigPath,
+      `[includeIf "gitdir:${submodule1GitDir}/"]\n\tpath = ${credentialsFilePath}\n`
+    )
+
+    // Verify submodule config has includeIf entry
+    let submoduleConfigContent = (
+      await fs.promises.readFile(submodule1ConfigPath)
+    ).toString()
+    expect(submoduleConfigContent.indexOf('includeIf')).toBeGreaterThanOrEqual(
+      0
+    )
+    expect(
+      submoduleConfigContent.indexOf(credentialsFilePath)
+    ).toBeGreaterThanOrEqual(0)
+
+    // Mock getSubmoduleConfigPaths
+    const mockGetSubmoduleConfigPaths =
+      git.getSubmoduleConfigPaths as jest.Mock<any, any>
+    mockGetSubmoduleConfigPaths.mockResolvedValue([submodule1ConfigPath])
+
+    // Mock tryGetConfigKeys for submodule
+    const mockTryGetConfigKeys = git.tryGetConfigKeys as jest.Mock<any, any>
+    mockTryGetConfigKeys.mockImplementation(
+      async (pattern: string, globalConfig?: boolean, configPath?: string) => {
+        if (configPath === submodule1ConfigPath) {
+          return [`includeIf.gitdir:${submodule1GitDir}/.path`]
+        }
+        return []
+      }
+    )
+
+    // Mock tryGetConfigValues for submodule
+    const mockTryGetConfigValues = git.tryGetConfigValues as jest.Mock<any, any>
+    mockTryGetConfigValues.mockImplementation(
+      async (key: string, globalConfig?: boolean, configPath?: string) => {
+        if (
+          configPath === submodule1ConfigPath &&
+          key === `includeIf.gitdir:${submodule1GitDir}/.path`
+        ) {
+          return [credentialsFilePath]
+        }
+        return []
+      }
+    )
+
+    // Mock tryConfigUnsetValue for submodule
+    const mockTryConfigUnsetValue = git.tryConfigUnsetValue as jest.Mock<
+      any,
+      any
+    >
+    mockTryConfigUnsetValue.mockImplementation(
+      async (
+        key: string,
+        value: string,
+        globalConfig?: boolean,
+        configPath?: string
+      ) => {
+        const targetPath = configPath || localGitConfigPath
+        let content = await fs.promises.readFile(targetPath, 'utf8')
+        const lines = content
+          .split('\n')
+          .filter(line => !line.includes('includeIf') && !line.includes(value))
+        await fs.promises.writeFile(targetPath, lines.join('\n'))
+        return true
+      }
+    )
+
+    // Act
+    await authHelper.removeAuth()
+
+    // Assert submodule includeIf entries removed
+    submoduleConfigContent = (
+      await fs.promises.readFile(submodule1ConfigPath)
+    ).toString()
+    expect(submoduleConfigContent.indexOf('includeIf')).toBeLessThan(0)
+    expect(submoduleConfigContent.indexOf(credentialsFilePath)).toBeLessThan(0)
+
+    // Assert credentials file deleted
+    try {
+      await fs.promises.stat(credentialsFilePath)
+      throw new Error('Credentials file should have been deleted')
+    } catch (err) {
+      if ((err as any)?.code !== 'ENOENT') {
+        throw err
+      }
+    }
+  })
+
+  const removeAuth_skipsV6CleanupWhenEnvVarSet =
+    'removeAuth skips v6 cleanup when ACTIONS_CHECKOUT_SKIP_V6_CLEANUP is set'
+  it(removeAuth_skipsV6CleanupWhenEnvVarSet, async () => {
+    // Arrange
+    await setup(removeAuth_skipsV6CleanupWhenEnvVarSet)
+
+    // Set the skip environment variable
+    process.env['ACTIONS_CHECKOUT_SKIP_V6_CLEANUP'] = '1'
+
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+
+    // Create v6-style credentials file in RUNNER_TEMP
+    const credentialsFileName = 'git-credentials-test-uuid-1234-5678.config'
+    const credentialsFilePath = path.join(runnerTemp, credentialsFileName)
+    const credentialsContent =
+      '[http "https://github.com/"]\n\textraheader = AUTHORIZATION: basic token\n'
+    await fs.promises.writeFile(credentialsFilePath, credentialsContent)
+
+    // Add includeIf section to local git config (separate from http.* config)
+    const includeIfSection = `\n[includeIf "gitdir:/some/path/.git/"]\n\tpath = ${credentialsFilePath}\n`
+    await fs.promises.appendFile(localGitConfigPath, includeIfSection)
+
+    // Verify v6 style config exists
+    let gitConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(gitConfigContent.indexOf('includeIf')).toBeGreaterThanOrEqual(0)
+    await fs.promises.stat(credentialsFilePath) // Verify file exists
+
+    // Act
+    await authHelper.removeAuth()
+
+    // Assert v5 cleanup still happened (http.* removed)
+    gitConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(
+      gitConfigContent.indexOf('http.https://github.com/.extraheader')
+    ).toBeLessThan(0)
+
+    // Assert v6 cleanup was skipped - includeIf should still be present
+    expect(gitConfigContent.indexOf('includeIf')).toBeGreaterThanOrEqual(0)
+    expect(
+      gitConfigContent.indexOf(credentialsFilePath)
+    ).toBeGreaterThanOrEqual(0)
+
+    // Assert credentials file still exists (wasn't deleted)
+    await fs.promises.stat(credentialsFilePath) // File should still exist
+
+    // Assert debug message was logged
+    expect(core.debug).toHaveBeenCalledWith(
+      'Skipping v6 style cleanup due to ACTIONS_CHECKOUT_SKIP_V6_CLEANUP'
+    )
+
+    // Cleanup
+    delete process.env['ACTIONS_CHECKOUT_SKIP_V6_CLEANUP']
+  })
+
   const removeGlobalConfig_removesOverride =
     'removeGlobalConfig removes override'
   it(removeGlobalConfig_removesOverride, async () => {
@@ -796,6 +1073,18 @@ async function setup(testName: string): Promise<void> {
     ),
     tryDisableAutomaticGarbageCollection: jest.fn(),
     tryGetFetchUrl: jest.fn(),
+    getSubmoduleConfigPaths: jest.fn(async () => {
+      return []
+    }),
+    tryConfigUnsetValue: jest.fn(async () => {
+      return true
+    }),
+    tryGetConfigValues: jest.fn(async () => {
+      return []
+    }),
+    tryGetConfigKeys: jest.fn(async () => {
+      return []
+    }),
     tryReset: jest.fn(),
     version: jest.fn()
   }
