@@ -125,6 +125,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     sparse-checkout-cone-mode: ''
 
     # Number of commits to fetch. 0 indicates all history for all branches and tags.
+    # 2147483647 indicates full history for the single branch being checked out.
     # Default: 1
     fetch-depth: ''
 
