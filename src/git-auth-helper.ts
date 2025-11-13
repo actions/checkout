@@ -346,8 +346,58 @@ class GitAuthHelper {
   }
 
   private async removeToken(): Promise<void> {
-    // HTTP extra header
+    // Remove HTTP extra header from local git config and submodule configs
     await this.removeGitConfig(this.tokenConfigKey)
+
+    //
+    // Cleanup actions/checkout@v6 style credentials
+    //
+    const skipV6Cleanup = process.env['ACTIONS_CHECKOUT_SKIP_V6_CLEANUP']
+    if (skipV6Cleanup === '1' || skipV6Cleanup?.toLowerCase() === 'true') {
+      core.debug(
+        'Skipping v6 style cleanup due to ACTIONS_CHECKOUT_SKIP_V6_CLEANUP'
+      )
+      return
+    }
+
+    try {
+      // Collect credentials config paths that need to be removed
+      const credentialsPaths = new Set<string>()
+
+      // Remove includeIf entries that point to git-credentials-*.config files
+      const mainCredentialsPaths = await this.removeIncludeIfCredentials()
+      mainCredentialsPaths.forEach(path => credentialsPaths.add(path))
+
+      // Remove submodule includeIf entries that point to git-credentials-*.config files
+      try {
+        const submoduleConfigPaths =
+          await this.git.getSubmoduleConfigPaths(true)
+        for (const configPath of submoduleConfigPaths) {
+          const submoduleCredentialsPaths =
+            await this.removeIncludeIfCredentials(configPath)
+          submoduleCredentialsPaths.forEach(path => credentialsPaths.add(path))
+        }
+      } catch (err) {
+        core.debug(`Unable to get submodule config paths: ${err}`)
+      }
+
+      // Remove credentials config files
+      for (const credentialsPath of credentialsPaths) {
+        // Only remove credentials config files if they are under RUNNER_TEMP
+        const runnerTemp = process.env['RUNNER_TEMP']
+        if (runnerTemp && credentialsPath.startsWith(runnerTemp)) {
+          try {
+            await io.rmRF(credentialsPath)
+          } catch (err) {
+            core.debug(
+              `Failed to remove credentials config '${credentialsPath}': ${err}`
+            )
+          }
+        }
+      }
+    } catch (err) {
+      core.debug(`Failed to cleanup v6 style credentials: ${err}`)
+    }
   }
 
   private async removeGitConfig(
@@ -370,5 +420,60 @@ class GitAuthHelper {
       `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`,
       true
     )
+  }
+
+  /**
+   * Removes includeIf entries that point to git-credentials-*.config files.
+   * This handles cleanup of credentials configured by newer versions of the action.
+   * @param configPath Optional path to a specific git config file to operate on
+   * @returns Array of unique credentials config file paths that were found and removed
+   */
+  private async removeIncludeIfCredentials(
+    configPath?: string
+  ): Promise<string[]> {
+    const credentialsPaths = new Set<string>()
+
+    try {
+      // Get all includeIf.gitdir keys
+      const keys = await this.git.tryGetConfigKeys(
+        '^includeIf\\.gitdir:',
+        false, // globalConfig?
+        configPath
+      )
+
+      for (const key of keys) {
+        // Get all values for this key
+        const values = await this.git.tryGetConfigValues(
+          key,
+          false, // globalConfig?
+          configPath
+        )
+        if (values.length > 0) {
+          // Remove only values that match git-credentials-<uuid>.config pattern
+          for (const value of values) {
+            if (this.testCredentialsConfigPath(value)) {
+              credentialsPaths.add(value)
+              await this.git.tryConfigUnsetValue(key, value, false, configPath)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // Ignore errors - this is cleanup code
+      core.debug(
+        `Error during includeIf cleanup${configPath ? ` for ${configPath}` : ''}: ${err}`
+      )
+    }
+
+    return Array.from(credentialsPaths)
+  }
+
+  /**
+   * Tests if a path matches the git-credentials-*.config pattern used by newer versions.
+   * @param path The path to test
+   * @returns True if the path matches the credentials config pattern
+   */
+  private testCredentialsConfigPath(path: string): boolean {
+    return /git-credentials-[0-9a-f-]+\.config$/i.test(path)
   }
 }
