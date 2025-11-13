@@ -41,6 +41,7 @@ export interface IGitCommandManager {
     }
   ): Promise<void>
   getDefaultBranch(repositoryUrl: string): Promise<string>
+  getSubmoduleConfigPaths(recursive: boolean): Promise<string[]>
   getWorkingDirectory(): string
   init(): Promise<void>
   isDetached(): Promise<boolean>
@@ -59,8 +60,24 @@ export interface IGitCommandManager {
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
+  tryConfigUnsetValue(
+    configKey: string,
+    configValue: string,
+    globalConfig?: boolean,
+    configFile?: string
+  ): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
+  tryGetConfigValues(
+    configKey: string,
+    globalConfig?: boolean,
+    configFile?: string
+  ): Promise<string[]>
+  tryGetConfigKeys(
+    pattern: string,
+    globalConfig?: boolean,
+    configFile?: string
+  ): Promise<string[]>
   tryReset(): Promise<boolean>
   version(): Promise<GitVersion>
 }
@@ -323,6 +340,21 @@ class GitCommandManager {
     throw new Error('Unexpected output when retrieving default branch')
   }
 
+  async getSubmoduleConfigPaths(recursive: boolean): Promise<string[]> {
+    // Get submodule config file paths.
+    // Use `--show-origin` to get the config file path for each submodule.
+    const output = await this.submoduleForeach(
+      `git config --local --show-origin --name-only --get-regexp remote.origin.url`,
+      recursive
+    )
+
+    // Extract config file paths from the output (lines starting with "file:").
+    const configPaths =
+      output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || []
+
+    return configPaths
+  }
+
   getWorkingDirectory(): string {
     return this.workingDirectory
   }
@@ -455,6 +487,24 @@ class GitCommandManager {
     return output.exitCode === 0
   }
 
+  async tryConfigUnsetValue(
+    configKey: string,
+    configValue: string,
+    globalConfig?: boolean,
+    configFile?: string
+  ): Promise<boolean> {
+    const args = ['config']
+    if (configFile) {
+      args.push('--file', configFile)
+    } else {
+      args.push(globalConfig ? '--global' : '--local')
+    }
+    args.push('--unset', configKey, configValue)
+
+    const output = await this.execGit(args, true)
+    return output.exitCode === 0
+  }
+
   async tryDisableAutomaticGarbageCollection(): Promise<boolean> {
     const output = await this.execGit(
       ['config', '--local', 'gc.auto', '0'],
@@ -479,6 +529,56 @@ class GitCommandManager {
     }
 
     return stdout
+  }
+
+  async tryGetConfigValues(
+    configKey: string,
+    globalConfig?: boolean,
+    configFile?: string
+  ): Promise<string[]> {
+    const args = ['config']
+    if (configFile) {
+      args.push('--file', configFile)
+    } else {
+      args.push(globalConfig ? '--global' : '--local')
+    }
+    args.push('--get-all', configKey)
+
+    const output = await this.execGit(args, true)
+
+    if (output.exitCode !== 0) {
+      return []
+    }
+
+    return output.stdout
+      .trim()
+      .split('\n')
+      .filter(value => value.trim())
+  }
+
+  async tryGetConfigKeys(
+    pattern: string,
+    globalConfig?: boolean,
+    configFile?: string
+  ): Promise<string[]> {
+    const args = ['config']
+    if (configFile) {
+      args.push('--file', configFile)
+    } else {
+      args.push(globalConfig ? '--global' : '--local')
+    }
+    args.push('--name-only', '--get-regexp', pattern)
+
+    const output = await this.execGit(args, true)
+
+    if (output.exitCode !== 0) {
+      return []
+    }
+
+    return output.stdout
+      .trim()
+      .split('\n')
+      .filter(key => key.trim())
   }
 
   async tryReset(): Promise<boolean> {

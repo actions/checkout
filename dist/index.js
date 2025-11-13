@@ -411,8 +411,50 @@ class GitAuthHelper {
     }
     removeToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            // HTTP extra header
+            // Remove HTTP extra header from local git config and submodule configs
             yield this.removeGitConfig(this.tokenConfigKey);
+            //
+            // Cleanup actions/checkout@v6 style credentials
+            //
+            const skipV6Cleanup = process.env['ACTIONS_CHECKOUT_SKIP_V6_CLEANUP'];
+            if (skipV6Cleanup === '1' || (skipV6Cleanup === null || skipV6Cleanup === void 0 ? void 0 : skipV6Cleanup.toLowerCase()) === 'true') {
+                core.debug('Skipping v6 style cleanup due to ACTIONS_CHECKOUT_SKIP_V6_CLEANUP');
+                return;
+            }
+            try {
+                // Collect credentials config paths that need to be removed
+                const credentialsPaths = new Set();
+                // Remove includeIf entries that point to git-credentials-*.config files
+                const mainCredentialsPaths = yield this.removeIncludeIfCredentials();
+                mainCredentialsPaths.forEach(path => credentialsPaths.add(path));
+                // Remove submodule includeIf entries that point to git-credentials-*.config files
+                try {
+                    const submoduleConfigPaths = yield this.git.getSubmoduleConfigPaths(true);
+                    for (const configPath of submoduleConfigPaths) {
+                        const submoduleCredentialsPaths = yield this.removeIncludeIfCredentials(configPath);
+                        submoduleCredentialsPaths.forEach(path => credentialsPaths.add(path));
+                    }
+                }
+                catch (err) {
+                    core.debug(`Unable to get submodule config paths: ${err}`);
+                }
+                // Remove credentials config files
+                for (const credentialsPath of credentialsPaths) {
+                    // Only remove credentials config files if they are under RUNNER_TEMP
+                    const runnerTemp = process.env['RUNNER_TEMP'];
+                    if (runnerTemp && credentialsPath.startsWith(runnerTemp)) {
+                        try {
+                            yield io.rmRF(credentialsPath);
+                        }
+                        catch (err) {
+                            core.debug(`Failed to remove credentials config '${credentialsPath}': ${err}`);
+                        }
+                    }
+                }
+            }
+            catch (err) {
+                core.debug(`Failed to cleanup v6 style credentials: ${err}`);
+            }
         });
     }
     removeGitConfig(configKey_1) {
@@ -429,6 +471,49 @@ class GitAuthHelper {
             // wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline
             `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`, true);
         });
+    }
+    /**
+     * Removes includeIf entries that point to git-credentials-*.config files.
+     * This handles cleanup of credentials configured by newer versions of the action.
+     * @param configPath Optional path to a specific git config file to operate on
+     * @returns Array of unique credentials config file paths that were found and removed
+     */
+    removeIncludeIfCredentials(configPath) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const credentialsPaths = new Set();
+            try {
+                // Get all includeIf.gitdir keys
+                const keys = yield this.git.tryGetConfigKeys('^includeIf\\.gitdir:', false, // globalConfig?
+                configPath);
+                for (const key of keys) {
+                    // Get all values for this key
+                    const values = yield this.git.tryGetConfigValues(key, false, // globalConfig?
+                    configPath);
+                    if (values.length > 0) {
+                        // Remove only values that match git-credentials-<uuid>.config pattern
+                        for (const value of values) {
+                            if (this.testCredentialsConfigPath(value)) {
+                                credentialsPaths.add(value);
+                                yield this.git.tryConfigUnsetValue(key, value, false, configPath);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (err) {
+                // Ignore errors - this is cleanup code
+                core.debug(`Error during includeIf cleanup${configPath ? ` for ${configPath}` : ''}: ${err}`);
+            }
+            return Array.from(credentialsPaths);
+        });
+    }
+    /**
+     * Tests if a path matches the git-credentials-*.config pattern used by newer versions.
+     * @param path The path to test
+     * @returns True if the path matches the credentials config pattern
+     */
+    testCredentialsConfigPath(path) {
+        return /git-credentials-[0-9a-f-]+\.config$/i.test(path);
     }
 }
 
@@ -706,6 +791,16 @@ class GitCommandManager {
             throw new Error('Unexpected output when retrieving default branch');
         });
     }
+    getSubmoduleConfigPaths(recursive) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Get submodule config file paths.
+            // Use `--show-origin` to get the config file path for each submodule.
+            const output = yield this.submoduleForeach(`git config --local --show-origin --name-only --get-regexp remote.origin.url`, recursive);
+            // Extract config file paths from the output (lines starting with "file:").
+            const configPaths = output.match(/(?<=(^|\n)file:)[^\t]+(?=\tremote\.origin\.url)/g) || [];
+            return configPaths;
+        });
+    }
     getWorkingDirectory() {
         return this.workingDirectory;
     }
@@ -836,6 +931,20 @@ class GitCommandManager {
             return output.exitCode === 0;
         });
     }
+    tryConfigUnsetValue(configKey, configValue, globalConfig, configFile) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['config'];
+            if (configFile) {
+                args.push('--file', configFile);
+            }
+            else {
+                args.push(globalConfig ? '--global' : '--local');
+            }
+            args.push('--unset', configKey, configValue);
+            const output = yield this.execGit(args, true);
+            return output.exitCode === 0;
+        });
+    }
     tryDisableAutomaticGarbageCollection() {
         return __awaiter(this, void 0, void 0, function* () {
             const output = yield this.execGit(['config', '--local', 'gc.auto', '0'], true);
@@ -853,6 +962,46 @@ class GitCommandManager {
                 return '';
             }
             return stdout;
+        });
+    }
+    tryGetConfigValues(configKey, globalConfig, configFile) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['config'];
+            if (configFile) {
+                args.push('--file', configFile);
+            }
+            else {
+                args.push(globalConfig ? '--global' : '--local');
+            }
+            args.push('--get-all', configKey);
+            const output = yield this.execGit(args, true);
+            if (output.exitCode !== 0) {
+                return [];
+            }
+            return output.stdout
+                .trim()
+                .split('\n')
+                .filter(value => value.trim());
+        });
+    }
+    tryGetConfigKeys(pattern, globalConfig, configFile) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const args = ['config'];
+            if (configFile) {
+                args.push('--file', configFile);
+            }
+            else {
+                args.push(globalConfig ? '--global' : '--local');
+            }
+            args.push('--name-only', '--get-regexp', pattern);
+            const output = yield this.execGit(args, true);
+            if (output.exitCode !== 0) {
+                return [];
+            }
+            return output.stdout
+                .trim()
+                .split('\n')
+                .filter(key => key.trim());
         });
     }
     tryReset() {
