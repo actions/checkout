@@ -499,6 +499,18 @@ async function setup(testName: string): Promise<void> {
       await fs.promises.stat(path.join(repositoryPath, '.git'))
       return repositoryUrl
     }),
+    getSubmoduleConfigPaths: jest.fn(async () => {
+      return []
+    }),
+    tryConfigUnsetValue: jest.fn(async () => {
+      return true
+    }),
+    tryGetConfigValues: jest.fn(async () => {
+      return []
+    }),
+    tryGetConfigKeys: jest.fn(async () => {
+      return []
+    }),
     tryReset: jest.fn(async () => {
       return true
     }),
