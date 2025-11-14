@@ -104,7 +104,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     persist-credentials: ''
 
-    # Relative path under $GITHUB_WORKSPACE to place the repository
+    # Relative or absolute path under $GITHUB_WORKSPACE to place the repository
     path: ''
 
     # Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching
@@ -255,6 +255,18 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     path: my-tools
 ```
 > - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
+
+## Checkout repo with a environment based path
+
+```yaml
+env:
+  main_path: ${{ github.workspace }}/main
+steps:
+- name: Checkout
+  uses: actions/checkout@v2
+  with:
+    path: ${{ env.main_path }}
+```
 
 ## Checkout multiple repos (nested)
 
