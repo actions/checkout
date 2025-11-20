@@ -1,6 +1,6 @@
 import * as exec from '@actions/exec'
-import * as fshelper from '../lib/fs-helper'
-import * as commandManager from '../lib/git-command-manager'
+import * as fshelper from '../src/fs-helper'
+import * as commandManager from '../src/git-command-manager'
 
 let git: commandManager.IGitCommandManager
 let mockExec = jest.fn()
