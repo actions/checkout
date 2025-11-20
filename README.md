@@ -1,6 +1,6 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout v6-beta
+# Checkout v6
 
 ## What's new
 
