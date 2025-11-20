@@ -25,9 +25,14 @@ export interface IGitSourceSettings {
   commit: string
 
   /**
-   * Indicates whether to clean the repository
+   * Whether to execute git clean and git reset before fetching
    */
   clean: boolean
+
+  /**
+   * Whether to preserve local changes during checkout
+   */
+  preserveLocalChanges: boolean
 
   /**
    * The filter determining which objects to include
