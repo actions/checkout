@@ -3,3 +3,4 @@ _temp/
 lib/
 node_modules/
 .vscode/
+.idea/
