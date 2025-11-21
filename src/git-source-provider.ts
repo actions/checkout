@@ -169,7 +169,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       fetchOptions.filter = 'blob:none'
     }
 
-    if (settings.fetchDepth <= 0) {
+    if (settings.fetchDepth <= 0 || settings.defaultBranchCheckout) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
@@ -193,11 +193,34 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Checkout info
     core.startGroup('Determining the checkout info')
-    const checkoutInfo = await refHelper.getCheckoutInfo(
-      git,
-      settings.ref,
-      settings.commit
-    )
+    let checkoutInfo: refHelper.ICheckoutInfo
+    try {
+      checkoutInfo = await refHelper.getCheckoutInfo(
+        git,
+        settings.ref,
+        settings.commit
+      )
+    } catch (error) {
+      if (settings.defaultBranchCheckout) {
+        core.info(
+          'Could not determine the checkout info. Trying the default repository branch'
+        )
+        const repositoryDefaultBranch = settings.sshKey
+          ? await git.getDefaultBranch(repositoryUrl)
+          : await githubApiHelper.getDefaultBranch(
+              settings.authToken,
+              settings.repositoryOwner,
+              settings.repositoryName
+            )
+        checkoutInfo = await refHelper.getCheckoutInfo(
+          git,
+          repositoryDefaultBranch,
+          settings.commit
+        )
+      } else {
+        throw error
+      }
+    }
     core.endGroup()
 
     // LFS fetch
