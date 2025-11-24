@@ -294,7 +294,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ```yaml
 - uses: actions/checkout@v6
   with:
-    ref: ${{ github.event.pull_request.head.sha }}
+    ref: ${{ github.event.pull_request.head.sha || github.ref }}
 ```
 
 ## Checkout pull request on closed event
