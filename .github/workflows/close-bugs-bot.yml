@@ -1,0 +1,17 @@
+name: Close Action Bugs Bot
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # every day at midnight
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v8
+        with:
+          close-issue-message: "This issue does not seem to be a problem with the runner application, it concerns the GitHub actions platform more generally. Could you please post your feedback on the [GitHub Community Support Forum](https://github.com/orgs/community/discussions/categories/actions) which is actively monitored. Using the forum ensures that we route your problem to the correct team. 😃"
+          exempt-issue-labels: "keep"
+          stale-issue-label: "actions-bug"
+          only-labels: "actions-bug"
+          days-before-stale: 0
+          days-before-close: 1
