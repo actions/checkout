@@ -65,7 +65,7 @@ We want to take this opportunity to make behavioral changes, from v1. This docum
     description: 'Whether to configure the token or SSH key with the local git config'
     default: true
   path:
-    description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+    description: 'Relative or absolute path under $GITHUB_WORKSPACE to place the repository'
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
