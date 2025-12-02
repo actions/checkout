@@ -1,12 +1,12 @@
 import * as core from '@actions/core'
 import * as fs from 'fs'
-import * as gitAuthHelper from '../lib/git-auth-helper'
+import * as gitAuthHelper from '../src/git-auth-helper'
 import * as io from '@actions/io'
 import * as os from 'os'
 import * as path from 'path'
-import * as stateHelper from '../lib/state-helper'
-import {IGitCommandManager} from '../lib/git-command-manager'
-import {IGitSourceSettings} from '../lib/git-source-settings'
+import * as stateHelper from '../src/state-helper'
+import {IGitCommandManager} from '../src/git-command-manager'
+import {IGitSourceSettings} from '../src/git-source-settings'
 
 const isWindows = process.platform === 'win32'
 const testWorkspace = path.join(__dirname, '_temp', 'git-auth-helper')
@@ -1173,7 +1173,8 @@ async function setup(testName: string): Promise<void> {
     sshUser: '',
     workflowOrganizationId: 123456,
     setSafeDirectory: true,
-    githubServerUrl: githubServerUrl
+    githubServerUrl: githubServerUrl,
+    gitUser: 'github-action[bot]'
   }
 }
 
