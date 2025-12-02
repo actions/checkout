@@ -1,19 +1,19 @@
 # Changelog
 
-## V6.0.0
+## v6.0.0
 * Persist creds to a separate file by @ericsciple in https://github.com/actions/checkout/pull/2286
 * Update README to include Node.js 24 support details and requirements by @salmanmkc in https://github.com/actions/checkout/pull/2248
 
-## V5.0.1
+## v5.0.1
 * Port v6 cleanup to v5 by @ericsciple in https://github.com/actions/checkout/pull/2301
 
-## V5.0.0
+## v5.0.0
 * Update actions checkout to use node 24 by @salmanmkc in https://github.com/actions/checkout/pull/2226
 
-## V4.3.1
+## v4.3.1
 * Port v6 cleanup to v4 by @ericsciple in https://github.com/actions/checkout/pull/2305
 
-## V4.3.0
+## v4.3.0
 * docs: update README.md by @motss in https://github.com/actions/checkout/pull/1971
 * Add internal repos for checking out multiple repositories by @mouismail in https://github.com/actions/checkout/pull/1977
 * Documentation update - add recommended permissions to Readme by @benwells in https://github.com/actions/checkout/pull/2043
