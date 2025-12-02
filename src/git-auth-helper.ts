@@ -374,6 +374,10 @@ class GitAuthHelper {
       const hostIncludeKey = `includeIf.gitdir:${gitDir}.path`
       await this.git.config(hostIncludeKey, credentialsConfigPath)
 
+      // Configure host includeIf for worktrees
+      const hostWorktreeIncludeKey = `includeIf.gitdir:${gitDir}/worktrees/*.path`
+      await this.git.config(hostWorktreeIncludeKey, credentialsConfigPath)
+
       // Container git directory
       const workingDirectory = this.git.getWorkingDirectory()
       const githubWorkspace = process.env['GITHUB_WORKSPACE']
@@ -395,6 +399,13 @@ class GitAuthHelper {
       // Configure container includeIf
       const containerIncludeKey = `includeIf.gitdir:${containerGitDir}.path`
       await this.git.config(containerIncludeKey, containerCredentialsPath)
+
+      // Configure container includeIf for worktrees
+      const containerWorktreeIncludeKey = `includeIf.gitdir:${containerGitDir}/worktrees/*.path`
+      await this.git.config(
+        containerWorktreeIncludeKey,
+        containerCredentialsPath
+      )
     }
   }
 
