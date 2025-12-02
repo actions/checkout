@@ -4,8 +4,9 @@
 
 ## What's new
 
-- Updated `persist-credentials` to store the credentials under `$RUNNER_TEMP` instead of directly in the local git config.
-  - This requires a minimum Actions Runner version of [v2.329.0](https://github.com/actions/runner/releases/tag/v2.329.0) to access the persisted credentials for [Docker container action](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-a-docker-container-action) scenarios.
+- Improved credential security: `persist-credentials` now stores credentials in a separate file under `$RUNNER_TEMP` instead of directly in `.git/config`
+- No workflow changes required — `git fetch`, `git push`, etc. continue to work automatically
+- Running authenticated git commands from a [Docker container action](https://docs.github.com/actions/sharing-automations/creating-actions/creating-a-docker-container-action) requires Actions Runner [v2.329.0](https://github.com/actions/runner/releases/tag/v2.329.0) or later
 
 # Checkout v5
 
