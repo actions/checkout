@@ -120,7 +120,7 @@ function updateUsage(
 }
 
 updateUsage(
-  'actions/checkout@v5',
+  'actions/checkout@v6',
   path.join(__dirname, '..', '..', 'action.yml'),
   path.join(__dirname, '..', '..', 'README.md')
 )
