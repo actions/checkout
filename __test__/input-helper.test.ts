@@ -1,47 +1,55 @@
-import * as assert from 'assert'
+import * as core from '@actions/core'
+import * as fsHelper from '../lib/fs-helper'
+import * as github from '@actions/github'
+import * as inputHelper from '../lib/input-helper'
 import * as path from 'path'
-import {ISourceSettings} from '../lib/git-source-provider'
+import * as workflowContextHelper from '../lib/workflow-context-helper'
+import {IGitSourceSettings} from '../lib/git-source-settings'
 
 const originalGitHubWorkspace = process.env['GITHUB_WORKSPACE']
 const gitHubWorkspace = path.resolve('/checkout-tests/workspace')
 
-// Late bind
-let inputHelper: any
-
-// Mock @actions/core
+// Inputs for mock @actions/core
 let inputs = {} as any
-const mockCore = jest.genMockFromModule('@actions/core') as any
-mockCore.getInput = (name: string) => {
-  return inputs[name]
-}
 
-// Mock @actions/github
-const mockGitHub = jest.genMockFromModule('@actions/github') as any
-mockGitHub.context = {
-  repo: {
-    owner: 'some-owner',
-    repo: 'some-repo'
-  },
-  ref: 'refs/heads/some-ref',
-  sha: '1234567890123456789012345678901234567890'
-}
-
-// Mock ./fs-helper
-const mockFSHelper = jest.genMockFromModule('../lib/fs-helper') as any
-mockFSHelper.directoryExistsSync = (path: string) => path == gitHubWorkspace
+// Shallow clone original @actions/github context
+let originalContext = {...github.context}
 
 describe('input-helper tests', () => {
   beforeAll(() => {
+    // Mock getInput
+    jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
+      return inputs[name]
+    })
+
+    // Mock error/warning/info/debug
+    jest.spyOn(core, 'error').mockImplementation(jest.fn())
+    jest.spyOn(core, 'warning').mockImplementation(jest.fn())
+    jest.spyOn(core, 'info').mockImplementation(jest.fn())
+    jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+
+    // Mock github context
+    jest.spyOn(github.context, 'repo', 'get').mockImplementation(() => {
+      return {
+        owner: 'some-owner',
+        repo: 'some-repo'
+      }
+    })
+    github.context.ref = 'refs/heads/some-ref'
+    github.context.sha = '1234567890123456789012345678901234567890'
+
+    // Mock ./fs-helper directoryExistsSync()
+    jest
+      .spyOn(fsHelper, 'directoryExistsSync')
+      .mockImplementation((path: string) => path == gitHubWorkspace)
+
+    // Mock ./workflowContextHelper getOrganizationId()
+    jest
+      .spyOn(workflowContextHelper, 'getOrganizationId')
+      .mockImplementation(() => Promise.resolve(123456))
+
     // GitHub workspace
     process.env['GITHUB_WORKSPACE'] = gitHubWorkspace
-
-    // Mocks
-    jest.setMock('@actions/core', mockCore)
-    jest.setMock('@actions/github', mockGitHub)
-    jest.setMock('../lib/fs-helper', mockFSHelper)
-
-    // Now import
-    inputHelper = require('../lib/input-helper')
   })
 
   beforeEach(() => {
@@ -50,71 +58,90 @@ describe('input-helper tests', () => {
   })
 
   afterAll(() => {
-    // Reset GitHub workspace
+    // Restore GitHub workspace
     delete process.env['GITHUB_WORKSPACE']
     if (originalGitHubWorkspace) {
       process.env['GITHUB_WORKSPACE'] = originalGitHubWorkspace
     }
 
-    // Reset modules
-    jest.resetModules()
+    // Restore @actions/github context
+    github.context.ref = originalContext.ref
+    github.context.sha = originalContext.sha
+
+    // Restore
+    jest.restoreAllMocks()
   })
 
-  it('sets defaults', () => {
-    const settings: ISourceSettings = inputHelper.getInputs()
+  it('sets defaults', async () => {
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings).toBeTruthy()
-    expect(settings.accessToken).toBeFalsy()
+    expect(settings.authToken).toBeFalsy()
     expect(settings.clean).toBe(true)
     expect(settings.commit).toBeTruthy()
     expect(settings.commit).toBe('1234567890123456789012345678901234567890')
+    expect(settings.filter).toBe(undefined)
+    expect(settings.sparseCheckout).toBe(undefined)
+    expect(settings.sparseCheckoutConeMode).toBe(true)
     expect(settings.fetchDepth).toBe(1)
+    expect(settings.fetchTags).toBe(false)
+    expect(settings.showProgress).toBe(true)
     expect(settings.lfs).toBe(false)
     expect(settings.ref).toBe('refs/heads/some-ref')
     expect(settings.repositoryName).toBe('some-repo')
     expect(settings.repositoryOwner).toBe('some-owner')
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
+    expect(settings.setSafeDirectory).toBe(true)
   })
 
-  it('requires qualified repo', () => {
+  it('qualifies ref', async () => {
+    let originalRef = github.context.ref
+    try {
+      github.context.ref = 'some-unqualified-ref'
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings).toBeTruthy()
+      expect(settings.commit).toBe('1234567890123456789012345678901234567890')
+      expect(settings.ref).toBe('refs/heads/some-unqualified-ref')
+    } finally {
+      github.context.ref = originalRef
+    }
+  })
+
+  it('requires qualified repo', async () => {
     inputs.repository = 'some-unqualified-repo'
-    assert.throws(() => {
-      inputHelper.getInputs()
-    }, /Invalid repository 'some-unqualified-repo'/)
+    try {
+      await inputHelper.getInputs()
+      throw 'should not reach here'
+    } catch (err) {
+      expect(`(${(err as any).message}`).toMatch(
+        "Invalid repository 'some-unqualified-repo'"
+      )
+    }
   })
 
-  it('roots path', () => {
+  it('roots path', async () => {
     inputs.path = 'some-directory/some-subdirectory'
-    const settings: ISourceSettings = inputHelper.getInputs()
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.repositoryPath).toBe(
       path.join(gitHubWorkspace, 'some-directory', 'some-subdirectory')
     )
   })
 
-  it('sets correct default ref/sha for other repo', () => {
-    inputs.repository = 'some-owner/some-other-repo'
-    const settings: ISourceSettings = inputHelper.getInputs()
-    expect(settings.ref).toBe('refs/heads/master')
-    expect(settings.commit).toBeFalsy()
-  })
-
-  it('sets ref to empty when explicit sha', () => {
+  it('sets ref to empty when explicit sha', async () => {
     inputs.ref = '1111111111222222222233333333334444444444'
-    const settings: ISourceSettings = inputHelper.getInputs()
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBeFalsy()
     expect(settings.commit).toBe('1111111111222222222233333333334444444444')
   })
 
-  it('sets sha to empty when explicit ref', () => {
+  it('sets sha to empty when explicit ref', async () => {
     inputs.ref = 'refs/heads/some-other-ref'
-    const settings: ISourceSettings = inputHelper.getInputs()
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
   })
 
-  it('gives good error message for submodules input', () => {
-    inputs.submodules = 'true'
-    assert.throws(() => {
-      inputHelper.getInputs()
-    }, /The input 'submodules' is not supported/)
+  it('sets workflow organization ID', async () => {
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.workflowOrganizationId).toBe(123456)
   })
 })

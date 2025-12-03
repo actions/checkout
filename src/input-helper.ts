@@ -2,10 +2,11 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
-import {ISourceSettings} from './git-source-provider'
+import * as workflowContextHelper from './workflow-context-helper'
+import {IGitSourceSettings} from './git-source-settings'
 
-export function getInputs(): ISourceSettings {
-  const result = ({} as unknown) as ISourceSettings
+export async function getInputs(): Promise<IGitSourceSettings> {
+  const result = {} as unknown as IGitSourceSettings
 
   // GitHub workspace
   let githubWorkspacePath = process.env['GITHUB_WORKSPACE']
@@ -61,10 +62,12 @@ export function getInputs(): ISourceSettings {
     if (isWorkflowRepository) {
       result.ref = github.context.ref
       result.commit = github.context.sha
-    }
 
-    if (!result.ref && !result.commit) {
-      result.ref = 'refs/heads/master'
+      // Some events have an unqualifed ref. For example when a PR is merged (pull_request closed event),
+      // the ref is unqualifed like "main" instead of "refs/heads/main".
+      if (result.commit && result.ref && !result.ref.startsWith('refs/')) {
+        result.ref = `refs/heads/${result.ref}`
+      }
     }
   }
   // SHA?
@@ -79,12 +82,24 @@ export function getInputs(): ISourceSettings {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
-  // Submodules
-  if (core.getInput('submodules')) {
-    throw new Error(
-      "The input 'submodules' is not supported in actions/checkout@v2"
-    )
+  // Filter
+  const filter = core.getInput('filter')
+  if (filter) {
+    result.filter = filter
   }
+
+  core.debug(`filter = ${result.filter}`)
+
+  // Sparse checkout
+  const sparseCheckout = core.getMultilineInput('sparse-checkout')
+  if (sparseCheckout.length) {
+    result.sparseCheckout = sparseCheckout
+    core.debug(`sparse checkout = ${result.sparseCheckout}`)
+  }
+
+  result.sparseCheckoutConeMode =
+    (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
+    'TRUE'
 
   // Fetch depth
   result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
@@ -93,12 +108,58 @@ export function getInputs(): ISourceSettings {
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
+  // Fetch tags
+  result.fetchTags =
+    (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
+  core.debug(`fetch tags = ${result.fetchTags}`)
+
+  // Show fetch progress
+  result.showProgress =
+    (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
+  core.debug(`show progress = ${result.showProgress}`)
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
 
-  // Access token
-  result.accessToken = core.getInput('token')
+  // Submodules
+  result.submodules = false
+  result.nestedSubmodules = false
+  const submodulesString = (core.getInput('submodules') || '').toUpperCase()
+  if (submodulesString == 'RECURSIVE') {
+    result.submodules = true
+    result.nestedSubmodules = true
+  } else if (submodulesString == 'TRUE') {
+    result.submodules = true
+  }
+  core.debug(`submodules = ${result.submodules}`)
+  core.debug(`recursive submodules = ${result.nestedSubmodules}`)
+
+  // Auth token
+  result.authToken = core.getInput('token', {required: true})
+
+  // SSH
+  result.sshKey = core.getInput('ssh-key')
+  result.sshKnownHosts = core.getInput('ssh-known-hosts')
+  result.sshStrict =
+    (core.getInput('ssh-strict') || 'true').toUpperCase() === 'TRUE'
+  result.sshUser = core.getInput('ssh-user')
+
+  // Persist credentials
+  result.persistCredentials =
+    (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
+
+  // Workflow organization ID
+  result.workflowOrganizationId =
+    await workflowContextHelper.getOrganizationId()
+
+  // Set safe.directory in git global config.
+  result.setSafeDirectory =
+    (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE'
+
+  // Determine the GitHub URL that the repository is being hosted from
+  result.githubServerUrl = core.getInput('github-server-url')
+  core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
   return result
 }

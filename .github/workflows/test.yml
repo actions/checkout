@@ -4,20 +4,27 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
       - releases/*
+
+
+# Note that when you see patterns like "ref: test-data/v2/basic" within this workflow,
+# these refer to "test-data" branches on this actions/checkout repo.
+# (For example, test-data/v2/basic -> https://github.com/actions/checkout/tree/test-data/v2/basic)
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1 # todo: switch to v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+      - uses: actions/checkout@v6
       - run: npm ci
       - run: npm run build
       - run: npm run format-check
       - run: npm run lint
-      - run: npm run pack
-      - run: npm run gendocs
+      - run: npm test
       - name: Verify no unstaged changes
         run: __test__/verify-no-unstaged-changes.sh
 
@@ -30,10 +37,10 @@ jobs:
     steps:
       # Clone this repo
       - name: Checkout
-        uses: actions/checkout@v1 # todo: switch to V2
+        uses: actions/checkout@v6
 
       # Basic checkout
-      - name: Basic checkout
+      - name: Checkout basic
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -46,7 +53,7 @@ jobs:
       - name: Modify work tree
         shell: bash
         run: __test__/modify-work-tree.sh
-      - name: Clean checkout
+      - name: Checkout clean
         uses: ./
         with:
           ref: test-data/v2/basic
@@ -56,12 +63,12 @@ jobs:
         run: __test__/verify-clean.sh
 
       # Side by side
-      - name: Side by side checkout 1
+      - name: Checkout side by side 1
         uses: ./
         with:
           ref: test-data/v2/side-by-side-1
           path: side-by-side-1
-      - name: Side by side checkout 2
+      - name: Checkout side by side 2
         uses: ./
         with:
           ref: test-data/v2/side-by-side-2
@@ -70,8 +77,55 @@ jobs:
         shell: bash
         run: __test__/verify-side-by-side.sh
 
+      # Filter
+      - name: Fetch filter
+        uses: ./
+        with:
+          filter: 'blob:none'
+          path: fetch-filter
+
+      - name: Verify fetch filter
+        run: __test__/verify-fetch-filter.sh
+
+      # Sparse checkout
+      - name: Sparse checkout
+        uses: ./
+        with:
+          sparse-checkout: |
+            __test__
+            .github
+            dist
+          path: sparse-checkout
+
+      - name: Verify sparse checkout
+        run: __test__/verify-sparse-checkout.sh
+
+      # Disabled sparse checkout in existing checkout
+      - name: Disabled sparse checkout
+        uses: ./
+        with:
+          path: sparse-checkout
+
+      - name: Verify disabled sparse checkout
+        shell: bash
+        run: set -x && ls -l sparse-checkout/src/git-command-manager.ts
+
+      # Sparse checkout (non-cone mode)
+      - name: Sparse checkout (non-cone mode)
+        uses: ./
+        with:
+          sparse-checkout: |
+            /__test__/
+            /.github/
+            /dist/
+          sparse-checkout-cone-mode: false
+          path: sparse-checkout-non-cone-mode
+
+      - name: Verify sparse checkout (non-cone mode)
+        run: __test__/verify-sparse-checkout-non-cone-mode.sh
+
       # LFS
-      - name: LFS checkout
+      - name: Checkout LFS
         uses: ./
         with:
           repository: actions/checkout # hardcoded, otherwise doesn't work from a fork
@@ -81,3 +135,212 @@ jobs:
       - name: Verify LFS
         shell: bash
         run: __test__/verify-lfs.sh
+
+      # Submodules false
+      - name: Checkout submodules false
+        uses: ./
+        with:
+          ref: test-data/v2/submodule-ssh-url
+          path: submodules-false
+      - name: Verify submodules false
+        run: __test__/verify-submodules-false.sh
+
+      # Submodules one level
+      - name: Checkout submodules true
+        uses: ./
+        with:
+          ref: test-data/v2/submodule-ssh-url
+          path: submodules-true
+          submodules: true
+      - name: Verify submodules true
+        run: __test__/verify-submodules-true.sh
+
+      # Submodules recursive
+      - name: Checkout submodules recursive
+        uses: ./
+        with:
+          ref: test-data/v2/submodule-ssh-url
+          path: submodules-recursive
+          submodules: recursive
+      - name: Verify submodules recursive
+        run: __test__/verify-submodules-recursive.sh
+
+      # Worktree credentials
+      - name: Checkout for worktree test
+        uses: ./
+        with:
+          path: worktree-test
+      - name: Verify worktree credentials
+        shell: bash
+        run: __test__/verify-worktree.sh worktree-test worktree-branch
+
+      # Worktree credentials in container step
+      - name: Verify worktree credentials in container step
+        if: runner.os == 'Linux'
+        uses: docker://bitnami/git:latest
+        with:
+          args: bash __test__/verify-worktree.sh worktree-test container-worktree-branch
+
+      # Basic checkout using REST API
+      - name: Remove basic
+        if: runner.os != 'windows'
+        run: rm -rf basic
+      - name: Remove basic (Windows)
+        if: runner.os == 'windows'
+        shell: cmd
+        run: rmdir /s /q basic
+      - name: Override git version
+        if: runner.os != 'windows'
+        run: __test__/override-git-version.sh
+      - name: Override git version (Windows)
+        if: runner.os == 'windows'
+        run: __test__\\override-git-version.cmd
+      - name: Checkout basic using REST API
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh --archive
+
+  test-proxy:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/actions/test-ubuntu-git:main.20240221.114913.703z
+      options: --dns 127.0.0.1
+    services:
+      squid-proxy:
+        image: ubuntu/squid:latest
+        ports:
+          - 3128:3128
+    env:
+      https_proxy: http://squid-proxy:3128
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Basic checkout using git
+      - name: Checkout basic
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh
+
+      # Basic checkout using REST API
+      - name: Remove basic
+        run: rm -rf basic
+      - name: Override git version
+        run: __test__/override-git-version.sh
+      - name: Basic checkout using REST API
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh --archive
+
+  test-bypass-proxy:
+    runs-on: ubuntu-latest
+    env:
+      https_proxy: http://no-such-proxy:3128
+      no_proxy: api.github.com,github.com
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Basic checkout using git
+      - name: Checkout basic
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh
+      - name: Remove basic
+        run: rm -rf basic
+
+      # Basic checkout using REST API
+      - name: Override git version
+        run: __test__/override-git-version.sh
+      - name: Checkout basic using REST API
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: basic
+      - name: Verify basic
+        run: __test__/verify-basic.sh --archive
+
+  test-git-container:
+    runs-on: ubuntu-latest
+    container: bitnami/git:latest
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          path: localClone
+
+      # Basic checkout using git
+      - name: Checkout basic
+        uses: ./localClone
+        with:
+          ref: test-data/v2/basic
+      - name: Verify basic
+        run: |
+          if [ ! -f "./basic-file.txt" ]; then
+              echo "Expected basic file does not exist"
+              exit 1
+          fi
+
+          # Verify .git folder
+          if [ ! -d "./.git" ]; then
+            echo "Expected ./.git folder to exist"
+            exit 1
+          fi
+
+          # Verify auth token
+          git config --global --add safe.directory "*"
+          git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+
+      # needed to make checkout post cleanup succeed
+      - name: Fix Checkout v6
+        uses: actions/checkout@v6
+        with:
+          path: localClone
+
+  test-output:
+    runs-on: ubuntu-latest
+    steps:
+      # Clone this repo
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          path: actions-checkout
+
+      # Basic checkout using git
+      - name: Checkout basic
+        id: checkout
+        uses: ./actions-checkout
+        with:
+          path: cloned-using-local-action
+          ref: test-data/v2/basic
+
+      # Verify output
+      - name: Verify output
+        run: |
+          echo "Commit: ${{ steps.checkout.outputs.commit }}"
+          echo "Ref: ${{ steps.checkout.outputs.ref }}"
+
+          if [ "${{ steps.checkout.outputs.ref }}" != "test-data/v2/basic" ]; then
+            echo "Expected ref to be test-data/v2/basic"
+            exit 1
+          fi
+
+          if [ "${{ steps.checkout.outputs.commit }}" != "82f71901cf8c021332310dcc8cdba84c4193ff5d" ]; then
+            echo "Expected commit to be 82f71901cf8c021332310dcc8cdba84c4193ff5d"
+            exit 1
+          fi
