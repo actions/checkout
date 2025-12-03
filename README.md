@@ -63,6 +63,11 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Otherwise, uses the default branch.
     ref: ''
 
+    # The commit SHA to checkout. Used when ref is not specified or is ambiguous. This
+    # can be used as a replacement for ref, or alongside it to checkout a specific
+    # commit of the ref.
+    commit: ''
+
     # Personal access token (PAT) used to fetch the repository. The PAT is configured
     # with the local git config, which enables your scripts to run authenticated git
     # commands. The post-job step removes the PAT.
