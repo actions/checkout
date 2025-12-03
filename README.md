@@ -357,6 +357,12 @@ jobs:
 
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
 
+# Outputs
+
+The `checkout` action provides the following outputs that can be referenced in later steps:
+- `ref`, the Git ref that was checked out (not available if the checkout resulted in a detached `HEAD`)
+- `commit`, the SHA of the commit that was checked out
+
 # Recommended permissions
 
 When using the `checkout` action in your GitHub Actions workflow, it is recommended to set the following `GITHUB_TOKEN` permissions to ensure proper functionality, unless alternative auth is provided via the `token` or `ssh-key` inputs:
