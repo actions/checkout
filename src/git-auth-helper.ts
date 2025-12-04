@@ -367,7 +367,7 @@ class GitAuthHelper {
       )
     } else {
       // Host git directory
-      let gitDir = path.join(this.git.getWorkingDirectory(), '.git')
+      let gitDir = fs.realpathSync(path.join(this.git.getWorkingDirectory(), '.git'))
       gitDir = gitDir.replace(/\\/g, '/') // Use forward slashes, even on Windows
 
       // Configure host includeIf
