@@ -334,6 +334,7 @@ jobs:
         run: |
           echo "Commit: ${{ steps.checkout.outputs.commit }}"
           echo "Ref: ${{ steps.checkout.outputs.ref }}"
+          echo "Path: ${{ steps.checkout.outputs.path }}"
 
           if [ "${{ steps.checkout.outputs.ref }}" != "test-data/v2/basic" ]; then
             echo "Expected ref to be test-data/v2/basic"
@@ -342,5 +343,10 @@ jobs:
 
           if [ "${{ steps.checkout.outputs.commit }}" != "82f71901cf8c021332310dcc8cdba84c4193ff5d" ]; then
             echo "Expected commit to be 82f71901cf8c021332310dcc8cdba84c4193ff5d"
+            exit 1
+          fi
+
+          if [[ "${{ steps.checkout.outputs.path }}" != *"/cloned-using-local-action" ]]; then
+            echo "Expected path to end with /cloned-using-local-action"
             exit 1
           fi

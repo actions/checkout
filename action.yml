@@ -103,6 +103,8 @@ outputs:
     description: 'The branch, tag or SHA that was checked out'
   commit:
     description: 'The commit SHA that was checked out'
+  path:
+    description: 'The absolute path that was checked out to'
 runs:
   using: node24
   main: dist/index.js
