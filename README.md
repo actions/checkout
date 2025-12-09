@@ -357,6 +357,22 @@ jobs:
 
 *NOTE:* The user email is `{user.id}+{user.login}@users.noreply.github.com`. See users API: https://api.github.com/users/github-actions%5Bbot%5D
 
+## Post checkout permission check
+
+```yaml
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: >-
+          git status
+          || git config --system --add safe.directory "$GITHUB_WORKSPACE"
+```
+
+This check prevent/workaround "fatal: detected dubious ownership in repository" error on self hosted runners.
+
 # Recommended permissions
 
 When using the `checkout` action in your GitHub Actions workflow, it is recommended to set the following `GITHUB_TOKEN` permissions to ensure proper functionality, unless alternative auth is provided via the `token` or `ssh-key` inputs:
