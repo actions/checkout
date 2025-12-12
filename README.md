@@ -60,6 +60,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
     # The branch, tag or SHA to checkout. When checking out the repository that
     # triggered a workflow, this defaults to the reference or SHA for that event.
+    # For tags, it can be forced to ${{ github.ref }} (useful if using git-describe)
     # Otherwise, uses the default branch.
     ref: ''
 
