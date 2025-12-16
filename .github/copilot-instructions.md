@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is the official `actions/checkout` GitHub Action for checking out repositories in workflows, now with added support for Deno workflow integration. It's a TypeScript project that compiles to a single bundled JavaScript file (`dist/index.js`) and supports both git-based and REST API-based repository downloads, as well as Deno-based workflow scenarios.
+This is the official `actions/checkout` GitHub Action for checking out repositories in workflows. It's a TypeScript project that compiles to a single bundled JavaScript file (`dist/index.js`) and supports both git-based and REST API-based repository downloads.
 
 ## Architecture & Key Components
 
