@@ -20,6 +20,7 @@ let tempHomedir: string
 let git: IGitCommandManager & {env: {[key: string]: string}}
 let settings: IGitSourceSettings
 let sshPath: string
+let githubServerUrl: string
 
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {
@@ -67,30 +68,74 @@ describe('git-auth-helper tests', () => {
     }
   })
 
-  const configureAuth_configuresAuthHeader =
-    'configureAuth configures auth header'
-  it(configureAuth_configuresAuthHeader, async () => {
+  async function testAuthHeader(
+    testName: string,
+    serverUrl: string | undefined = undefined
+  ) {
     // Arrange
-    await setup(configureAuth_configuresAuthHeader)
+    let expectedServerUrl = 'https://github.com'
+    if (serverUrl) {
+      githubServerUrl = serverUrl
+      expectedServerUrl = githubServerUrl
+    }
+
+    await setup(testName)
     expect(settings.authToken).toBeTruthy() // sanity check
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
 
     // Act
     await authHelper.configureAuth()
 
-    // Assert config
-    const configContent = (
+    // Assert config - check that .git/config contains includeIf entries
+    const localConfigContent = (
       await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    expect(
+      localConfigContent.indexOf('includeIf.gitdir:')
+    ).toBeGreaterThanOrEqual(0)
+
+    // Assert credentials config file contains the actual credentials
+    const credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+      f => f.startsWith('git-credentials-') && f.endsWith('.config')
+    )
+    expect(credentialsFiles.length).toBe(1)
+    const credentialsConfigPath = path.join(runnerTemp, credentialsFiles[0])
+    const credentialsContent = (
+      await fs.promises.readFile(credentialsConfigPath)
     ).toString()
     const basicCredential = Buffer.from(
       `x-access-token:${settings.authToken}`,
       'utf8'
     ).toString('base64')
     expect(
-      configContent.indexOf(
-        `http.https://github.com/.extraheader AUTHORIZATION: basic ${basicCredential}`
+      credentialsContent.indexOf(
+        `http.${expectedServerUrl}/.extraheader AUTHORIZATION: basic ${basicCredential}`
       )
     ).toBeGreaterThanOrEqual(0)
+  }
+
+  const configureAuth_configuresAuthHeader =
+    'configureAuth configures auth header'
+  it(configureAuth_configuresAuthHeader, async () => {
+    await testAuthHeader(configureAuth_configuresAuthHeader)
+  })
+
+  const configureAuth_AcceptsGitHubServerUrl =
+    'inject https://my-ghes-server.com as github server url'
+  it(configureAuth_AcceptsGitHubServerUrl, async () => {
+    await testAuthHeader(
+      configureAuth_AcceptsGitHubServerUrl,
+      'https://my-ghes-server.com'
+    )
+  })
+
+  const configureAuth_AcceptsGitHubServerUrlSetToGHEC =
+    'inject https://github.com as github server url'
+  it(configureAuth_AcceptsGitHubServerUrlSetToGHEC, async () => {
+    await testAuthHeader(
+      configureAuth_AcceptsGitHubServerUrlSetToGHEC,
+      'https://github.com'
+    )
   })
 
   const configureAuth_configuresAuthHeaderEvenWhenPersistCredentialsFalse =
@@ -109,12 +154,17 @@ describe('git-auth-helper tests', () => {
       // Act
       await authHelper.configureAuth()
 
-      // Assert config
-      const configContent = (
-        await fs.promises.readFile(localGitConfigPath)
+      // Assert config - check credentials config file (not local .git/config)
+      const credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+        f => f.startsWith('git-credentials-') && f.endsWith('.config')
+      )
+      expect(credentialsFiles.length).toBe(1)
+      const credentialsConfigPath = path.join(runnerTemp, credentialsFiles[0])
+      const credentialsContent = (
+        await fs.promises.readFile(credentialsConfigPath)
       ).toString()
       expect(
-        configContent.indexOf(
+        credentialsContent.indexOf(
           `http.https://github.com/.extraheader AUTHORIZATION`
         )
       ).toBeGreaterThanOrEqual(0)
@@ -137,8 +187,9 @@ describe('git-auth-helper tests', () => {
 
     // Mock fs.promises.readFile
     const realReadFile = fs.promises.readFile
-    jest.spyOn(fs.promises, 'readFile').mockImplementation(
-      async (file: any, options: any): Promise<Buffer> => {
+    jest
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (file: any, options: any): Promise<Buffer> => {
         const userKnownHostsPath = path.join(
           os.homedir(),
           '.ssh',
@@ -149,8 +200,7 @@ describe('git-auth-helper tests', () => {
         }
 
         return await realReadFile(file, options)
-      }
-    )
+      })
 
     // Act
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -219,13 +269,16 @@ describe('git-auth-helper tests', () => {
       expectedSshCommand
     )
 
-    // Asserty git config
+    // Assert git config
     const gitConfigLines = (await fs.promises.readFile(localGitConfigPath))
       .toString()
       .split('\n')
       .filter(x => x)
-    expect(gitConfigLines).toHaveLength(1)
-    expect(gitConfigLines[0]).toMatch(/^http\./)
+    // Should have includeIf entries pointing to credentials file
+    expect(gitConfigLines.length).toBeGreaterThan(0)
+    expect(
+      gitConfigLines.some(line => line.indexOf('includeIf.gitdir:') >= 0)
+    ).toBeTruthy()
   })
 
   const configureAuth_setsSshCommandWhenPersistCredentialsTrue =
@@ -387,8 +440,20 @@ describe('git-auth-helper tests', () => {
     expect(
       configContent.indexOf('value-from-global-config')
     ).toBeGreaterThanOrEqual(0)
+    // Global config should have include.path pointing to credentials file
+    expect(configContent.indexOf('include.path')).toBeGreaterThanOrEqual(0)
+
+    // Check credentials in the separate config file
+    const credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+      f => f.startsWith('git-credentials-') && f.endsWith('.config')
+    )
+    expect(credentialsFiles.length).toBeGreaterThan(0)
+    const credentialsConfigPath = path.join(runnerTemp, credentialsFiles[0])
+    const credentialsContent = (
+      await fs.promises.readFile(credentialsConfigPath)
+    ).toString()
     expect(
-      configContent.indexOf(
+      credentialsContent.indexOf(
         `http.https://github.com/.extraheader AUTHORIZATION: basic ${basicCredential}`
       )
     ).toBeGreaterThanOrEqual(0)
@@ -417,7 +482,7 @@ describe('git-auth-helper tests', () => {
           `Did not expect file to exist: '${globalGitConfigPath}'`
         )
       } catch (err) {
-        if (err.code !== 'ENOENT') {
+        if ((err as any)?.code !== 'ENOENT') {
           throw err
         }
       }
@@ -431,8 +496,20 @@ describe('git-auth-helper tests', () => {
       const configContent = (
         await fs.promises.readFile(path.join(git.env['HOME'], '.gitconfig'))
       ).toString()
+      // Global config should have include.path pointing to credentials file
+      expect(configContent.indexOf('include.path')).toBeGreaterThanOrEqual(0)
+
+      // Check credentials in the separate config file
+      const credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+        f => f.startsWith('git-credentials-') && f.endsWith('.config')
+      )
+      expect(credentialsFiles.length).toBeGreaterThan(0)
+      const credentialsConfigPath = path.join(runnerTemp, credentialsFiles[0])
+      const credentialsContent = (
+        await fs.promises.readFile(credentialsConfigPath)
+      ).toString()
       expect(
-        configContent.indexOf(
+        credentialsContent.indexOf(
           `http.https://github.com/.extraheader AUTHORIZATION: basic ${basicCredential}`
         )
       ).toBeGreaterThanOrEqual(0)
@@ -518,12 +595,17 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
+      // Should configure insteadOf (2 calls for two values)
       expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
       expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
         /unset-all.*insteadOf/
       )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/url.*insteadOf/)
+      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(
+        /url.*insteadOf.*git@github.com:/
+      )
+      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(
+        /url.*insteadOf.*org-123456@github.com:/
+      )
     }
   )
 
@@ -552,12 +634,12 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
+      // Should configure sshCommand (1 call)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
       expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
         /unset-all.*insteadOf/
       )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/http.*extraheader/)
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(/core\.sshCommand/)
+      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/core\.sshCommand/)
     }
   )
 
@@ -601,7 +683,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKeyPath)
       throw new Error('SSH key should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -611,7 +693,7 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(actualKnownHostsPath)
       throw new Error('SSH known hosts should have been deleted')
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
@@ -623,25 +705,208 @@ describe('git-auth-helper tests', () => {
     await setup(removeAuth_removesToken)
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
     await authHelper.configureAuth()
-    let gitConfigContent = (
+
+    // Verify includeIf entries exist in local config
+    let localConfigContent = (
       await fs.promises.readFile(localGitConfigPath)
     ).toString()
-    expect(gitConfigContent.indexOf('http.')).toBeGreaterThanOrEqual(0) // sanity check
+    expect(
+      localConfigContent.indexOf('includeIf.gitdir:')
+    ).toBeGreaterThanOrEqual(0)
+
+    // Verify both host and container includeIf entries are present
+    const hostGitDir = path.join(workspace, '.git').replace(/\\/g, '/')
+    expect(
+      localConfigContent.indexOf(`includeIf.gitdir:${hostGitDir}.path`)
+    ).toBeGreaterThanOrEqual(0)
+    expect(
+      localConfigContent.indexOf('includeIf.gitdir:/github/workspace/.git.path')
+    ).toBeGreaterThanOrEqual(0)
+
+    // Verify credentials file exists
+    let credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+      f => f.startsWith('git-credentials-') && f.endsWith('.config')
+    )
+    expect(credentialsFiles.length).toBe(1)
+    const credentialsFilePath = path.join(runnerTemp, credentialsFiles[0])
+
+    // Verify credentials file contains the auth token
+    let credentialsContent = (
+      await fs.promises.readFile(credentialsFilePath)
+    ).toString()
+    const basicCredential = Buffer.from(
+      `x-access-token:${settings.authToken}`,
+      'utf8'
+    ).toString('base64')
+    expect(
+      credentialsContent.indexOf(
+        `http.https://github.com/.extraheader AUTHORIZATION: basic ${basicCredential}`
+      )
+    ).toBeGreaterThanOrEqual(0)
+
+    // Verify the includeIf entries point to the credentials file
+    const containerCredentialsPath = path.posix.join(
+      '/github/runner_temp',
+      path.basename(credentialsFilePath)
+    )
+    expect(
+      localConfigContent.indexOf(credentialsFilePath)
+    ).toBeGreaterThanOrEqual(0)
+    expect(
+      localConfigContent.indexOf(containerCredentialsPath)
+    ).toBeGreaterThanOrEqual(0)
 
     // Act
     await authHelper.removeAuth()
 
-    // Assert git config
-    gitConfigContent = (
+    // Assert all includeIf entries removed from local git config
+    localConfigContent = (
       await fs.promises.readFile(localGitConfigPath)
     ).toString()
-    expect(gitConfigContent.indexOf('http.')).toBeLessThan(0)
+    expect(localConfigContent.indexOf('includeIf.gitdir:')).toBeLessThan(0)
+    expect(
+      localConfigContent.indexOf(`includeIf.gitdir:${hostGitDir}.path`)
+    ).toBeLessThan(0)
+    expect(
+      localConfigContent.indexOf('includeIf.gitdir:/github/workspace/.git.path')
+    ).toBeLessThan(0)
+    expect(localConfigContent.indexOf(credentialsFilePath)).toBeLessThan(0)
+    expect(localConfigContent.indexOf(containerCredentialsPath)).toBeLessThan(0)
+
+    // Assert credentials config file deleted
+    credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+      f => f.startsWith('git-credentials-') && f.endsWith('.config')
+    )
+    expect(credentialsFiles.length).toBe(0)
+
+    // Verify credentials file no longer exists on disk
+    try {
+      await fs.promises.stat(credentialsFilePath)
+      throw new Error('Credentials file should have been deleted')
+    } catch (err) {
+      if ((err as any)?.code !== 'ENOENT') {
+        throw err
+      }
+    }
   })
 
-  const removeGlobalAuth_removesOverride = 'removeGlobalAuth removes override'
-  it(removeGlobalAuth_removesOverride, async () => {
+  const removeAuth_removesTokenFromSubmodules =
+    'removeAuth removes token from submodules'
+  it(removeAuth_removesTokenFromSubmodules, async () => {
     // Arrange
-    await setup(removeGlobalAuth_removesOverride)
+    await setup(removeAuth_removesTokenFromSubmodules)
+
+    // Create fake submodule config paths
+    const submodule1Dir = path.join(workspace, '.git', 'modules', 'submodule-1')
+    const submodule2Dir = path.join(workspace, '.git', 'modules', 'submodule-2')
+    const submodule1ConfigPath = path.join(submodule1Dir, 'config')
+    const submodule2ConfigPath = path.join(submodule2Dir, 'config')
+
+    await fs.promises.mkdir(submodule1Dir, {recursive: true})
+    await fs.promises.mkdir(submodule2Dir, {recursive: true})
+    await fs.promises.writeFile(submodule1ConfigPath, '')
+    await fs.promises.writeFile(submodule2ConfigPath, '')
+
+    // Mock getSubmoduleConfigPaths to return our fake submodules (for both configure and remove)
+    const mockGetSubmoduleConfigPaths =
+      git.getSubmoduleConfigPaths as jest.Mock<any, any>
+    mockGetSubmoduleConfigPaths.mockResolvedValue([
+      submodule1ConfigPath,
+      submodule2ConfigPath
+    ])
+
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+    await authHelper.configureSubmoduleAuth()
+
+    // Verify credentials file exists
+    let credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+      f => f.startsWith('git-credentials-') && f.endsWith('.config')
+    )
+    expect(credentialsFiles.length).toBe(1)
+    const credentialsFilePath = path.join(runnerTemp, credentialsFiles[0])
+
+    // Verify submodule 1 config has includeIf entries
+    let submodule1Content = (
+      await fs.promises.readFile(submodule1ConfigPath)
+    ).toString()
+    const submodule1GitDir = submodule1Dir.replace(/\\/g, '/')
+    expect(
+      submodule1Content.indexOf(`includeIf.gitdir:${submodule1GitDir}.path`)
+    ).toBeGreaterThanOrEqual(0)
+    expect(
+      submodule1Content.indexOf(credentialsFilePath)
+    ).toBeGreaterThanOrEqual(0)
+
+    // Verify submodule 2 config has includeIf entries
+    let submodule2Content = (
+      await fs.promises.readFile(submodule2ConfigPath)
+    ).toString()
+    const submodule2GitDir = submodule2Dir.replace(/\\/g, '/')
+    expect(
+      submodule2Content.indexOf(`includeIf.gitdir:${submodule2GitDir}.path`)
+    ).toBeGreaterThanOrEqual(0)
+    expect(
+      submodule2Content.indexOf(credentialsFilePath)
+    ).toBeGreaterThanOrEqual(0)
+
+    // Verify both host and container paths are in each submodule config
+    const containerCredentialsPath = path.posix.join(
+      '/github/runner_temp',
+      path.basename(credentialsFilePath)
+    )
+    expect(
+      submodule1Content.indexOf(containerCredentialsPath)
+    ).toBeGreaterThanOrEqual(0)
+    expect(
+      submodule2Content.indexOf(containerCredentialsPath)
+    ).toBeGreaterThanOrEqual(0)
+
+    // Act - ensure mock persists for removeAuth
+    mockGetSubmoduleConfigPaths.mockResolvedValue([
+      submodule1ConfigPath,
+      submodule2ConfigPath
+    ])
+    await authHelper.removeAuth()
+
+    // Assert submodule 1 includeIf entries removed
+    submodule1Content = (
+      await fs.promises.readFile(submodule1ConfigPath)
+    ).toString()
+    expect(submodule1Content.indexOf('includeIf.gitdir:')).toBeLessThan(0)
+    expect(submodule1Content.indexOf(credentialsFilePath)).toBeLessThan(0)
+    expect(submodule1Content.indexOf(containerCredentialsPath)).toBeLessThan(0)
+
+    // Assert submodule 2 includeIf entries removed
+    submodule2Content = (
+      await fs.promises.readFile(submodule2ConfigPath)
+    ).toString()
+    expect(submodule2Content.indexOf('includeIf.gitdir:')).toBeLessThan(0)
+    expect(submodule2Content.indexOf(credentialsFilePath)).toBeLessThan(0)
+    expect(submodule2Content.indexOf(containerCredentialsPath)).toBeLessThan(0)
+
+    // Assert credentials config file deleted
+    credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
+      f => f.startsWith('git-credentials-') && f.endsWith('.config')
+    )
+    expect(credentialsFiles.length).toBe(0)
+
+    // Verify credentials file no longer exists on disk
+    try {
+      await fs.promises.stat(credentialsFilePath)
+      throw new Error('Credentials file should have been deleted')
+    } catch (err) {
+      if ((err as any)?.code !== 'ENOENT') {
+        throw err
+      }
+    }
+  })
+
+  const removeGlobalConfig_removesOverride =
+    'removeGlobalConfig removes override'
+  it(removeGlobalConfig_removesOverride, async () => {
+    // Arrange
+    await setup(removeGlobalConfig_removesOverride)
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
     await authHelper.configureAuth()
     await authHelper.configureGlobalAuth()
@@ -650,7 +915,7 @@ describe('git-auth-helper tests', () => {
     await fs.promises.stat(path.join(git.env['HOME'], '.gitconfig'))
 
     // Act
-    await authHelper.removeGlobalAuth()
+    await authHelper.removeGlobalConfig()
 
     // Assert
     expect(git.env['HOME']).toBeUndefined()
@@ -658,10 +923,56 @@ describe('git-auth-helper tests', () => {
       await fs.promises.stat(homeOverride)
       throw new Error(`Should have been deleted '${homeOverride}'`)
     } catch (err) {
-      if (err.code !== 'ENOENT') {
+      if ((err as any)?.code !== 'ENOENT') {
         throw err
       }
     }
+  })
+
+  const testCredentialsConfigPath_matchesCredentialsConfigPaths =
+    'testCredentialsConfigPath matches credentials config paths'
+  it(testCredentialsConfigPath_matchesCredentialsConfigPaths, async () => {
+    // Arrange
+    await setup(testCredentialsConfigPath_matchesCredentialsConfigPaths)
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Get a real credentials config path
+    const credentialsConfigPath = await (
+      authHelper as any
+    ).getCredentialsConfigPath()
+
+    // Act & Assert
+    expect(
+      (authHelper as any).testCredentialsConfigPath(credentialsConfigPath)
+    ).toBe(true)
+    expect(
+      (authHelper as any).testCredentialsConfigPath(
+        '/some/path/git-credentials-12345678-abcd-1234-5678-123456789012.config'
+      )
+    ).toBe(true)
+    expect(
+      (authHelper as any).testCredentialsConfigPath(
+        '/some/path/git-credentials-abcdef12-3456-7890-abcd-ef1234567890.config'
+      )
+    ).toBe(true)
+
+    // Test invalid paths
+    expect(
+      (authHelper as any).testCredentialsConfigPath(
+        '/some/path/other-config.config'
+      )
+    ).toBe(false)
+    expect(
+      (authHelper as any).testCredentialsConfigPath(
+        '/some/path/git-credentials-invalid.config'
+      )
+    ).toBe(false)
+    expect(
+      (authHelper as any).testCredentialsConfigPath(
+        '/some/path/git-credentials-.config'
+      )
+    ).toBe(false)
+    expect((authHelper as any).testCredentialsConfigPath('')).toBe(false)
   })
 })
 
@@ -677,6 +988,7 @@ async function setup(testName: string): Promise<void> {
   await fs.promises.mkdir(tempHomedir, {recursive: true})
   process.env['RUNNER_TEMP'] = runnerTemp
   process.env['HOME'] = tempHomedir
+  process.env['GITHUB_WORKSPACE'] = workspace
 
   // Create git config
   globalGitConfigPath = path.join(tempHomedir, '.gitconfig')
@@ -689,13 +1001,26 @@ async function setup(testName: string): Promise<void> {
     branchDelete: jest.fn(),
     branchExists: jest.fn(),
     branchList: jest.fn(),
+    disableSparseCheckout: jest.fn(),
+    sparseCheckout: jest.fn(),
+    sparseCheckoutNonConeMode: jest.fn(),
     checkout: jest.fn(),
     checkoutDetach: jest.fn(),
     config: jest.fn(
-      async (key: string, value: string, globalConfig?: boolean) => {
-        const configPath = globalConfig
-          ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
-          : localGitConfigPath
+      async (
+        key: string,
+        value: string,
+        globalConfig?: boolean,
+        add?: boolean,
+        configFile?: string
+      ) => {
+        const configPath =
+          configFile ||
+          (globalConfig
+            ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
+            : localGitConfigPath)
+        // Ensure directory exists
+        await fs.promises.mkdir(path.dirname(configPath), {recursive: true})
         await fs.promises.appendFile(configPath, `\n${key} ${value}`)
       }
     ),
@@ -715,6 +1040,7 @@ async function setup(testName: string): Promise<void> {
     env: {},
     fetch: jest.fn(),
     getDefaultBranch: jest.fn(),
+    getSubmoduleConfigPaths: jest.fn(async () => []),
     getWorkingDirectory: jest.fn(() => workspace),
     init: jest.fn(),
     isDetached: jest.fn(),
@@ -732,6 +1058,9 @@ async function setup(testName: string): Promise<void> {
       return ''
     }),
     submoduleSync: jest.fn(),
+    submoduleStatus: jest.fn(async () => {
+      return true
+    }),
     submoduleUpdate: jest.fn(),
     tagExists: jest.fn(),
     tryClean: jest.fn(),
@@ -750,32 +1079,107 @@ async function setup(testName: string): Promise<void> {
         return true
       }
     ),
+    tryConfigUnsetValue: jest.fn(
+      async (
+        key: string,
+        value: string,
+        globalConfig?: boolean,
+        configPath?: string
+      ): Promise<boolean> => {
+        const targetConfigPath =
+          configPath ||
+          (globalConfig
+            ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
+            : localGitConfigPath)
+        let content = await fs.promises.readFile(targetConfigPath)
+        let lines = content
+          .toString()
+          .split('\n')
+          .filter(x => x)
+          .filter(x => !(x.startsWith(key) && x.includes(value)))
+        await fs.promises.writeFile(targetConfigPath, lines.join('\n'))
+        return true
+      }
+    ),
     tryDisableAutomaticGarbageCollection: jest.fn(),
     tryGetFetchUrl: jest.fn(),
-    tryReset: jest.fn()
+    tryGetConfigValues: jest.fn(
+      async (
+        key: string,
+        globalConfig?: boolean,
+        configPath?: string
+      ): Promise<string[]> => {
+        const targetConfigPath =
+          configPath ||
+          (globalConfig
+            ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
+            : localGitConfigPath)
+        const content = await fs.promises.readFile(targetConfigPath)
+        const lines = content
+          .toString()
+          .split('\n')
+          .filter(x => x && x.startsWith(key))
+          .map(x => x.substring(key.length).trim())
+        return lines
+      }
+    ),
+    tryGetConfigKeys: jest.fn(
+      async (
+        pattern: string,
+        globalConfig?: boolean,
+        configPath?: string
+      ): Promise<string[]> => {
+        const targetConfigPath =
+          configPath ||
+          (globalConfig
+            ? path.join(git.env['HOME'] || tempHomedir, '.gitconfig')
+            : localGitConfigPath)
+        const content = await fs.promises.readFile(targetConfigPath)
+        const lines = content
+          .toString()
+          .split('\n')
+          .filter(x => x)
+        const keys = lines
+          .filter(x => new RegExp(pattern).test(x.split(' ')[0]))
+          .map(x => x.split(' ')[0])
+        return [...new Set(keys)] // Remove duplicates
+      }
+    ),
+    tryReset: jest.fn(),
+    version: jest.fn()
   }
 
   settings = {
     authToken: 'some auth token',
     clean: true,
     commit: '',
+    filter: undefined,
+    sparseCheckout: [],
+    sparseCheckoutConeMode: true,
     fetchDepth: 1,
+    fetchTags: false,
+    showProgress: true,
     lfs: false,
     submodules: false,
     nestedSubmodules: false,
     persistCredentials: true,
-    ref: 'refs/heads/master',
+    ref: 'refs/heads/main',
     repositoryName: 'my-repo',
     repositoryOwner: 'my-org',
     repositoryPath: '',
     sshKey: sshPath ? 'some ssh private key' : '',
     sshKnownHosts: '',
-    sshStrict: true
+    sshStrict: true,
+    sshUser: '',
+    workflowOrganizationId: 123456,
+    setSafeDirectory: true,
+    githubServerUrl: githubServerUrl
   }
 }
 
 async function getActualSshKeyPath(): Promise<string> {
   let actualTempFiles = (await fs.promises.readdir(runnerTemp))
+    .filter(x => !x.startsWith('git-credentials-')) // Exclude credentials config file
     .sort()
     .map(x => path.join(runnerTemp, x))
   if (actualTempFiles.length === 0) {
@@ -789,6 +1193,7 @@ async function getActualSshKeyPath(): Promise<string> {
 
 async function getActualSshKnownHostsPath(): Promise<string> {
   let actualTempFiles = (await fs.promises.readdir(runnerTemp))
+    .filter(x => !x.startsWith('git-credentials-')) // Exclude credentials config file
     .sort()
     .map(x => path.join(runnerTemp, x))
   if (actualTempFiles.length === 0) {

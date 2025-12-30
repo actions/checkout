@@ -39,7 +39,9 @@ export async function prepareExistingDirectory(
       try {
         await io.rmRF(lockPath)
       } catch (error) {
-        core.debug(`Unable to delete '${lockPath}'. ${error.message}`)
+        core.debug(
+          `Unable to delete '${lockPath}'. ${(error as any)?.message ?? error}`
+        )
       }
     }
 
@@ -79,12 +81,18 @@ export async function prepareExistingDirectory(
       }
       core.endGroup()
 
+      // Check for submodules and delete any existing files if submodules are present
+      if (!(await git.submoduleStatus())) {
+        remove = true
+        core.info('Bad Submodules found, removing existing files')
+      }
+
       // Clean
       if (clean) {
         core.startGroup('Cleaning the repository')
         if (!(await git.tryClean())) {
           core.debug(
-            `The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For futher investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`
+            `The clean command failed. This might be caused by: 1) path too long, 2) permission issue, or 3) file in use. For further investigation, manually run 'git clean -ffdx' on the directory '${repositoryPath}'.`
           )
           remove = true
         } else if (!(await git.tryReset())) {
