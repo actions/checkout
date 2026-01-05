@@ -1,11 +1,11 @@
 name: CI Pipeline
 
-# Déclenche la pipeline à chaque PR et push sur master
+# Déclenche la pipeline à chaque PR et push sur main
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
   push:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
