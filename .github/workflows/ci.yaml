@@ -1,0 +1,35 @@
+name: CI Pipeline
+
+# Déclenche la pipeline à chaque PR et push sur master
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout du repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Installer Node.js selon .nvmrc
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # 3️⃣ Installer les dépendances de manière reproductible
+      - name: Install dependencies
+        run: npm ci
+
+      # 4️⃣ Lancer les tests unitaires
+      - name: Run unit tests
+        run: npm test
+
+      # 5️⃣ Linter le code
+      - name: Lint code
+        run: npm run lint
