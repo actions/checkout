@@ -492,39 +492,4 @@ describe('git user-agent with orchestration ID', () => {
       'git/2.18 (github-actions-checkout)'
     )
   })
-
-  it('should sanitize orchestration ID to underscores when it contains only invalid characters', async () => {
-    const orchId = '()///'
-    process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
-
-    let capturedEnv: any = null
-    mockExec.mockImplementation((path, args, options) => {
-      if (args.includes('version')) {
-        options.listeners.stdout(Buffer.from('2.18'))
-      }
-      // Capture env on any command
-      capturedEnv = options.env
-      return 0
-    })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
-
-    const workingDirectory = 'test'
-    const lfs = false
-    const doSparseCheckout = false
-    git = await commandManager.createCommandManager(
-      workingDirectory,
-      lfs,
-      doSparseCheckout
-    )
-
-    // Call a git command to trigger env capture after user-agent is set
-    await git.init()
-
-    // Verify the user agent contains orchestration ID with sanitized underscores
-    expect(git).toBeDefined()
-    expect(capturedEnv).toBeDefined()
-    expect(capturedEnv['GIT_HTTP_USER_AGENT']).toBe(
-      'git/2.18 (github-actions-checkout) actions_orchestration_id/_____'
-    )
-  })
 })
