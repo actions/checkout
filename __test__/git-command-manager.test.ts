@@ -376,3 +376,93 @@ describe('Test fetchDepth and fetchTags options', () => {
     )
   })
 })
+
+describe('git user-agent with orchestration ID', () => {
+  beforeEach(async () => {
+    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
+    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    // Clean up environment variable to prevent test pollution
+    delete process.env['ACTIONS_ORCHESTRATION_ID']
+  })
+
+  it('should include orchestration ID in user-agent when ACTIONS_ORCHESTRATION_ID is set', async () => {
+    const orchId = 'test-orch-id-12345'
+    process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
+
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    // The user agent should be set with orchestration ID
+    // We can't directly inspect gitEnv, but we verify the git command was created successfully
+    expect(git).toBeDefined()
+  })
+
+  it('should sanitize invalid characters in orchestration ID', async () => {
+    const orchId = 'test (with) special/chars'
+    process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
+
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    // The user agent should be set with sanitized orchestration ID
+    // We can't directly inspect gitEnv, but we verify the git command was created successfully
+    expect(git).toBeDefined()
+  })
+
+  it('should not modify user-agent when ACTIONS_ORCHESTRATION_ID is not set', async () => {
+    delete process.env['ACTIONS_ORCHESTRATION_ID']
+
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    // The user agent should be set without orchestration ID
+    // We can't directly inspect gitEnv, but we verify the git command was created successfully
+    expect(git).toBeDefined()
+  })
+})

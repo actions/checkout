@@ -1206,7 +1206,15 @@ class GitCommandManager {
                 }
             }
             // Set the user agent
-            const gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`;
+            let gitHttpUserAgent = `git/${this.gitVersion} (github-actions-checkout)`;
+            // Append orchestration ID if set
+            const orchId = process.env['ACTIONS_ORCHESTRATION_ID'];
+            if (orchId) {
+                // Sanitize the orchestration ID to ensure it contains only valid characters
+                // Valid characters: 0-9, a-z, _, -, .
+                const sanitizedId = orchId.replace(/[^a-z0-9_.-]/gi, '_');
+                gitHttpUserAgent = `${gitHttpUserAgent} actions_orchestration_id/${sanitizedId}`;
+            }
             core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
             this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
         });
