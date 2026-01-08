@@ -1213,7 +1213,10 @@ class GitCommandManager {
                 // Sanitize the orchestration ID to ensure it contains only valid characters
                 // Valid characters: 0-9, a-z, _, -, .
                 const sanitizedId = orchId.replace(/[^a-z0-9_.-]/gi, '_');
-                gitHttpUserAgent = `${gitHttpUserAgent} actions_orchestration_id/${sanitizedId}`;
+                // Only append if sanitized ID contains at least one alphanumeric character
+                if (sanitizedId && /[a-z0-9]/i.test(sanitizedId)) {
+                    gitHttpUserAgent = `${gitHttpUserAgent} actions_orchestration_id/${sanitizedId}`;
+                }
             }
             core.debug(`Set git useragent to: ${gitHttpUserAgent}`);
             this.gitEnv['GIT_HTTP_USER_AGENT'] = gitHttpUserAgent;
