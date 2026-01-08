@@ -87,6 +87,17 @@ jobs:
       - name: Verify fetch filter
         run: __test__/verify-fetch-filter.sh
 
+      # Fetch tags
+      - name: Checkout with fetch-tags
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: fetch-tags-test
+          fetch-tags: true
+      - name: Verify fetch-tags
+        shell: bash
+        run: __test__/verify-fetch-tags.sh
+
       # Sparse checkout
       - name: Sparse checkout
         uses: ./
