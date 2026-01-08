@@ -841,6 +841,9 @@ class GitCommandManager {
             if (options.filter) {
                 args.push(`--filter=${options.filter}`);
             }
+            if (options.shallowSince) {
+                args.push(`--shallow-since=${options.shallowSince}`);
+            }
             if (options.fetchDepth && options.fetchDepth > 0) {
                 args.push(`--depth=${options.fetchDepth}`);
             }
@@ -981,12 +984,15 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    submoduleUpdate(fetchDepth, recursive) {
+    submoduleUpdate(fetchDepth, recursive, shallowSince) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['-c', 'protocol.version=2'];
             args.push('submodule', 'update', '--init', '--force');
             if (fetchDepth > 0) {
                 args.push(`--depth=${fetchDepth}`);
+            }
+            if (shallowSince) {
+                args.push(`--shallow-since=${shallowSince}`);
             }
             if (recursive) {
                 args.push('--recursive');
@@ -2039,6 +2045,12 @@ function getInputs() {
             result.fetchDepth = 0;
         }
         core.debug(`fetch depth = ${result.fetchDepth}`);
+        // Shallow since
+        if (core.getInput('fetch-depth') && core.getInput('shallow-since')) {
+            throw new Error('`fetch-depth` and `shallow-since` cannot be used at the same time');
+        }
+        result.shallowSince = core.getInput('shallow-since');
+        core.debug(`shallow since = ${result.shallowSince}`);
         // Fetch tags
         result.fetchTags =
             (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE';

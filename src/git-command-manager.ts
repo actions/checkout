@@ -37,6 +37,7 @@ export interface IGitCommandManager {
     options: {
       filter?: string
       fetchDepth?: number
+      shallowSince?: string
       fetchTags?: boolean
       showProgress?: boolean
     }
@@ -56,8 +57,12 @@ export interface IGitCommandManager {
   shaExists(sha: string): Promise<boolean>
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
-  submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
   submoduleStatus(): Promise<boolean>
+  submoduleUpdate(
+    fetchDepth: number,
+    recursive: boolean,
+    shallowSince?: string
+  ): Promise<void>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
   tryConfigUnset(configKey: string, globalConfig?: boolean): Promise<boolean>
@@ -280,6 +285,7 @@ class GitCommandManager {
     options: {
       filter?: string
       fetchDepth?: number
+      shallowSince?: string
       fetchTags?: boolean
       showProgress?: boolean
     }
@@ -296,6 +302,10 @@ class GitCommandManager {
 
     if (options.filter) {
       args.push(`--filter=${options.filter}`)
+    }
+
+    if (options.shallowSince) {
+      args.push(`--shallow-since=${options.shallowSince}`)
     }
 
     if (options.fetchDepth && options.fetchDepth > 0) {
@@ -448,11 +458,19 @@ class GitCommandManager {
     await this.execGit(args)
   }
 
-  async submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void> {
+  async submoduleUpdate(
+    fetchDepth: number,
+    recursive: boolean,
+    shallowSince?: string
+  ): Promise<void> {
     const args = ['-c', 'protocol.version=2']
     args.push('submodule', 'update', '--init', '--force')
     if (fetchDepth > 0) {
       args.push(`--depth=${fetchDepth}`)
+    }
+
+    if (shallowSince) {
+      args.push(`--shallow-since=${shallowSince}`)
     }
 
     if (recursive) {

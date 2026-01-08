@@ -129,6 +129,9 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: 1
     fetch-depth: ''
 
+    # Date like `2days` or `1970-01-01`. Fetch a history after the specified time.
+    shallow-since: ''
+
     # Whether to fetch tags, even if fetch-depth > 0.
     # Default: false
     fetch-tags: ''

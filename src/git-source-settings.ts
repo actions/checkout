@@ -50,7 +50,12 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
-   * Fetch tags, even if fetchDepth > 0 (default: false)
+   * Deepen or shorten the history of a shallow repository to include all reachable commits after
+   */
+  shallowSince: string
+
+  /**
+   *  Fetch tags, even if fetchDepth > 0 (default: false)
    */
   fetchTags: boolean
 

@@ -108,6 +108,15 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   }
   core.debug(`fetch depth = ${result.fetchDepth}`)
 
+  // Shallow since
+  if (core.getInput('fetch-depth') && core.getInput('shallow-since')) {
+    throw new Error(
+      '`fetch-depth` and `shallow-since` cannot be used at the same time'
+    )
+  }
+  result.shallowSince = core.getInput('shallow-since')
+  core.debug(`shallow since = ${result.shallowSince}`)
+
   // Fetch tags
   result.fetchTags =
     (core.getInput('fetch-tags') || 'false').toUpperCase() === 'TRUE'
