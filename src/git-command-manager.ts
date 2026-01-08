@@ -738,8 +738,7 @@ class GitCommandManager {
       // Sanitize the orchestration ID to ensure it contains only valid characters
       // Valid characters: 0-9, a-z, _, -, .
       const sanitizedId = orchId.replace(/[^a-z0-9_.-]/gi, '_')
-      // Only append if sanitized ID contains at least one alphanumeric character
-      if (sanitizedId && /[a-z0-9]/i.test(sanitizedId)) {
+      if (sanitizedId) {
         gitHttpUserAgent = `${gitHttpUserAgent} actions_orchestration_id/${sanitizedId}`
       }
     }

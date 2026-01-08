@@ -493,7 +493,7 @@ describe('git user-agent with orchestration ID', () => {
     )
   })
 
-  it('should not append orchestration ID when it becomes empty after sanitization', async () => {
+  it('should sanitize orchestration ID to underscores when it contains only invalid characters', async () => {
     const orchId = '()///'
     process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
 
@@ -520,11 +520,11 @@ describe('git user-agent with orchestration ID', () => {
     // Call a git command to trigger env capture after user-agent is set
     await git.init()
 
-    // Verify the user agent does NOT contain orchestration ID when sanitized ID is empty
+    // Verify the user agent contains orchestration ID with sanitized underscores
     expect(git).toBeDefined()
     expect(capturedEnv).toBeDefined()
     expect(capturedEnv['GIT_HTTP_USER_AGENT']).toBe(
-      'git/2.18 (github-actions-checkout)'
+      'git/2.18 (github-actions-checkout) actions_orchestration_id/_____'
     )
   })
 })
