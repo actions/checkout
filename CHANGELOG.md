@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.0.2
+* Fix tag handling: preserve annotations and explicit fetch-tags by @ericsciple in https://github.com/actions/checkout/pull/2356
+
+## v6.0.1
+* Add worktree support for persist-credentials includeIf by @ericsciple in https://github.com/actions/checkout/pull/2327
+
 ## v6.0.0
 * Persist creds to a separate file by @ericsciple in https://github.com/actions/checkout/pull/2286
 * Update README to include Node.js 24 support details and requirements by @salmanmkc in https://github.com/actions/checkout/pull/2248
