@@ -20,6 +20,7 @@ async function run(): Promise<void> {
       // Get sources
       await gitSourceProvider.getSource(sourceSettings)
       core.setOutput('ref', sourceSettings.ref)
+      core.setOutput('path', sourceSettings.repositoryPath)
     } finally {
       // Unregister problem matcher
       coreCommand.issueCommand('remove-matcher', {owner: 'checkout-git'}, '')
