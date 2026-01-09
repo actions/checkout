@@ -80,6 +80,12 @@ inputs:
   show-progress:
     description: 'Whether to show progress status output when fetching.'
     default: true
+  reference:
+    required: false
+    description: >
+      Path to a local bare git [reference repository to minimize network usage](https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---reference-if-ableltrepositorygt).
+      
+      If the directory doesn't exists this option will ignore it and log a message.
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false
