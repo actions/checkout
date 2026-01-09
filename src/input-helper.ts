@@ -138,6 +138,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // Auth token
   result.authToken = core.getInput('token', {required: true})
 
+  // Git user
+  result.gitUser = core.getInput('git-user') || 'github-action[bot]'
+
   // SSH
   result.sshKey = core.getInput('ssh-key')
   result.sshKnownHosts = core.getInput('ssh-known-hosts')

@@ -1,10 +1,10 @@
 import * as core from '@actions/core'
-import * as fsHelper from '../lib/fs-helper'
+import * as fsHelper from '../src/fs-helper'
 import * as github from '@actions/github'
-import * as inputHelper from '../lib/input-helper'
+import * as inputHelper from '../src/input-helper'
 import * as path from 'path'
-import * as workflowContextHelper from '../lib/workflow-context-helper'
-import {IGitSourceSettings} from '../lib/git-source-settings'
+import * as workflowContextHelper from '../src/workflow-context-helper'
+import {IGitSourceSettings} from '../src/git-source-settings'
 
 const originalGitHubWorkspace = process.env['GITHUB_WORKSPACE']
 const gitHubWorkspace = path.resolve('/checkout-tests/workspace')

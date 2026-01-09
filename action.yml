@@ -22,6 +22,12 @@ inputs:
 
       [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
     default: ${{ github.token }}
+  git-user:
+    description: >
+      Github slug used to configure local user.name and user.email for git.
+      This is required to push a commit from a Github Action Workflow.
+      Set to '' to disable this configuration.
+    default: "github-action[bot]"
   ssh-key:
     description: >
       SSH key used to fetch the repository. The SSH key is configured with the local

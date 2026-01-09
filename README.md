@@ -75,6 +75,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: ${{ github.token }}
     token: ''
 
+    # Github slug used to configure local user.name and user.email for git. This is
+    # required to push a commit from a Github Action Workflow. Set to '' to disable
+    # this configuration.
+    # Default: github-action[bot]
+    git-user: ''
+
     # SSH key used to fetch the repository. The SSH key is configured with the local
     # git config, which enables your scripts to run authenticated git commands. The
     # post-job step removes the SSH key.
@@ -324,8 +330,6 @@ jobs:
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "generated"
           git push
@@ -348,8 +352,6 @@ jobs:
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "generated"
           git push
