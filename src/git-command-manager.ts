@@ -22,7 +22,7 @@ export interface IGitCommandManager {
   disableSparseCheckout(): Promise<void>
   sparseCheckout(sparseCheckout: string[]): Promise<void>
   sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void>
-  checkout(ref: string, startPoint: string): Promise<void>
+  checkout(ref: string, startPoint: string, options?: string[]): Promise<void>
   checkoutDetach(): Promise<void>
   config(
     configKey: string,
@@ -220,8 +220,21 @@ class GitCommandManager {
     )
   }
 
-  async checkout(ref: string, startPoint: string): Promise<void> {
-    const args = ['checkout', '--progress', '--force']
+  async checkout(
+    ref: string,
+    startPoint: string,
+    options: string[] = []
+  ): Promise<void> {
+    const args = ['checkout', '--progress']
+
+    // Add custom options (like --merge) if provided
+    if (options.length > 0) {
+      args.push(...options)
+    } else {
+      // Default behavior - use force
+      args.push('--force')
+    }
+
     if (startPoint) {
       args.push('-B', ref, startPoint)
     } else {

@@ -143,12 +143,41 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
+    expect(git.tryClean).toHaveBeenCalled()
+    expect(core.warning).toHaveBeenCalled()
+    expect(git.tryReset).not.toHaveBeenCalled()
+  })
+  
+  const preservesContentsWhenCleanFailsAndPreserveLocalChanges = 'preserves contents when clean fails and preserve-local-changes is true'
+  it(preservesContentsWhenCleanFailsAndPreserveLocalChanges, async () => {
+    // Arrange
+    await setup(preservesContentsWhenCleanFailsAndPreserveLocalChanges)
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+    let mockTryClean = git.tryClean as jest.Mock<any, any>
+    mockTryClean.mockImplementation(async () => {
+      return false
+    })
+
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      repositoryUrl,
+      clean,
+      ref,
+      true // preserveLocalChanges = true
+    )
+
+    // Assert
+    const files = await fs.promises.readdir(repositoryPath)
+    expect(files.sort()).toEqual(['.git', 'my-file']) // Expect both .git and user files to remain
     expect(git.tryClean).toHaveBeenCalled()
     expect(core.warning).toHaveBeenCalled()
     expect(git.tryReset).not.toHaveBeenCalled()
@@ -170,14 +199,48 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       differentRepositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(core.warning).not.toHaveBeenCalled()
     expect(git.isDetached).not.toHaveBeenCalled()
+  })
+
+  const keepsContentsWhenDifferentRepositoryUrlAndPreserveLocalChanges =
+    'keeps contents when different repository url and preserve-local-changes is true'
+  it(keepsContentsWhenDifferentRepositoryUrlAndPreserveLocalChanges, async () => {
+    // Arrange
+    await setup(keepsContentsWhenDifferentRepositoryUrlAndPreserveLocalChanges)
+    clean = false
+    
+    // Create a file that we expect to be preserved
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+    
+    // Simulate a different repository by simply removing the .git directory
+    await io.rmRF(path.join(repositoryPath, '.git'))
+    await fs.promises.mkdir(path.join(repositoryPath, '.git'))
+    
+    const differentRepositoryUrl = 'https://github.com/my-different-org/my-different-repo'
+    
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      differentRepositoryUrl, // Use a different URL
+      clean,
+      ref,
+      true // preserveLocalChanges = true
+    )
+
+    // Assert
+    const files = await fs.promises.readdir(repositoryPath)
+    console.log('Files after operation:', files)
+    // When preserveLocalChanges is true, files should be preserved even with different repo URL
+    expect(files.sort()).toEqual(['.git', 'my-file'].sort())
   })
 
   const removesContentsWhenNoGitDirectory =
@@ -221,12 +284,41 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
+    expect(git.tryClean).toHaveBeenCalled()
+    expect(git.tryReset).toHaveBeenCalled()
+    expect(core.warning).toHaveBeenCalled()
+  })
+
+  const preservesContentsWhenResetFailsAndPreserveLocalChanges = 'preserves contents when reset fails and preserve-local-changes is true'
+  it(preservesContentsWhenResetFailsAndPreserveLocalChanges, async () => {
+    // Arrange
+    await setup(preservesContentsWhenResetFailsAndPreserveLocalChanges)
+    await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
+    let mockTryReset = git.tryReset as jest.Mock<any, any>
+    mockTryReset.mockImplementation(async () => {
+      return false
+    })
+
+    // Act
+    await gitDirectoryHelper.prepareExistingDirectory(
+      git,
+      repositoryPath,
+      repositoryUrl,
+      clean,
+      ref,
+      true // preserveLocalChanges = true
+    )
+
+    // Assert
+    const files = await fs.promises.readdir(repositoryPath)
+    expect(files.sort()).toEqual(['.git', 'my-file']) // Expect both .git and user files to remain
     expect(git.tryClean).toHaveBeenCalled()
     expect(git.tryReset).toHaveBeenCalled()
     expect(core.warning).toHaveBeenCalled()
@@ -246,12 +338,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(core.warning).not.toHaveBeenCalled()
   })
 
@@ -302,12 +395,13 @@ describe('git-directory-helper tests', () => {
       repositoryPath,
       repositoryUrl,
       clean,
-      ref
+      ref,
+      false // preserveLocalChanges = false
     )
 
     // Assert
     const files = await fs.promises.readdir(repositoryPath)
-    expect(files).toHaveLength(0)
+    expect(files).toEqual(['.git']) // Expect just the .git directory to remain
     expect(git.tryClean).toHaveBeenCalled()
   })
 

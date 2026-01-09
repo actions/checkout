@@ -70,7 +70,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         settings.repositoryPath,
         repositoryUrl,
         settings.clean,
-        settings.ref
+        settings.ref,
+        settings.preserveLocalChanges
       )
     }
 
@@ -251,7 +252,115 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Checkout
     core.startGroup('Checking out the ref')
-    await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    if (settings.preserveLocalChanges) {
+      core.info('Attempting to preserve local changes during checkout')
+
+      // List and store local files before checkout
+      const fs = require('fs')
+      const path = require('path')
+      const localFiles = new Map()
+
+      try {
+        // Get all files in the workspace that aren't in the .git directory
+        const workspacePath = process.cwd()
+        core.info(`Current workspace path: ${workspacePath}`)
+
+        // List all files in the current directory using fs
+        const listFilesRecursively = (dir: string): string[] => {
+          let results: string[] = []
+          const list = fs.readdirSync(dir)
+          list.forEach((file: string) => {
+            const fullPath = path.join(dir, file)
+            const relativePath = path.relative(workspacePath, fullPath)
+            // Skip .git directory
+            if (relativePath.startsWith('.git')) return
+
+            const stat = fs.statSync(fullPath)
+            if (stat && stat.isDirectory()) {
+              // Recursively explore subdirectories
+              results = results.concat(listFilesRecursively(fullPath))
+            } else {
+              // Store file content in memory
+              try {
+                const content = fs.readFileSync(fullPath)
+                localFiles.set(relativePath, content)
+                results.push(relativePath)
+              } catch (readErr) {
+                core.warning(`Failed to read file ${relativePath}: ${readErr}`)
+              }
+            }
+          })
+          return results
+        }
+
+        const localFilesList = listFilesRecursively(workspacePath)
+        core.info(`Found ${localFilesList.length} local files to preserve:`)
+        localFilesList.forEach(file => core.info(`  - ${file}`))
+      } catch (error) {
+        core.warning(`Failed to list local files: ${error}`)
+      }
+
+      // Perform normal checkout
+      await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+
+      // Restore local files that were not tracked by git
+      core.info('Restoring local files after checkout')
+      try {
+        let restoredCount = 0
+        const execOptions = {
+          cwd: process.cwd(),
+          silent: true,
+          ignoreReturnCode: true
+        }
+
+        for (const [filePath, content] of localFiles.entries()) {
+          // Check if file exists in git using a child process instead of git.execGit
+          const {exec} = require('@actions/exec')
+          let exitCode = 0
+          const output = {
+            stdout: '',
+            stderr: ''
+          }
+
+          // Capture output
+          const options = {
+            ...execOptions,
+            listeners: {
+              stdout: (data: Buffer) => {
+                output.stdout += data.toString()
+              },
+              stderr: (data: Buffer) => {
+                output.stderr += data.toString()
+              }
+            }
+          }
+
+          exitCode = await exec(
+            'git',
+            ['ls-files', '--error-unmatch', filePath],
+            options
+          )
+
+          if (exitCode !== 0) {
+            // File is not tracked by git, safe to restore
+            const fullPath = path.join(process.cwd(), filePath)
+            // Ensure directory exists
+            fs.mkdirSync(path.dirname(fullPath), {recursive: true})
+            fs.writeFileSync(fullPath, content)
+            core.info(`Restored local file: ${filePath}`)
+            restoredCount++
+          } else {
+            core.info(`Skipping ${filePath} as it's tracked by git`)
+          }
+        }
+        core.info(`Successfully restored ${restoredCount} local files`)
+      } catch (error) {
+        core.warning(`Failed to restore local files: ${error}`)
+      }
+    } else {
+      // Use the default behavior with --force
+      await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    }
     core.endGroup()
 
     // Submodules

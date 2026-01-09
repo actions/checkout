@@ -1163,6 +1163,7 @@ async function setup(testName: string): Promise<void> {
     submodules: false,
     nestedSubmodules: false,
     persistCredentials: true,
+    preserveLocalChanges: false,
     ref: 'refs/heads/main',
     repositoryName: 'my-repo',
     repositoryOwner: 'my-org',
