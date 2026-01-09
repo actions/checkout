@@ -981,10 +981,10 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    submoduleUpdate(fetchDepth, recursive) {
+    submoduleUpdate(fetchDepth, recursive, submoduleDirectories) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['-c', 'protocol.version=2'];
-            args.push('submodule', 'update', '--init', '--force');
+            args.push('submodule', 'update', '--init', '--force', ...submoduleDirectories);
             if (fetchDepth > 0) {
                 args.push(`--depth=${fetchDepth}`);
             }
@@ -1592,7 +1592,7 @@ function getSource(settings) {
                 // Checkout submodules
                 core.startGroup('Fetching submodules');
                 yield git.submoduleSync(settings.nestedSubmodules);
-                yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules, settings.submoduleDirectories);
                 yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
                 core.endGroup();
                 // Persist credentials
@@ -2053,6 +2053,7 @@ function getInputs() {
         // Submodules
         result.submodules = false;
         result.nestedSubmodules = false;
+        result.submoduleDirectories = [];
         const submodulesString = (core.getInput('submodules') || '').toUpperCase();
         if (submodulesString == 'RECURSIVE') {
             result.submodules = true;
@@ -2061,8 +2062,15 @@ function getInputs() {
         else if (submodulesString == 'TRUE') {
             result.submodules = true;
         }
+        const submoduleDirectories = core.getMultilineInput('submodule-directories');
+        if (submoduleDirectories.length > 0) {
+            result.submoduleDirectories = submoduleDirectories;
+            if (!result.submodules)
+                result.submodules = true;
+        }
         core.debug(`submodules = ${result.submodules}`);
         core.debug(`recursive submodules = ${result.nestedSubmodules}`);
+        core.debug(`submodule directories = ${result.submoduleDirectories}`);
         // Auth token
         result.authToken = core.getInput('token', { required: true });
         // SSH
