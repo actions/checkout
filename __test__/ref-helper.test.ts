@@ -152,7 +152,22 @@ describe('ref-helper tests', () => {
   it('getRefSpec sha + refs/tags/', async () => {
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit)
     expect(refSpec.length).toBe(1)
-    expect(refSpec[0]).toBe(`+${commit}:refs/tags/my-tag`)
+    expect(refSpec[0]).toBe(`+refs/tags/my-tag:refs/tags/my-tag`)
+  })
+
+  it('getRefSpec sha + refs/tags/ with fetchTags', async () => {
+    // When fetchTags is true, only include tags wildcard (specific tag is redundant)
+    const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit, true)
+    expect(refSpec.length).toBe(1)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+  })
+
+  it('getRefSpec sha + refs/heads/ with fetchTags', async () => {
+    // When fetchTags is true, include both the branch refspec and tags wildcard
+    const refSpec = refHelper.getRefSpec('refs/heads/my/branch', commit, true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe(`+${commit}:refs/remotes/origin/my/branch`)
   })
 
   it('getRefSpec sha only', async () => {
@@ -166,6 +181,14 @@ describe('ref-helper tests', () => {
     expect(refSpec.length).toBe(2)
     expect(refSpec[0]).toBe('+refs/heads/my-ref*:refs/remotes/origin/my-ref*')
     expect(refSpec[1]).toBe('+refs/tags/my-ref*:refs/tags/my-ref*')
+  })
+
+  it('getRefSpec unqualified ref only with fetchTags', async () => {
+    // When fetchTags is true, skip specific tag pattern since wildcard covers all
+    const refSpec = refHelper.getRefSpec('my-ref', '', true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe('+refs/heads/my-ref*:refs/remotes/origin/my-ref*')
   })
 
   it('getRefSpec refs/heads/ only', async () => {
@@ -186,5 +209,22 @@ describe('ref-helper tests', () => {
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '')
     expect(refSpec.length).toBe(1)
     expect(refSpec[0]).toBe('+refs/tags/my-tag:refs/tags/my-tag')
+  })
+
+  it('getRefSpec refs/tags/ only with fetchTags', async () => {
+    // When fetchTags is true, only include tags wildcard (specific tag is redundant)
+    const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '', true)
+    expect(refSpec.length).toBe(1)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+  })
+
+  it('getRefSpec refs/heads/ only with fetchTags', async () => {
+    // When fetchTags is true, include both the branch refspec and tags wildcard
+    const refSpec = refHelper.getRefSpec('refs/heads/my/branch', '', true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe(
+      '+refs/heads/my/branch:refs/remotes/origin/my/branch'
+    )
   })
 })

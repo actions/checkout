@@ -653,7 +653,6 @@ const fs = __importStar(__nccwpck_require__(7147));
 const fshelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
-const refHelper = __importStar(__nccwpck_require__(8601));
 const regexpHelper = __importStar(__nccwpck_require__(3120));
 const retryHelper = __importStar(__nccwpck_require__(2155));
 const git_version_1 = __nccwpck_require__(3142);
@@ -831,9 +830,9 @@ class GitCommandManager {
     fetch(refSpec, options) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['-c', 'protocol.version=2', 'fetch'];
-            if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
-                args.push('--no-tags');
-            }
+            // Always use --no-tags for explicit control over tag fetching
+            // Tags are fetched explicitly via refspec when needed
+            args.push('--no-tags');
             args.push('--prune', '--no-recurse-submodules');
             if (options.showProgress) {
                 args.push('--progress');
@@ -1539,13 +1538,26 @@ function getSource(settings) {
                 if (!(yield refHelper.testRef(git, settings.ref, settings.commit))) {
                     refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
                     yield git.fetch(refSpec, fetchOptions);
+                    // Verify the ref now matches. For branches, the targeted fetch above brings
+                    // in the specific commit. For tags (fetched by ref), this will fail if
+                    // the tag was moved after the workflow was triggered.
+                    if (!(yield refHelper.testRef(git, settings.ref, settings.commit))) {
+                        throw new Error(`The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
+                            `The ref may have been updated after the workflow was triggered.`);
+                    }
                 }
             }
             else {
                 fetchOptions.fetchDepth = settings.fetchDepth;
-                fetchOptions.fetchTags = settings.fetchTags;
-                const refSpec = refHelper.getRefSpec(settings.ref, settings.commit);
+                const refSpec = refHelper.getRefSpec(settings.ref, settings.commit, settings.fetchTags);
                 yield git.fetch(refSpec, fetchOptions);
+                // For tags, verify the ref still points to the expected commit.
+                // Tags are fetched by ref (not commit), so if a tag was moved after the
+                // workflow was triggered, we would silently check out the wrong commit.
+                if (!(yield refHelper.testRef(git, settings.ref, settings.commit))) {
+                    throw new Error(`The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
+                        `The ref may have been updated after the workflow was triggered.`);
+                }
             }
             core.endGroup();
             // Checkout info
@@ -2284,53 +2296,67 @@ function getRefSpecForAllHistory(ref, commit) {
     }
     return result;
 }
-function getRefSpec(ref, commit) {
+function getRefSpec(ref, commit, fetchTags) {
     if (!ref && !commit) {
         throw new Error('Args ref and commit cannot both be empty');
     }
     const upperRef = (ref || '').toUpperCase();
+    const result = [];
+    // When fetchTags is true, always include the tags refspec
+    if (fetchTags) {
+        result.push(exports.tagsRefSpec);
+    }
     // SHA
     if (commit) {
         // refs/heads
         if (upperRef.startsWith('REFS/HEADS/')) {
             const branch = ref.substring('refs/heads/'.length);
-            return [`+${commit}:refs/remotes/origin/${branch}`];
+            result.push(`+${commit}:refs/remotes/origin/${branch}`);
         }
         // refs/pull/
         else if (upperRef.startsWith('REFS/PULL/')) {
             const branch = ref.substring('refs/pull/'.length);
-            return [`+${commit}:refs/remotes/pull/${branch}`];
+            result.push(`+${commit}:refs/remotes/pull/${branch}`);
         }
         // refs/tags/
         else if (upperRef.startsWith('REFS/TAGS/')) {
-            return [`+${commit}:${ref}`];
+            if (!fetchTags) {
+                result.push(`+${ref}:${ref}`);
+            }
         }
         // Otherwise no destination ref
         else {
-            return [commit];
+            result.push(commit);
         }
     }
     // Unqualified ref, check for a matching branch or tag
     else if (!upperRef.startsWith('REFS/')) {
-        return [
-            `+refs/heads/${ref}*:refs/remotes/origin/${ref}*`,
-            `+refs/tags/${ref}*:refs/tags/${ref}*`
-        ];
+        result.push(`+refs/heads/${ref}*:refs/remotes/origin/${ref}*`);
+        if (!fetchTags) {
+            result.push(`+refs/tags/${ref}*:refs/tags/${ref}*`);
+        }
     }
     // refs/heads/
     else if (upperRef.startsWith('REFS/HEADS/')) {
         const branch = ref.substring('refs/heads/'.length);
-        return [`+${ref}:refs/remotes/origin/${branch}`];
+        result.push(`+${ref}:refs/remotes/origin/${branch}`);
     }
     // refs/pull/
     else if (upperRef.startsWith('REFS/PULL/')) {
         const branch = ref.substring('refs/pull/'.length);
-        return [`+${ref}:refs/remotes/pull/${branch}`];
+        result.push(`+${ref}:refs/remotes/pull/${branch}`);
     }
     // refs/tags/
-    else {
-        return [`+${ref}:${ref}`];
+    else if (upperRef.startsWith('REFS/TAGS/')) {
+        if (!fetchTags) {
+            result.push(`+${ref}:${ref}`);
+        }
     }
+    // Other refs
+    else {
+        result.push(`+${ref}:${ref}`);
+    }
+    return result;
 }
 /**
  * Tests whether the initial fetch created the ref at the expected commit
@@ -2366,7 +2392,9 @@ function testRef(git, ref, commit) {
         // refs/tags/
         else if (upperRef.startsWith('REFS/TAGS/')) {
             const tagName = ref.substring('refs/tags/'.length);
-            return ((yield git.tagExists(tagName)) && commit === (yield git.revParse(ref)));
+            // Use ^{commit} to dereference annotated tags to their underlying commit
+            return ((yield git.tagExists(tagName)) &&
+                commit === (yield git.revParse(`${ref}^{commit}`)));
         }
         // Unexpected
         else {

@@ -37,7 +37,6 @@ export interface IGitCommandManager {
     options: {
       filter?: string
       fetchDepth?: number
-      fetchTags?: boolean
       showProgress?: boolean
     }
   ): Promise<void>
@@ -280,14 +279,13 @@ class GitCommandManager {
     options: {
       filter?: string
       fetchDepth?: number
-      fetchTags?: boolean
       showProgress?: boolean
     }
   ): Promise<void> {
     const args = ['-c', 'protocol.version=2', 'fetch']
-    if (!refSpec.some(x => x === refHelper.tagsRefSpec) && !options.fetchTags) {
-      args.push('--no-tags')
-    }
+    // Always use --no-tags for explicit control over tag fetching
+    // Tags are fetched explicitly via refspec when needed
+    args.push('--no-tags')
 
     args.push('--prune', '--no-recurse-submodules')
     if (options.showProgress) {
