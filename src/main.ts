@@ -30,6 +30,12 @@ async function run(): Promise<void> {
 }
 
 async function cleanup(): Promise<void> {
+  const sourceSettings = await inputHelper.getInputs()
+
+  if (sourceSettings.skipCleanup) {
+    return
+  }
+
   try {
     await gitSourceProvider.cleanup(stateHelper.RepositoryPath)
   } catch (error) {
