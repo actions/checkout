@@ -78,6 +78,12 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   core.debug(`ref = '${result.ref}'`)
   core.debug(`commit = '${result.commit}'`)
 
+  // Default branch checkout
+  result.defaultBranchCheckout =
+    (core.getInput('default-branch-checkout') || 'false').toUpperCase() ===
+    'TRUE'
+  core.debug(`default-branch-checkout = '${result.defaultBranchCheckout}'`)
+
   // Clean
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)

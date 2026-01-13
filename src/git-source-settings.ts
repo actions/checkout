@@ -20,6 +20,11 @@ export interface IGitSourceSettings {
   ref: string
 
   /**
+   * Indicates whether to checkout the default repository branch if the requested ref does not exist
+   */
+  defaultBranchCheckout: boolean
+
+  /**
    * The commit to checkout
    */
   commit: string
