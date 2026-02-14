@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v6
 
       - name: Set Node.js 24.x
         uses: actions/setup-node@v4

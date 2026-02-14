@@ -108,7 +108,7 @@ describe('Test fetchDepth and fetchTags options', () => {
     jest.restoreAllMocks()
   })
 
-  it('should call execGit with the correct arguments when fetchDepth is 0 and fetchTags is true', async () => {
+  it('should call execGit with the correct arguments when fetchDepth is 0', async () => {
     jest.spyOn(exec, 'exec').mockImplementation(mockExec)
     const workingDirectory = 'test'
     const lfs = false
@@ -122,45 +122,7 @@ describe('Test fetchDepth and fetchTags options', () => {
     const refSpec = ['refspec1', 'refspec2']
     const options = {
       filter: 'filterValue',
-      fetchDepth: 0,
-      fetchTags: true
-    }
-
-    await git.fetch(refSpec, options)
-
-    expect(mockExec).toHaveBeenCalledWith(
-      expect.any(String),
-      [
-        '-c',
-        'protocol.version=2',
-        'fetch',
-        '--prune',
-        '--no-recurse-submodules',
-        '--filter=filterValue',
-        'origin',
-        'refspec1',
-        'refspec2'
-      ],
-      expect.any(Object)
-    )
-  })
-
-  it('should call execGit with the correct arguments when fetchDepth is 0 and fetchTags is false', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
-
-    const workingDirectory = 'test'
-    const lfs = false
-    const doSparseCheckout = false
-    git = await commandManager.createCommandManager(
-      workingDirectory,
-      lfs,
-      doSparseCheckout
-    )
-    const refSpec = ['refspec1', 'refspec2']
-    const options = {
-      filter: 'filterValue',
-      fetchDepth: 0,
-      fetchTags: false
+      fetchDepth: 0
     }
 
     await git.fetch(refSpec, options)
@@ -183,7 +145,45 @@ describe('Test fetchDepth and fetchTags options', () => {
     )
   })
 
-  it('should call execGit with the correct arguments when fetchDepth is 1 and fetchTags is false', async () => {
+  it('should call execGit with the correct arguments when fetchDepth is 0 and refSpec includes tags', async () => {
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+    const refSpec = ['refspec1', 'refspec2', '+refs/tags/*:refs/tags/*']
+    const options = {
+      filter: 'filterValue',
+      fetchDepth: 0
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--filter=filterValue',
+        'origin',
+        'refspec1',
+        'refspec2',
+        '+refs/tags/*:refs/tags/*'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit with the correct arguments when fetchDepth is 1', async () => {
     jest.spyOn(exec, 'exec').mockImplementation(mockExec)
 
     const workingDirectory = 'test'
@@ -197,8 +197,7 @@ describe('Test fetchDepth and fetchTags options', () => {
     const refSpec = ['refspec1', 'refspec2']
     const options = {
       filter: 'filterValue',
-      fetchDepth: 1,
-      fetchTags: false
+      fetchDepth: 1
     }
 
     await git.fetch(refSpec, options)
@@ -222,7 +221,7 @@ describe('Test fetchDepth and fetchTags options', () => {
     )
   })
 
-  it('should call execGit with the correct arguments when fetchDepth is 1 and fetchTags is true', async () => {
+  it('should call execGit with the correct arguments when fetchDepth is 1 and refSpec includes tags', async () => {
     jest.spyOn(exec, 'exec').mockImplementation(mockExec)
 
     const workingDirectory = 'test'
@@ -233,11 +232,10 @@ describe('Test fetchDepth and fetchTags options', () => {
       lfs,
       doSparseCheckout
     )
-    const refSpec = ['refspec1', 'refspec2']
+    const refSpec = ['refspec1', 'refspec2', '+refs/tags/*:refs/tags/*']
     const options = {
       filter: 'filterValue',
-      fetchDepth: 1,
-      fetchTags: true
+      fetchDepth: 1
     }
 
     await git.fetch(refSpec, options)
@@ -248,13 +246,15 @@ describe('Test fetchDepth and fetchTags options', () => {
         '-c',
         'protocol.version=2',
         'fetch',
+        '--no-tags',
         '--prune',
         '--no-recurse-submodules',
         '--filter=filterValue',
         '--depth=1',
         'origin',
         'refspec1',
-        'refspec2'
+        'refspec2',
+        '+refs/tags/*:refs/tags/*'
       ],
       expect.any(Object)
     )
@@ -338,7 +338,7 @@ describe('Test fetchDepth and fetchTags options', () => {
     )
   })
 
-  it('should call execGit with the correct arguments when fetchTags is true and showProgress is true', async () => {
+  it('should call execGit with the correct arguments when showProgress is true and refSpec includes tags', async () => {
     jest.spyOn(exec, 'exec').mockImplementation(mockExec)
 
     const workingDirectory = 'test'
@@ -349,10 +349,9 @@ describe('Test fetchDepth and fetchTags options', () => {
       lfs,
       doSparseCheckout
     )
-    const refSpec = ['refspec1', 'refspec2']
+    const refSpec = ['refspec1', 'refspec2', '+refs/tags/*:refs/tags/*']
     const options = {
       filter: 'filterValue',
-      fetchTags: true,
       showProgress: true
     }
 
@@ -364,15 +363,134 @@ describe('Test fetchDepth and fetchTags options', () => {
         '-c',
         'protocol.version=2',
         'fetch',
+        '--no-tags',
         '--prune',
         '--no-recurse-submodules',
         '--progress',
         '--filter=filterValue',
         'origin',
         'refspec1',
-        'refspec2'
+        'refspec2',
+        '+refs/tags/*:refs/tags/*'
       ],
       expect.any(Object)
+    )
+  })
+})
+
+describe('git user-agent with orchestration ID', () => {
+  beforeEach(async () => {
+    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
+    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    // Clean up environment variable to prevent test pollution
+    delete process.env['ACTIONS_ORCHESTRATION_ID']
+  })
+
+  it('should include orchestration ID in user-agent when ACTIONS_ORCHESTRATION_ID is set', async () => {
+    const orchId = 'test-orch-id-12345'
+    process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
+
+    let capturedEnv: any = null
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+      // Capture env on any command
+      capturedEnv = options.env
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    // Call a git command to trigger env capture after user-agent is set
+    await git.init()
+
+    // Verify the user agent includes the orchestration ID
+    expect(git).toBeDefined()
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv['GIT_HTTP_USER_AGENT']).toBe(
+      `git/2.18 (github-actions-checkout) actions_orchestration_id/${orchId}`
+    )
+  })
+
+  it('should sanitize invalid characters in orchestration ID', async () => {
+    const orchId = 'test (with) special/chars'
+    process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
+
+    let capturedEnv: any = null
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+      // Capture env on any command
+      capturedEnv = options.env
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    // Call a git command to trigger env capture after user-agent is set
+    await git.init()
+
+    // Verify the user agent has sanitized orchestration ID (spaces, parentheses, slash replaced)
+    expect(git).toBeDefined()
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv['GIT_HTTP_USER_AGENT']).toBe(
+      'git/2.18 (github-actions-checkout) actions_orchestration_id/test__with__special_chars'
+    )
+  })
+
+  it('should not modify user-agent when ACTIONS_ORCHESTRATION_ID is not set', async () => {
+    delete process.env['ACTIONS_ORCHESTRATION_ID']
+
+    let capturedEnv: any = null
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+      // Capture env on any command
+      capturedEnv = options.env
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    // Call a git command to trigger env capture after user-agent is set
+    await git.init()
+
+    // Verify the user agent does NOT contain orchestration ID
+    expect(git).toBeDefined()
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv['GIT_HTTP_USER_AGENT']).toBe(
+      'git/2.18 (github-actions-checkout)'
     )
   })
 })

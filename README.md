@@ -1,6 +1,14 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout V5
+# Checkout v6
+
+## What's new
+
+- Improved credential security: `persist-credentials` now stores credentials in a separate file under `$RUNNER_TEMP` instead of directly in `.git/config`
+- No workflow changes required — `git fetch`, `git push`, etc. continue to work automatically
+- Running authenticated git commands from a [Docker container action](https://docs.github.com/actions/sharing-automations/creating-actions/creating-a-docker-container-action) requires Actions Runner [v2.329.0](https://github.com/actions/runner/releases/tag/v2.329.0) or later
+
+# Checkout v5
 
 ## What's new
 
@@ -8,7 +16,7 @@
   - This requires a minimum Actions Runner version of [v2.327.1](https://github.com/actions/runner/releases/tag/v2.327.1) to run.
 
 
-# Checkout V4
+# Checkout v4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -44,7 +52,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -183,7 +191,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     sparse-checkout: .
 ```
@@ -191,7 +199,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files and `.github` and `src` folder
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     sparse-checkout: |
       .github
@@ -201,7 +209,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only a single file
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     sparse-checkout: |
       README.md
@@ -211,7 +219,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     fetch-depth: 0
 ```
@@ -219,7 +227,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     ref: my-branch
 ```
@@ -227,7 +235,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -237,12 +245,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v5
+  uses: actions/checkout@v6
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v5
+  uses: actions/checkout@v6
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -253,10 +261,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v5
+  uses: actions/checkout@v6
 
 - name: Checkout tools repo
-  uses: actions/checkout@v5
+  uses: actions/checkout@v6
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -267,12 +275,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v5
+  uses: actions/checkout@v6
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v5
+  uses: actions/checkout@v6
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -285,7 +293,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v6
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -301,7 +309,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 ```
 
 ## Push a commit using the built-in token
@@ -312,7 +320,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
@@ -334,7 +342,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
       - run: |

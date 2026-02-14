@@ -26,7 +26,7 @@ jobs:
  
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Use `docker/login-action` to log in to GHCR.io. 
       # Once published, the packages are scoped to the account defined here.
