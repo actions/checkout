@@ -259,6 +259,8 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ## Checkout multiple repos (nested)
 
+Note: the checkout order must be primary _then_ secondary repo checkout.
+
 ```yaml
 - name: Checkout
   uses: actions/checkout@v6
@@ -272,6 +274,8 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 > - If your secondary repository is private or internal you will need to add the option noted in [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
 
 ## Checkout multiple repos (private)
+
+Note: the checkout order must be primary _then_ secondary repo checkout.
 
 ```yaml
 - name: Checkout
