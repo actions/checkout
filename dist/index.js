@@ -1310,7 +1310,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 core.startGroup('Removing previously created refs, to avoid conflicts');
                 // Checkout detached HEAD
                 if (!(yield git.isDetached())) {
-                    yield git.checkoutDetach();
+                    yield git.checkoutDetach(false);
                 }
                 // Remove all refs/heads/*
                 let branches = yield git.branchList(false);

@@ -49,7 +49,7 @@ export async function prepareExistingDirectory(
       core.startGroup('Removing previously created refs, to avoid conflicts')
       // Checkout detached HEAD
       if (!(await git.isDetached())) {
-        await git.checkoutDetach()
+        await git.checkoutDetach(false)
       }
 
       // Remove all refs/heads/*

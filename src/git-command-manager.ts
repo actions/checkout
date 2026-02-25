@@ -22,8 +22,8 @@ export interface IGitCommandManager {
   disableSparseCheckout(): Promise<void>
   sparseCheckout(sparseCheckout: string[]): Promise<void>
   sparseCheckoutNonConeMode(sparseCheckout: string[]): Promise<void>
-  checkout(ref: string, startPoint: string, showProgress?: boolean): Promise<void>
-  checkoutDetach(showProgress?: boolean): Promise<void>
+  checkout(ref: string, startPoint: string, showProgress: boolean): Promise<void>
+  checkoutDetach(showProgress: boolean): Promise<void>
   config(
     configKey: string,
     configValue: string,
@@ -220,7 +220,7 @@ class GitCommandManager {
     )
   }
 
-  async checkout(ref: string, startPoint: string, showProgress?: boolean): Promise<void> {
+  async checkout(ref: string, startPoint: string, showProgress: boolean): Promise<void> {
     const args = ['checkout', showProgress ? '--progress' : '--quiet', '--force']
     if (startPoint) {
       args.push('-B', ref, startPoint)
@@ -231,7 +231,7 @@ class GitCommandManager {
     await this.execGit(args)
   }
 
-  async checkoutDetach(showProgress?: boolean): Promise<void> {
+  async checkoutDetach(showProgress: boolean): Promise<void> {
     const args = ['checkout', '--detach', showProgress ? '--progress' : '--quiet']
     await this.execGit(args)
   }
