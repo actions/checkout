@@ -7,16 +7,16 @@ let git: IGitCommandManager
 
 describe('ref-helper tests', () => {
   beforeEach(() => {
-    git = ({} as unknown) as IGitCommandManager
+    git = {} as unknown as IGitCommandManager
   })
 
   it('getCheckoutInfo requires git', async () => {
-    const git = (null as unknown) as IGitCommandManager
+    const git = null as unknown as IGitCommandManager
     try {
       await refHelper.getCheckoutInfo(git, 'refs/heads/my/branch', commit)
       throw new Error('Should not reach here')
     } catch (err) {
-      expect(err.message).toBe('Arg git cannot be empty')
+      expect((err as any)?.message).toBe('Arg git cannot be empty')
     }
   })
 
@@ -25,7 +25,9 @@ describe('ref-helper tests', () => {
       await refHelper.getCheckoutInfo(git, '', '')
       throw new Error('Should not reach here')
     } catch (err) {
-      expect(err.message).toBe('Args ref and commit cannot both be empty')
+      expect((err as any)?.message).toBe(
+        'Args ref and commit cannot both be empty'
+      )
     }
   })
 
@@ -62,6 +64,26 @@ describe('ref-helper tests', () => {
       commit
     )
     expect(checkoutInfo.ref).toBe('refs/tags/my-tag')
+    expect(checkoutInfo.startPoint).toBeFalsy()
+  })
+
+  it('getCheckoutInfo refs/', async () => {
+    const checkoutInfo = await refHelper.getCheckoutInfo(
+      git,
+      'refs/gh/queue/main/pr-123',
+      commit
+    )
+    expect(checkoutInfo.ref).toBe(commit)
+    expect(checkoutInfo.startPoint).toBeFalsy()
+  })
+
+  it('getCheckoutInfo refs/ without commit', async () => {
+    const checkoutInfo = await refHelper.getCheckoutInfo(
+      git,
+      'refs/non-standard-ref',
+      ''
+    )
+    expect(checkoutInfo.ref).toBe('refs/non-standard-ref')
     expect(checkoutInfo.startPoint).toBeFalsy()
   })
 
@@ -102,7 +124,7 @@ describe('ref-helper tests', () => {
       await refHelper.getCheckoutInfo(git, 'my-ref', '')
       throw new Error('Should not reach here')
     } catch (err) {
-      expect(err.message).toBe(
+      expect((err as any)?.message).toBe(
         "A branch or tag with the name 'my-ref' could not be found"
       )
     }
@@ -130,7 +152,22 @@ describe('ref-helper tests', () => {
   it('getRefSpec sha + refs/tags/', async () => {
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit)
     expect(refSpec.length).toBe(1)
-    expect(refSpec[0]).toBe(`+${commit}:refs/tags/my-tag`)
+    expect(refSpec[0]).toBe(`+refs/tags/my-tag:refs/tags/my-tag`)
+  })
+
+  it('getRefSpec sha + refs/tags/ with fetchTags', async () => {
+    // When fetchTags is true, only include tags wildcard (specific tag is redundant)
+    const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit, true)
+    expect(refSpec.length).toBe(1)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+  })
+
+  it('getRefSpec sha + refs/heads/ with fetchTags', async () => {
+    // When fetchTags is true, include both the branch refspec and tags wildcard
+    const refSpec = refHelper.getRefSpec('refs/heads/my/branch', commit, true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe(`+${commit}:refs/remotes/origin/my/branch`)
   })
 
   it('getRefSpec sha only', async () => {
@@ -144,6 +181,14 @@ describe('ref-helper tests', () => {
     expect(refSpec.length).toBe(2)
     expect(refSpec[0]).toBe('+refs/heads/my-ref*:refs/remotes/origin/my-ref*')
     expect(refSpec[1]).toBe('+refs/tags/my-ref*:refs/tags/my-ref*')
+  })
+
+  it('getRefSpec unqualified ref only with fetchTags', async () => {
+    // When fetchTags is true, skip specific tag pattern since wildcard covers all
+    const refSpec = refHelper.getRefSpec('my-ref', '', true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe('+refs/heads/my-ref*:refs/remotes/origin/my-ref*')
   })
 
   it('getRefSpec refs/heads/ only', async () => {
@@ -164,5 +209,22 @@ describe('ref-helper tests', () => {
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '')
     expect(refSpec.length).toBe(1)
     expect(refSpec[0]).toBe('+refs/tags/my-tag:refs/tags/my-tag')
+  })
+
+  it('getRefSpec refs/tags/ only with fetchTags', async () => {
+    // When fetchTags is true, only include tags wildcard (specific tag is redundant)
+    const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '', true)
+    expect(refSpec.length).toBe(1)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+  })
+
+  it('getRefSpec refs/heads/ only with fetchTags', async () => {
+    // When fetchTags is true, include both the branch refspec and tags wildcard
+    const refSpec = refHelper.getRefSpec('refs/heads/my/branch', '', true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe(
+      '+refs/heads/my/branch:refs/remotes/origin/my/branch'
+    )
   })
 })
