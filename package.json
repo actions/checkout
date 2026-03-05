@@ -38,6 +38,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^24.1.0",
+    "@types/proper-lockfile": "^4.1.4",
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^7.9.0",
     "@typescript-eslint/parser": "^7.9.0",
@@ -49,6 +50,7 @@
     "jest-circus": "^29.7.0",
     "js-yaml": "^4.1.0",
     "prettier": "^3.3.3",
+    "proper-lockfile": "^4.1.2",
     "ts-jest": "^29.2.5",
     "typescript": "^5.5.4"
   }

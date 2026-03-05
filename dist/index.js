@@ -303,6 +303,13 @@ class GitAuthHelper {
             yield this.removeToken();
         });
     }
+    removeGlobalAuth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            core.debug('Removing global auth entries');
+            yield this.git.tryConfigUnset('include.path', true);
+            yield this.git.tryConfigUnset(this.insteadOfKey, true);
+        });
+    }
     removeGlobalConfig() {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
@@ -607,6 +614,143 @@ class GitAuthHelper {
 
 /***/ }),
 
+/***/ 4209:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GitCacheHelper = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const path = __importStar(__nccwpck_require__(1017));
+const fs = __importStar(__nccwpck_require__(7147));
+const crypto = __importStar(__nccwpck_require__(6113));
+const lockfile = __importStar(__nccwpck_require__(4582));
+class GitCacheHelper {
+    constructor(referenceCache) {
+        this.referenceCache = referenceCache;
+    }
+    /**
+     * Prepares the reference cache for a given repository URL.
+     * If the cache does not exist, it performs a bare clone.
+     * If it exists, it performs a fetch to update it.
+     * Returns the absolute path to the bare cache repository.
+     */
+    setupCache(git, repositoryUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const cacheDirName = this.generateCacheDirName(repositoryUrl);
+            const cachePath = path.join(this.referenceCache, cacheDirName);
+            // Ensure the base cache directory exists before we try to lock inside it
+            if (!fs.existsSync(this.referenceCache)) {
+                yield fs.promises.mkdir(this.referenceCache, { recursive: true });
+            }
+            // We use a dedicated lock dir specifically for this repository's cache
+            // since we cannot place a lock *inside* a repository that might not exist yet
+            const lockfilePath = `${cachePath}.lock`;
+            // Ensure the file we are locking exists
+            if (!fs.existsSync(lockfilePath)) {
+                yield fs.promises.writeFile(lockfilePath, '');
+            }
+            core.debug(`Acquiring lock for ${repositoryUrl} at ${lockfilePath}`);
+            let releaseLock;
+            try {
+                // proper-lockfile creates a ".lock" directory next to the target file.
+                // We configure it to wait up to 10 minutes (600,000 ms) for another process to finish.
+                // E.g. cloning a very large monorepo might take minutes.
+                releaseLock = yield lockfile.lock(lockfilePath, {
+                    retries: {
+                        retries: 60, // try 60 times
+                        factor: 1, // linear backoff
+                        minTimeout: 10000, // wait 10 seconds between tries
+                        maxTimeout: 10000, // (total max wait time: 600s = 10m)
+                        randomize: true
+                    }
+                });
+                core.debug(`Lock acquired.`);
+            }
+            catch (err) {
+                throw new Error(`Failed to acquire lock for repository cache ${repositoryUrl}: ${err}`);
+            }
+            try {
+                if (fs.existsSync(path.join(cachePath, 'objects'))) {
+                    core.info(`Reference cache for ${repositoryUrl} exists. Updating...`);
+                    const args = ['-C', cachePath, 'fetch', '--force', '--prune', '--tags', 'origin', '+refs/heads/*:refs/heads/*'];
+                    yield git.execGit(args);
+                }
+                else {
+                    core.info(`Reference cache for ${repositoryUrl} does not exist. Cloning --bare...`);
+                    // Use a temporary clone pattern to prevent corrupted repos if process is killed mid-clone
+                    const tmpPath = `${cachePath}.tmp.${crypto.randomUUID()}`;
+                    try {
+                        const args = ['-C', this.referenceCache, 'clone', '--bare', repositoryUrl, tmpPath];
+                        yield git.execGit(args);
+                        if (fs.existsSync(cachePath)) {
+                            // In rare cases where it somehow exists but objects/ didn't, clean it up
+                            yield fs.promises.rm(cachePath, { recursive: true, force: true });
+                        }
+                        yield fs.promises.rename(tmpPath, cachePath);
+                    }
+                    catch (cloneErr) {
+                        // Cleanup partial clone if an error occurred
+                        yield fs.promises.rm(tmpPath, { recursive: true, force: true }).catch(() => { });
+                        throw cloneErr;
+                    }
+                }
+            }
+            finally {
+                yield releaseLock();
+            }
+            return cachePath;
+        });
+    }
+    /**
+     * Generates a directory name for the cache based on the URL.
+     * Replaces non-alphanumeric characters with underscores
+     * and appends a short SHA256 hash of the original URL.
+     */
+    generateCacheDirName(url) {
+        const cleanUrl = url.replace(/[^a-zA-Z0-9]/g, '_');
+        const hash = crypto.createHash('sha256').update(url).digest('hex').substring(0, 8);
+        return `${cleanUrl}_${hash}.git`;
+    }
+}
+exports.GitCacheHelper = GitCacheHelper;
+
+
+/***/ }),
+
 /***/ 738:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -645,7 +789,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
+exports.GitOutput = exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
 exports.createCommandManager = createCommandManager;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
@@ -661,6 +805,13 @@ const git_version_1 = __nccwpck_require__(3142);
 // sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
 exports.MinimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.28');
+class GitOutput {
+    constructor() {
+        this.stdout = '';
+        this.exitCode = 0;
+    }
+}
+exports.GitOutput = GitOutput;
 function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
@@ -933,6 +1084,25 @@ class GitCommandManager {
     remoteAdd(remoteName, remoteUrl) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.execGit(['remote', 'add', remoteName, remoteUrl]);
+        });
+    }
+    referenceAdd(referenceObjects) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const alternatesPath = path.join(this.workingDirectory, '.git', 'objects', 'info', 'alternates');
+            core.info(`Configuring git alternate to reference objects at ${referenceObjects}`);
+            const infoDir = path.dirname(alternatesPath);
+            if (!fs.existsSync(infoDir)) {
+                yield fs.promises.mkdir(infoDir, { recursive: true });
+            }
+            let existing = '';
+            if (fs.existsSync(alternatesPath)) {
+                existing = (yield fs.promises.readFile(alternatesPath, 'utf8')).trim();
+            }
+            const lines = existing ? existing.split('\n') : [];
+            if (!lines.includes(referenceObjects)) {
+                lines.push(referenceObjects);
+                yield fs.promises.writeFile(alternatesPath, lines.join('\n') + '\n');
+            }
         });
     }
     removeEnvironmentVariable(name) {
@@ -1221,12 +1391,6 @@ class GitCommandManager {
         });
     }
 }
-class GitOutput {
-    constructor() {
-        this.stdout = '';
-        this.exitCode = 0;
-    }
-}
 
 
 /***/ }),
@@ -1429,6 +1593,135 @@ const refHelper = __importStar(__nccwpck_require__(8601));
 const stateHelper = __importStar(__nccwpck_require__(4866));
 const urlHelper = __importStar(__nccwpck_require__(9437));
 const git_command_manager_1 = __nccwpck_require__(738);
+const git_cache_helper_1 = __nccwpck_require__(4209);
+const fs = __importStar(__nccwpck_require__(7147));
+function iterativeSubmoduleUpdate(git, cacheHelper, repositoryPath, fetchDepth, nestedSubmodules) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const gitmodulesPath = path.join(repositoryPath, '.gitmodules');
+        if (!fs.existsSync(gitmodulesPath)) {
+            return;
+        }
+        const submodules = new Map();
+        // Get all submodule config keys
+        try {
+            const output = yield git.execGit([
+                '-C', repositoryPath,
+                'config', '--file', gitmodulesPath, '--get-regexp', 'submodule\\..*'
+            ], true, true);
+            const lines = output.stdout.split('\n').filter(l => l.trim().length > 0);
+            for (const line of lines) {
+                const match = line.match(/^submodule\.(.+?)\.(path|url)\s+(.*)$/);
+                if (match) {
+                    const [, name, key, value] = match;
+                    if (!submodules.has(name)) {
+                        submodules.set(name, { name, path: '', url: '' });
+                    }
+                    const info = submodules.get(name);
+                    if (key === 'path')
+                        info.path = value;
+                    if (key === 'url')
+                        info.url = value;
+                }
+            }
+        }
+        catch (err) {
+            core.warning(`Failed to read .gitmodules: ${err}`);
+            return;
+        }
+        for (const info of submodules.values()) {
+            if (!info.path || !info.url)
+                continue;
+            core.info(`Processing submodule ${info.name} at ${info.path}`);
+            // Resolve relative URLs or valid URLs
+            let subUrl = info.url;
+            if (subUrl.startsWith('../') || subUrl.startsWith('./')) {
+                // In checkout action, relative URLs are handled automatically by git.
+                // But for our bare cache clone, we need an absolute URL.
+                let originUrl = '';
+                try {
+                    const originOut = yield git.execGit(['-C', repositoryPath, 'remote', 'get-url', 'origin'], true, true);
+                    if (originOut.exitCode === 0) {
+                        originUrl = originOut.stdout.trim();
+                    }
+                    if (originUrl) {
+                        try {
+                            if (originUrl.match(/^https?:\/\//)) {
+                                // Using Node's URL class to resolve relative paths for HTTP(s)
+                                const parsedOrigin = new URL(originUrl.replace(/\.git$/, ''));
+                                const resolvedUrl = new URL(subUrl, parsedOrigin.href + '/');
+                                subUrl = resolvedUrl.href;
+                            }
+                            else {
+                                // Fallback for SSH URLs which new URL() cannot parse (e.g. git@github.com:org/repo)
+                                let originParts = originUrl.replace(/\.git$/, '').split('/');
+                                originParts.pop(); // remove current repo
+                                // Handle multiple ../
+                                let subTarget = subUrl;
+                                while (subTarget.startsWith('../')) {
+                                    if (originParts.length === 0)
+                                        break; // Can't go higher
+                                    originParts.pop();
+                                    subTarget = subTarget.substring(3);
+                                }
+                                if (subTarget.startsWith('./')) {
+                                    subTarget = subTarget.substring(2);
+                                }
+                                if (originParts.length > 0) {
+                                    subUrl = originParts.join('/') + '/' + subTarget;
+                                }
+                            }
+                        }
+                        catch (_a) {
+                            // Fallback does not work
+                        }
+                    }
+                }
+                catch (_b) {
+                    // ignore
+                }
+            }
+            if (!subUrl || subUrl.startsWith('../') || subUrl.startsWith('./')) {
+                core.warning(`Could not resolve absolute URL for submodule ${info.name}. Falling back to standard clone.`);
+                yield invokeStandardSubmoduleUpdate(git, repositoryPath, fetchDepth, info.path);
+                continue;
+            }
+            try {
+                // Prepare cache
+                const cachePath = yield cacheHelper.setupCache(git, subUrl);
+                // Submodule update for this specific one
+                const args = ['-C', repositoryPath, '-c', 'protocol.version=2', 'submodule', 'update', '--init', '--force'];
+                if (fetchDepth > 0) {
+                    args.push(`--depth=${fetchDepth}`);
+                }
+                args.push('--reference', cachePath);
+                args.push(info.path);
+                const output = yield git.execGit(args, true);
+                if (output.exitCode !== 0) {
+                    throw new Error(`Submodule update failed with exit code ${output.exitCode}`);
+                }
+            }
+            catch (err) {
+                core.warning(`Reference cache failed for submodule ${info.name} (${err}). Falling back to standard clone...`);
+                yield invokeStandardSubmoduleUpdate(git, repositoryPath, fetchDepth, info.path);
+            }
+            // Recursive update inside the submodule
+            if (nestedSubmodules) {
+                const subRepoPath = path.join(repositoryPath, info.path);
+                yield iterativeSubmoduleUpdate(git, cacheHelper, subRepoPath, fetchDepth, nestedSubmodules);
+            }
+        }
+    });
+}
+function invokeStandardSubmoduleUpdate(git, repositoryPath, fetchDepth, submodulePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const args = ['-C', repositoryPath, '-c', 'protocol.version=2', 'submodule', 'update', '--init', '--force'];
+        if (fetchDepth > 0) {
+            args.push(`--depth=${fetchDepth}`);
+        }
+        args.push(submodulePath);
+        yield git.execGit(args);
+    });
+}
 function getSource(settings) {
     return __awaiter(this, void 0, void 0, function* () {
         // Repository URL
@@ -1484,26 +1777,54 @@ function getSource(settings) {
             }
             // Save state for POST action
             stateHelper.setRepositoryPath(settings.repositoryPath);
+            // If we didn't initialize it above, do it now
+            if (!authHelper) {
+                authHelper = gitAuthHelper.createAuthHelper(git, settings);
+            }
+            // Check if we need global auth setup early for reference cache
+            // Global auth does not require a local .git directory
+            if (settings.referenceCache) {
+                core.startGroup('Setting up global auth for reference cache');
+                yield authHelper.configureGlobalAuth();
+                core.endGroup();
+            }
             // Initialize the repository
             if (!fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))) {
                 core.startGroup('Initializing the repository');
                 yield git.init();
                 yield git.remoteAdd('origin', repositoryUrl);
                 core.endGroup();
+                // Setup reference cache if requested
+                if (settings.referenceCache) {
+                    core.startGroup('Setting up reference repository cache');
+                    const cacheHelper = new git_cache_helper_1.GitCacheHelper(settings.referenceCache);
+                    const cachePath = yield cacheHelper.setupCache(git, repositoryUrl);
+                    const cacheObjects = path.join(cachePath, 'objects');
+                    if (fsHelper.directoryExistsSync(cacheObjects, false)) {
+                        yield git.referenceAdd(cacheObjects);
+                    }
+                    else {
+                        core.warning(`Reference repository cache objects directory ${cacheObjects} does not exist`);
+                    }
+                    core.endGroup();
+                }
             }
+            // Remove global auth if it was set for reference cache,
+            // to avoid duplicate AUTHORIZATION headers during fetch
+            if (settings.referenceCache) {
+                core.startGroup('Removing global auth after reference cache setup');
+                yield authHelper.removeGlobalAuth();
+                core.endGroup();
+            }
+            // Configure auth (must happen after git init so .git exists)
+            core.startGroup('Setting up auth');
+            yield authHelper.configureAuth();
+            core.endGroup();
             // Disable automatic garbage collection
             core.startGroup('Disabling automatic garbage collection');
             if (!(yield git.tryDisableAutomaticGarbageCollection())) {
                 core.warning(`Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`);
             }
-            core.endGroup();
-            // If we didn't initialize it above, do it now
-            if (!authHelper) {
-                authHelper = gitAuthHelper.createAuthHelper(git, settings);
-            }
-            // Configure auth
-            core.startGroup('Setting up auth');
-            yield authHelper.configureAuth();
             core.endGroup();
             // Determine the default branch
             if (!settings.ref && !settings.commit) {
@@ -1604,7 +1925,14 @@ function getSource(settings) {
                 // Checkout submodules
                 core.startGroup('Fetching submodules');
                 yield git.submoduleSync(settings.nestedSubmodules);
-                yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                if (settings.referenceCache) {
+                    core.info('Iterative submodule update using reference cache');
+                    const cacheHelper = new git_cache_helper_1.GitCacheHelper(settings.referenceCache);
+                    yield iterativeSubmoduleUpdate(git, cacheHelper, settings.repositoryPath, settings.fetchDepth, settings.nestedSubmodules);
+                }
+                else {
+                    yield git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+                }
                 yield git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
                 core.endGroup();
                 // Persist credentials
@@ -2095,6 +2423,9 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Reference Cache
+        result.referenceCache = core.getInput('reference-cache');
+        core.debug(`Reference Cache = ${result.referenceCache}`);
         return result;
     });
 }
@@ -11698,6 +12029,979 @@ exports.Deprecation = Deprecation;
 
 /***/ }),
 
+/***/ 7356:
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = clone
+
+var getPrototypeOf = Object.getPrototypeOf || function (obj) {
+  return obj.__proto__
+}
+
+function clone (obj) {
+  if (obj === null || typeof obj !== 'object')
+    return obj
+
+  if (obj instanceof Object)
+    var copy = { __proto__: getPrototypeOf(obj) }
+  else
+    var copy = Object.create(null)
+
+  Object.getOwnPropertyNames(obj).forEach(function (key) {
+    Object.defineProperty(copy, key, Object.getOwnPropertyDescriptor(obj, key))
+  })
+
+  return copy
+}
+
+
+/***/ }),
+
+/***/ 7758:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var fs = __nccwpck_require__(7147)
+var polyfills = __nccwpck_require__(263)
+var legacy = __nccwpck_require__(3086)
+var clone = __nccwpck_require__(7356)
+
+var util = __nccwpck_require__(3837)
+
+/* istanbul ignore next - node 0.x polyfill */
+var gracefulQueue
+var previousSymbol
+
+/* istanbul ignore else - node 0.x polyfill */
+if (typeof Symbol === 'function' && typeof Symbol.for === 'function') {
+  gracefulQueue = Symbol.for('graceful-fs.queue')
+  // This is used in testing by future versions
+  previousSymbol = Symbol.for('graceful-fs.previous')
+} else {
+  gracefulQueue = '___graceful-fs.queue'
+  previousSymbol = '___graceful-fs.previous'
+}
+
+function noop () {}
+
+function publishQueue(context, queue) {
+  Object.defineProperty(context, gracefulQueue, {
+    get: function() {
+      return queue
+    }
+  })
+}
+
+var debug = noop
+if (util.debuglog)
+  debug = util.debuglog('gfs4')
+else if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || ''))
+  debug = function() {
+    var m = util.format.apply(util, arguments)
+    m = 'GFS4: ' + m.split(/\n/).join('\nGFS4: ')
+    console.error(m)
+  }
+
+// Once time initialization
+if (!fs[gracefulQueue]) {
+  // This queue can be shared by multiple loaded instances
+  var queue = global[gracefulQueue] || []
+  publishQueue(fs, queue)
+
+  // Patch fs.close/closeSync to shared queue version, because we need
+  // to retry() whenever a close happens *anywhere* in the program.
+  // This is essential when multiple graceful-fs instances are
+  // in play at the same time.
+  fs.close = (function (fs$close) {
+    function close (fd, cb) {
+      return fs$close.call(fs, fd, function (err) {
+        // This function uses the graceful-fs shared queue
+        if (!err) {
+          resetQueue()
+        }
+
+        if (typeof cb === 'function')
+          cb.apply(this, arguments)
+      })
+    }
+
+    Object.defineProperty(close, previousSymbol, {
+      value: fs$close
+    })
+    return close
+  })(fs.close)
+
+  fs.closeSync = (function (fs$closeSync) {
+    function closeSync (fd) {
+      // This function uses the graceful-fs shared queue
+      fs$closeSync.apply(fs, arguments)
+      resetQueue()
+    }
+
+    Object.defineProperty(closeSync, previousSymbol, {
+      value: fs$closeSync
+    })
+    return closeSync
+  })(fs.closeSync)
+
+  if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || '')) {
+    process.on('exit', function() {
+      debug(fs[gracefulQueue])
+      __nccwpck_require__(9491).equal(fs[gracefulQueue].length, 0)
+    })
+  }
+}
+
+if (!global[gracefulQueue]) {
+  publishQueue(global, fs[gracefulQueue]);
+}
+
+module.exports = patch(clone(fs))
+if (process.env.TEST_GRACEFUL_FS_GLOBAL_PATCH && !fs.__patched) {
+    module.exports = patch(fs)
+    fs.__patched = true;
+}
+
+function patch (fs) {
+  // Everything that references the open() function needs to be in here
+  polyfills(fs)
+  fs.gracefulify = patch
+
+  fs.createReadStream = createReadStream
+  fs.createWriteStream = createWriteStream
+  var fs$readFile = fs.readFile
+  fs.readFile = readFile
+  function readFile (path, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    return go$readFile(path, options, cb)
+
+    function go$readFile (path, options, cb, startTime) {
+      return fs$readFile(path, options, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$readFile, [path, options, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$writeFile = fs.writeFile
+  fs.writeFile = writeFile
+  function writeFile (path, data, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    return go$writeFile(path, data, options, cb)
+
+    function go$writeFile (path, data, options, cb, startTime) {
+      return fs$writeFile(path, data, options, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$writeFile, [path, data, options, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$appendFile = fs.appendFile
+  if (fs$appendFile)
+    fs.appendFile = appendFile
+  function appendFile (path, data, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    return go$appendFile(path, data, options, cb)
+
+    function go$appendFile (path, data, options, cb, startTime) {
+      return fs$appendFile(path, data, options, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$appendFile, [path, data, options, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$copyFile = fs.copyFile
+  if (fs$copyFile)
+    fs.copyFile = copyFile
+  function copyFile (src, dest, flags, cb) {
+    if (typeof flags === 'function') {
+      cb = flags
+      flags = 0
+    }
+    return go$copyFile(src, dest, flags, cb)
+
+    function go$copyFile (src, dest, flags, cb, startTime) {
+      return fs$copyFile(src, dest, flags, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$copyFile, [src, dest, flags, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$readdir = fs.readdir
+  fs.readdir = readdir
+  var noReaddirOptionVersions = /^v[0-5]\./
+  function readdir (path, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    var go$readdir = noReaddirOptionVersions.test(process.version)
+      ? function go$readdir (path, options, cb, startTime) {
+        return fs$readdir(path, fs$readdirCallback(
+          path, options, cb, startTime
+        ))
+      }
+      : function go$readdir (path, options, cb, startTime) {
+        return fs$readdir(path, options, fs$readdirCallback(
+          path, options, cb, startTime
+        ))
+      }
+
+    return go$readdir(path, options, cb)
+
+    function fs$readdirCallback (path, options, cb, startTime) {
+      return function (err, files) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([
+            go$readdir,
+            [path, options, cb],
+            err,
+            startTime || Date.now(),
+            Date.now()
+          ])
+        else {
+          if (files && files.sort)
+            files.sort()
+
+          if (typeof cb === 'function')
+            cb.call(this, err, files)
+        }
+      }
+    }
+  }
+
+  if (process.version.substr(0, 4) === 'v0.8') {
+    var legStreams = legacy(fs)
+    ReadStream = legStreams.ReadStream
+    WriteStream = legStreams.WriteStream
+  }
+
+  var fs$ReadStream = fs.ReadStream
+  if (fs$ReadStream) {
+    ReadStream.prototype = Object.create(fs$ReadStream.prototype)
+    ReadStream.prototype.open = ReadStream$open
+  }
+
+  var fs$WriteStream = fs.WriteStream
+  if (fs$WriteStream) {
+    WriteStream.prototype = Object.create(fs$WriteStream.prototype)
+    WriteStream.prototype.open = WriteStream$open
+  }
+
+  Object.defineProperty(fs, 'ReadStream', {
+    get: function () {
+      return ReadStream
+    },
+    set: function (val) {
+      ReadStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+  Object.defineProperty(fs, 'WriteStream', {
+    get: function () {
+      return WriteStream
+    },
+    set: function (val) {
+      WriteStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+
+  // legacy names
+  var FileReadStream = ReadStream
+  Object.defineProperty(fs, 'FileReadStream', {
+    get: function () {
+      return FileReadStream
+    },
+    set: function (val) {
+      FileReadStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+  var FileWriteStream = WriteStream
+  Object.defineProperty(fs, 'FileWriteStream', {
+    get: function () {
+      return FileWriteStream
+    },
+    set: function (val) {
+      FileWriteStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+
+  function ReadStream (path, options) {
+    if (this instanceof ReadStream)
+      return fs$ReadStream.apply(this, arguments), this
+    else
+      return ReadStream.apply(Object.create(ReadStream.prototype), arguments)
+  }
+
+  function ReadStream$open () {
+    var that = this
+    open(that.path, that.flags, that.mode, function (err, fd) {
+      if (err) {
+        if (that.autoClose)
+          that.destroy()
+
+        that.emit('error', err)
+      } else {
+        that.fd = fd
+        that.emit('open', fd)
+        that.read()
+      }
+    })
+  }
+
+  function WriteStream (path, options) {
+    if (this instanceof WriteStream)
+      return fs$WriteStream.apply(this, arguments), this
+    else
+      return WriteStream.apply(Object.create(WriteStream.prototype), arguments)
+  }
+
+  function WriteStream$open () {
+    var that = this
+    open(that.path, that.flags, that.mode, function (err, fd) {
+      if (err) {
+        that.destroy()
+        that.emit('error', err)
+      } else {
+        that.fd = fd
+        that.emit('open', fd)
+      }
+    })
+  }
+
+  function createReadStream (path, options) {
+    return new fs.ReadStream(path, options)
+  }
+
+  function createWriteStream (path, options) {
+    return new fs.WriteStream(path, options)
+  }
+
+  var fs$open = fs.open
+  fs.open = open
+  function open (path, flags, mode, cb) {
+    if (typeof mode === 'function')
+      cb = mode, mode = null
+
+    return go$open(path, flags, mode, cb)
+
+    function go$open (path, flags, mode, cb, startTime) {
+      return fs$open(path, flags, mode, function (err, fd) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$open, [path, flags, mode, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  return fs
+}
+
+function enqueue (elem) {
+  debug('ENQUEUE', elem[0].name, elem[1])
+  fs[gracefulQueue].push(elem)
+  retry()
+}
+
+// keep track of the timeout between retry() calls
+var retryTimer
+
+// reset the startTime and lastTime to now
+// this resets the start of the 60 second overall timeout as well as the
+// delay between attempts so that we'll retry these jobs sooner
+function resetQueue () {
+  var now = Date.now()
+  for (var i = 0; i < fs[gracefulQueue].length; ++i) {
+    // entries that are only a length of 2 are from an older version, don't
+    // bother modifying those since they'll be retried anyway.
+    if (fs[gracefulQueue][i].length > 2) {
+      fs[gracefulQueue][i][3] = now // startTime
+      fs[gracefulQueue][i][4] = now // lastTime
+    }
+  }
+  // call retry to make sure we're actively processing the queue
+  retry()
+}
+
+function retry () {
+  // clear the timer and remove it to help prevent unintended concurrency
+  clearTimeout(retryTimer)
+  retryTimer = undefined
+
+  if (fs[gracefulQueue].length === 0)
+    return
+
+  var elem = fs[gracefulQueue].shift()
+  var fn = elem[0]
+  var args = elem[1]
+  // these items may be unset if they were added by an older graceful-fs
+  var err = elem[2]
+  var startTime = elem[3]
+  var lastTime = elem[4]
+
+  // if we don't have a startTime we have no way of knowing if we've waited
+  // long enough, so go ahead and retry this item now
+  if (startTime === undefined) {
+    debug('RETRY', fn.name, args)
+    fn.apply(null, args)
+  } else if (Date.now() - startTime >= 60000) {
+    // it's been more than 60 seconds total, bail now
+    debug('TIMEOUT', fn.name, args)
+    var cb = args.pop()
+    if (typeof cb === 'function')
+      cb.call(null, err)
+  } else {
+    // the amount of time between the last attempt and right now
+    var sinceAttempt = Date.now() - lastTime
+    // the amount of time between when we first tried, and when we last tried
+    // rounded up to at least 1
+    var sinceStart = Math.max(lastTime - startTime, 1)
+    // backoff. wait longer than the total time we've been retrying, but only
+    // up to a maximum of 100ms
+    var desiredDelay = Math.min(sinceStart * 1.2, 100)
+    // it's been long enough since the last retry, do it again
+    if (sinceAttempt >= desiredDelay) {
+      debug('RETRY', fn.name, args)
+      fn.apply(null, args.concat([startTime]))
+    } else {
+      // if we can't do this job yet, push it to the end of the queue
+      // and let the next iteration check again
+      fs[gracefulQueue].push(elem)
+    }
+  }
+
+  // schedule our next run if one isn't already scheduled
+  if (retryTimer === undefined) {
+    retryTimer = setTimeout(retry, 0)
+  }
+}
+
+
+/***/ }),
+
+/***/ 3086:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var Stream = (__nccwpck_require__(2781).Stream)
+
+module.exports = legacy
+
+function legacy (fs) {
+  return {
+    ReadStream: ReadStream,
+    WriteStream: WriteStream
+  }
+
+  function ReadStream (path, options) {
+    if (!(this instanceof ReadStream)) return new ReadStream(path, options);
+
+    Stream.call(this);
+
+    var self = this;
+
+    this.path = path;
+    this.fd = null;
+    this.readable = true;
+    this.paused = false;
+
+    this.flags = 'r';
+    this.mode = 438; /*=0666*/
+    this.bufferSize = 64 * 1024;
+
+    options = options || {};
+
+    // Mixin options into this
+    var keys = Object.keys(options);
+    for (var index = 0, length = keys.length; index < length; index++) {
+      var key = keys[index];
+      this[key] = options[key];
+    }
+
+    if (this.encoding) this.setEncoding(this.encoding);
+
+    if (this.start !== undefined) {
+      if ('number' !== typeof this.start) {
+        throw TypeError('start must be a Number');
+      }
+      if (this.end === undefined) {
+        this.end = Infinity;
+      } else if ('number' !== typeof this.end) {
+        throw TypeError('end must be a Number');
+      }
+
+      if (this.start > this.end) {
+        throw new Error('start must be <= end');
+      }
+
+      this.pos = this.start;
+    }
+
+    if (this.fd !== null) {
+      process.nextTick(function() {
+        self._read();
+      });
+      return;
+    }
+
+    fs.open(this.path, this.flags, this.mode, function (err, fd) {
+      if (err) {
+        self.emit('error', err);
+        self.readable = false;
+        return;
+      }
+
+      self.fd = fd;
+      self.emit('open', fd);
+      self._read();
+    })
+  }
+
+  function WriteStream (path, options) {
+    if (!(this instanceof WriteStream)) return new WriteStream(path, options);
+
+    Stream.call(this);
+
+    this.path = path;
+    this.fd = null;
+    this.writable = true;
+
+    this.flags = 'w';
+    this.encoding = 'binary';
+    this.mode = 438; /*=0666*/
+    this.bytesWritten = 0;
+
+    options = options || {};
+
+    // Mixin options into this
+    var keys = Object.keys(options);
+    for (var index = 0, length = keys.length; index < length; index++) {
+      var key = keys[index];
+      this[key] = options[key];
+    }
+
+    if (this.start !== undefined) {
+      if ('number' !== typeof this.start) {
+        throw TypeError('start must be a Number');
+      }
+      if (this.start < 0) {
+        throw new Error('start must be >= zero');
+      }
+
+      this.pos = this.start;
+    }
+
+    this.busy = false;
+    this._queue = [];
+
+    if (this.fd === null) {
+      this._open = fs.open;
+      this._queue.push([this._open, this.path, this.flags, this.mode, undefined]);
+      this.flush();
+    }
+  }
+}
+
+
+/***/ }),
+
+/***/ 263:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+var constants = __nccwpck_require__(2057)
+
+var origCwd = process.cwd
+var cwd = null
+
+var platform = process.env.GRACEFUL_FS_PLATFORM || process.platform
+
+process.cwd = function() {
+  if (!cwd)
+    cwd = origCwd.call(process)
+  return cwd
+}
+try {
+  process.cwd()
+} catch (er) {}
+
+// This check is needed until node.js 12 is required
+if (typeof process.chdir === 'function') {
+  var chdir = process.chdir
+  process.chdir = function (d) {
+    cwd = null
+    chdir.call(process, d)
+  }
+  if (Object.setPrototypeOf) Object.setPrototypeOf(process.chdir, chdir)
+}
+
+module.exports = patch
+
+function patch (fs) {
+  // (re-)implement some things that are known busted or missing.
+
+  // lchmod, broken prior to 0.6.2
+  // back-port the fix here.
+  if (constants.hasOwnProperty('O_SYMLINK') &&
+      process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
+    patchLchmod(fs)
+  }
+
+  // lutimes implementation, or no-op
+  if (!fs.lutimes) {
+    patchLutimes(fs)
+  }
+
+  // https://github.com/isaacs/node-graceful-fs/issues/4
+  // Chown should not fail on einval or eperm if non-root.
+  // It should not fail on enosys ever, as this just indicates
+  // that a fs doesn't support the intended operation.
+
+  fs.chown = chownFix(fs.chown)
+  fs.fchown = chownFix(fs.fchown)
+  fs.lchown = chownFix(fs.lchown)
+
+  fs.chmod = chmodFix(fs.chmod)
+  fs.fchmod = chmodFix(fs.fchmod)
+  fs.lchmod = chmodFix(fs.lchmod)
+
+  fs.chownSync = chownFixSync(fs.chownSync)
+  fs.fchownSync = chownFixSync(fs.fchownSync)
+  fs.lchownSync = chownFixSync(fs.lchownSync)
+
+  fs.chmodSync = chmodFixSync(fs.chmodSync)
+  fs.fchmodSync = chmodFixSync(fs.fchmodSync)
+  fs.lchmodSync = chmodFixSync(fs.lchmodSync)
+
+  fs.stat = statFix(fs.stat)
+  fs.fstat = statFix(fs.fstat)
+  fs.lstat = statFix(fs.lstat)
+
+  fs.statSync = statFixSync(fs.statSync)
+  fs.fstatSync = statFixSync(fs.fstatSync)
+  fs.lstatSync = statFixSync(fs.lstatSync)
+
+  // if lchmod/lchown do not exist, then make them no-ops
+  if (fs.chmod && !fs.lchmod) {
+    fs.lchmod = function (path, mode, cb) {
+      if (cb) process.nextTick(cb)
+    }
+    fs.lchmodSync = function () {}
+  }
+  if (fs.chown && !fs.lchown) {
+    fs.lchown = function (path, uid, gid, cb) {
+      if (cb) process.nextTick(cb)
+    }
+    fs.lchownSync = function () {}
+  }
+
+  // on Windows, A/V software can lock the directory, causing this
+  // to fail with an EACCES or EPERM if the directory contains newly
+  // created files.  Try again on failure, for up to 60 seconds.
+
+  // Set the timeout this long because some Windows Anti-Virus, such as Parity
+  // bit9, may lock files for up to a minute, causing npm package install
+  // failures. Also, take care to yield the scheduler. Windows scheduling gives
+  // CPU to a busy looping process, which can cause the program causing the lock
+  // contention to be starved of CPU by node, so the contention doesn't resolve.
+  if (platform === "win32") {
+    fs.rename = typeof fs.rename !== 'function' ? fs.rename
+    : (function (fs$rename) {
+      function rename (from, to, cb) {
+        var start = Date.now()
+        var backoff = 0;
+        fs$rename(from, to, function CB (er) {
+          if (er
+              && (er.code === "EACCES" || er.code === "EPERM" || er.code === "EBUSY")
+              && Date.now() - start < 60000) {
+            setTimeout(function() {
+              fs.stat(to, function (stater, st) {
+                if (stater && stater.code === "ENOENT")
+                  fs$rename(from, to, CB);
+                else
+                  cb(er)
+              })
+            }, backoff)
+            if (backoff < 100)
+              backoff += 10;
+            return;
+          }
+          if (cb) cb(er)
+        })
+      }
+      if (Object.setPrototypeOf) Object.setPrototypeOf(rename, fs$rename)
+      return rename
+    })(fs.rename)
+  }
+
+  // if read() returns EAGAIN, then just try it again.
+  fs.read = typeof fs.read !== 'function' ? fs.read
+  : (function (fs$read) {
+    function read (fd, buffer, offset, length, position, callback_) {
+      var callback
+      if (callback_ && typeof callback_ === 'function') {
+        var eagCounter = 0
+        callback = function (er, _, __) {
+          if (er && er.code === 'EAGAIN' && eagCounter < 10) {
+            eagCounter ++
+            return fs$read.call(fs, fd, buffer, offset, length, position, callback)
+          }
+          callback_.apply(this, arguments)
+        }
+      }
+      return fs$read.call(fs, fd, buffer, offset, length, position, callback)
+    }
+
+    // This ensures `util.promisify` works as it does for native `fs.read`.
+    if (Object.setPrototypeOf) Object.setPrototypeOf(read, fs$read)
+    return read
+  })(fs.read)
+
+  fs.readSync = typeof fs.readSync !== 'function' ? fs.readSync
+  : (function (fs$readSync) { return function (fd, buffer, offset, length, position) {
+    var eagCounter = 0
+    while (true) {
+      try {
+        return fs$readSync.call(fs, fd, buffer, offset, length, position)
+      } catch (er) {
+        if (er.code === 'EAGAIN' && eagCounter < 10) {
+          eagCounter ++
+          continue
+        }
+        throw er
+      }
+    }
+  }})(fs.readSync)
+
+  function patchLchmod (fs) {
+    fs.lchmod = function (path, mode, callback) {
+      fs.open( path
+             , constants.O_WRONLY | constants.O_SYMLINK
+             , mode
+             , function (err, fd) {
+        if (err) {
+          if (callback) callback(err)
+          return
+        }
+        // prefer to return the chmod error, if one occurs,
+        // but still try to close, and report closing errors if they occur.
+        fs.fchmod(fd, mode, function (err) {
+          fs.close(fd, function(err2) {
+            if (callback) callback(err || err2)
+          })
+        })
+      })
+    }
+
+    fs.lchmodSync = function (path, mode) {
+      var fd = fs.openSync(path, constants.O_WRONLY | constants.O_SYMLINK, mode)
+
+      // prefer to return the chmod error, if one occurs,
+      // but still try to close, and report closing errors if they occur.
+      var threw = true
+      var ret
+      try {
+        ret = fs.fchmodSync(fd, mode)
+        threw = false
+      } finally {
+        if (threw) {
+          try {
+            fs.closeSync(fd)
+          } catch (er) {}
+        } else {
+          fs.closeSync(fd)
+        }
+      }
+      return ret
+    }
+  }
+
+  function patchLutimes (fs) {
+    if (constants.hasOwnProperty("O_SYMLINK") && fs.futimes) {
+      fs.lutimes = function (path, at, mt, cb) {
+        fs.open(path, constants.O_SYMLINK, function (er, fd) {
+          if (er) {
+            if (cb) cb(er)
+            return
+          }
+          fs.futimes(fd, at, mt, function (er) {
+            fs.close(fd, function (er2) {
+              if (cb) cb(er || er2)
+            })
+          })
+        })
+      }
+
+      fs.lutimesSync = function (path, at, mt) {
+        var fd = fs.openSync(path, constants.O_SYMLINK)
+        var ret
+        var threw = true
+        try {
+          ret = fs.futimesSync(fd, at, mt)
+          threw = false
+        } finally {
+          if (threw) {
+            try {
+              fs.closeSync(fd)
+            } catch (er) {}
+          } else {
+            fs.closeSync(fd)
+          }
+        }
+        return ret
+      }
+
+    } else if (fs.futimes) {
+      fs.lutimes = function (_a, _b, _c, cb) { if (cb) process.nextTick(cb) }
+      fs.lutimesSync = function () {}
+    }
+  }
+
+  function chmodFix (orig) {
+    if (!orig) return orig
+    return function (target, mode, cb) {
+      return orig.call(fs, target, mode, function (er) {
+        if (chownErOk(er)) er = null
+        if (cb) cb.apply(this, arguments)
+      })
+    }
+  }
+
+  function chmodFixSync (orig) {
+    if (!orig) return orig
+    return function (target, mode) {
+      try {
+        return orig.call(fs, target, mode)
+      } catch (er) {
+        if (!chownErOk(er)) throw er
+      }
+    }
+  }
+
+
+  function chownFix (orig) {
+    if (!orig) return orig
+    return function (target, uid, gid, cb) {
+      return orig.call(fs, target, uid, gid, function (er) {
+        if (chownErOk(er)) er = null
+        if (cb) cb.apply(this, arguments)
+      })
+    }
+  }
+
+  function chownFixSync (orig) {
+    if (!orig) return orig
+    return function (target, uid, gid) {
+      try {
+        return orig.call(fs, target, uid, gid)
+      } catch (er) {
+        if (!chownErOk(er)) throw er
+      }
+    }
+  }
+
+  function statFix (orig) {
+    if (!orig) return orig
+    // Older versions of Node erroneously returned signed integers for
+    // uid + gid.
+    return function (target, options, cb) {
+      if (typeof options === 'function') {
+        cb = options
+        options = null
+      }
+      function callback (er, stats) {
+        if (stats) {
+          if (stats.uid < 0) stats.uid += 0x100000000
+          if (stats.gid < 0) stats.gid += 0x100000000
+        }
+        if (cb) cb.apply(this, arguments)
+      }
+      return options ? orig.call(fs, target, options, callback)
+        : orig.call(fs, target, callback)
+    }
+  }
+
+  function statFixSync (orig) {
+    if (!orig) return orig
+    // Older versions of Node erroneously returned signed integers for
+    // uid + gid.
+    return function (target, options) {
+      var stats = options ? orig.call(fs, target, options)
+        : orig.call(fs, target)
+      if (stats) {
+        if (stats.uid < 0) stats.uid += 0x100000000
+        if (stats.gid < 0) stats.gid += 0x100000000
+      }
+      return stats;
+    }
+  }
+
+  // ENOSYS means that the fs doesn't support the op. Just ignore
+  // that, because it doesn't matter.
+  //
+  // if there's no getuid, or if getuid() is something other
+  // than 0, and the error is EINVAL or EPERM, then just ignore
+  // it.
+  //
+  // This specific case is a silent failure in cp, install, tar,
+  // and most other unix tools that manage permissions.
+  //
+  // When running as root, or if other types of errors are
+  // encountered, then it's strict.
+  function chownErOk (er) {
+    if (!er)
+      return true
+
+    if (er.code === "ENOSYS")
+      return true
+
+    var nonroot = !process.getuid || process.getuid() !== 0
+    if (nonroot) {
+      if (er.code === "EINVAL" || er.code === "EPERM")
+        return true
+    }
+
+    return false
+  }
+}
+
+
+/***/ }),
+
 /***/ 1223:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -11743,6 +13047,839 @@ function onceStrict (fn) {
   f.called = false
   return f
 }
+
+
+/***/ }),
+
+/***/ 4582:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+const lockfile = __nccwpck_require__(5111);
+const { toPromise, toSync, toSyncOptions } = __nccwpck_require__(7624);
+
+async function lock(file, options) {
+    const release = await toPromise(lockfile.lock)(file, options);
+
+    return toPromise(release);
+}
+
+function lockSync(file, options) {
+    const release = toSync(lockfile.lock)(file, toSyncOptions(options));
+
+    return toSync(release);
+}
+
+function unlock(file, options) {
+    return toPromise(lockfile.unlock)(file, options);
+}
+
+function unlockSync(file, options) {
+    return toSync(lockfile.unlock)(file, toSyncOptions(options));
+}
+
+function check(file, options) {
+    return toPromise(lockfile.check)(file, options);
+}
+
+function checkSync(file, options) {
+    return toSync(lockfile.check)(file, toSyncOptions(options));
+}
+
+module.exports = lock;
+module.exports.lock = lock;
+module.exports.unlock = unlock;
+module.exports.lockSync = lockSync;
+module.exports.unlockSync = unlockSync;
+module.exports.check = check;
+module.exports.checkSync = checkSync;
+
+
+/***/ }),
+
+/***/ 7624:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+const fs = __nccwpck_require__(7758);
+
+function createSyncFs(fs) {
+    const methods = ['mkdir', 'realpath', 'stat', 'rmdir', 'utimes'];
+    const newFs = { ...fs };
+
+    methods.forEach((method) => {
+        newFs[method] = (...args) => {
+            const callback = args.pop();
+            let ret;
+
+            try {
+                ret = fs[`${method}Sync`](...args);
+            } catch (err) {
+                return callback(err);
+            }
+
+            callback(null, ret);
+        };
+    });
+
+    return newFs;
+}
+
+// ----------------------------------------------------------
+
+function toPromise(method) {
+    return (...args) => new Promise((resolve, reject) => {
+        args.push((err, result) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result);
+            }
+        });
+
+        method(...args);
+    });
+}
+
+function toSync(method) {
+    return (...args) => {
+        let err;
+        let result;
+
+        args.push((_err, _result) => {
+            err = _err;
+            result = _result;
+        });
+
+        method(...args);
+
+        if (err) {
+            throw err;
+        }
+
+        return result;
+    };
+}
+
+function toSyncOptions(options) {
+    // Shallow clone options because we are oging to mutate them
+    options = { ...options };
+
+    // Transform fs to use the sync methods instead
+    options.fs = createSyncFs(options.fs || fs);
+
+    // Retries are not allowed because it requires the flow to be sync
+    if (
+        (typeof options.retries === 'number' && options.retries > 0) ||
+        (options.retries && typeof options.retries.retries === 'number' && options.retries.retries > 0)
+    ) {
+        throw Object.assign(new Error('Cannot use retries with the sync api'), { code: 'ESYNC' });
+    }
+
+    return options;
+}
+
+module.exports = {
+    toPromise,
+    toSync,
+    toSyncOptions,
+};
+
+
+/***/ }),
+
+/***/ 5111:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+const path = __nccwpck_require__(1017);
+const fs = __nccwpck_require__(7758);
+const retry = __nccwpck_require__(1604);
+const onExit = __nccwpck_require__(4931);
+const mtimePrecision = __nccwpck_require__(1666);
+
+const locks = {};
+
+function getLockFile(file, options) {
+    return options.lockfilePath || `${file}.lock`;
+}
+
+function resolveCanonicalPath(file, options, callback) {
+    if (!options.realpath) {
+        return callback(null, path.resolve(file));
+    }
+
+    // Use realpath to resolve symlinks
+    // It also resolves relative paths
+    options.fs.realpath(file, callback);
+}
+
+function acquireLock(file, options, callback) {
+    const lockfilePath = getLockFile(file, options);
+
+    // Use mkdir to create the lockfile (atomic operation)
+    options.fs.mkdir(lockfilePath, (err) => {
+        if (!err) {
+            // At this point, we acquired the lock!
+            // Probe the mtime precision
+            return mtimePrecision.probe(lockfilePath, options.fs, (err, mtime, mtimePrecision) => {
+                // If it failed, try to remove the lock..
+                /* istanbul ignore if */
+                if (err) {
+                    options.fs.rmdir(lockfilePath, () => {});
+
+                    return callback(err);
+                }
+
+                callback(null, mtime, mtimePrecision);
+            });
+        }
+
+        // If error is not EEXIST then some other error occurred while locking
+        if (err.code !== 'EEXIST') {
+            return callback(err);
+        }
+
+        // Otherwise, check if lock is stale by analyzing the file mtime
+        if (options.stale <= 0) {
+            return callback(Object.assign(new Error('Lock file is already being held'), { code: 'ELOCKED', file }));
+        }
+
+        options.fs.stat(lockfilePath, (err, stat) => {
+            if (err) {
+                // Retry if the lockfile has been removed (meanwhile)
+                // Skip stale check to avoid recursiveness
+                if (err.code === 'ENOENT') {
+                    return acquireLock(file, { ...options, stale: 0 }, callback);
+                }
+
+                return callback(err);
+            }
+
+            if (!isLockStale(stat, options)) {
+                return callback(Object.assign(new Error('Lock file is already being held'), { code: 'ELOCKED', file }));
+            }
+
+            // If it's stale, remove it and try again!
+            // Skip stale check to avoid recursiveness
+            removeLock(file, options, (err) => {
+                if (err) {
+                    return callback(err);
+                }
+
+                acquireLock(file, { ...options, stale: 0 }, callback);
+            });
+        });
+    });
+}
+
+function isLockStale(stat, options) {
+    return stat.mtime.getTime() < Date.now() - options.stale;
+}
+
+function removeLock(file, options, callback) {
+    // Remove lockfile, ignoring ENOENT errors
+    options.fs.rmdir(getLockFile(file, options), (err) => {
+        if (err && err.code !== 'ENOENT') {
+            return callback(err);
+        }
+
+        callback();
+    });
+}
+
+function updateLock(file, options) {
+    const lock = locks[file];
+
+    // Just for safety, should never happen
+    /* istanbul ignore if */
+    if (lock.updateTimeout) {
+        return;
+    }
+
+    lock.updateDelay = lock.updateDelay || options.update;
+    lock.updateTimeout = setTimeout(() => {
+        lock.updateTimeout = null;
+
+        // Stat the file to check if mtime is still ours
+        // If it is, we can still recover from a system sleep or a busy event loop
+        options.fs.stat(lock.lockfilePath, (err, stat) => {
+            const isOverThreshold = lock.lastUpdate + options.stale < Date.now();
+
+            // If it failed to update the lockfile, keep trying unless
+            // the lockfile was deleted or we are over the threshold
+            if (err) {
+                if (err.code === 'ENOENT' || isOverThreshold) {
+                    return setLockAsCompromised(file, lock, Object.assign(err, { code: 'ECOMPROMISED' }));
+                }
+
+                lock.updateDelay = 1000;
+
+                return updateLock(file, options);
+            }
+
+            const isMtimeOurs = lock.mtime.getTime() === stat.mtime.getTime();
+
+            if (!isMtimeOurs) {
+                return setLockAsCompromised(
+                    file,
+                    lock,
+                    Object.assign(
+                        new Error('Unable to update lock within the stale threshold'),
+                        { code: 'ECOMPROMISED' }
+                    ));
+            }
+
+            const mtime = mtimePrecision.getMtime(lock.mtimePrecision);
+
+            options.fs.utimes(lock.lockfilePath, mtime, mtime, (err) => {
+                const isOverThreshold = lock.lastUpdate + options.stale < Date.now();
+
+                // Ignore if the lock was released
+                if (lock.released) {
+                    return;
+                }
+
+                // If it failed to update the lockfile, keep trying unless
+                // the lockfile was deleted or we are over the threshold
+                if (err) {
+                    if (err.code === 'ENOENT' || isOverThreshold) {
+                        return setLockAsCompromised(file, lock, Object.assign(err, { code: 'ECOMPROMISED' }));
+                    }
+
+                    lock.updateDelay = 1000;
+
+                    return updateLock(file, options);
+                }
+
+                // All ok, keep updating..
+                lock.mtime = mtime;
+                lock.lastUpdate = Date.now();
+                lock.updateDelay = null;
+                updateLock(file, options);
+            });
+        });
+    }, lock.updateDelay);
+
+    // Unref the timer so that the nodejs process can exit freely
+    // This is safe because all acquired locks will be automatically released
+    // on process exit
+
+    // We first check that `lock.updateTimeout.unref` exists because some users
+    // may be using this module outside of NodeJS (e.g., in an electron app),
+    // and in those cases `setTimeout` return an integer.
+    /* istanbul ignore else */
+    if (lock.updateTimeout.unref) {
+        lock.updateTimeout.unref();
+    }
+}
+
+function setLockAsCompromised(file, lock, err) {
+    // Signal the lock has been released
+    lock.released = true;
+
+    // Cancel lock mtime update
+    // Just for safety, at this point updateTimeout should be null
+    /* istanbul ignore if */
+    if (lock.updateTimeout) {
+        clearTimeout(lock.updateTimeout);
+    }
+
+    if (locks[file] === lock) {
+        delete locks[file];
+    }
+
+    lock.options.onCompromised(err);
+}
+
+// ----------------------------------------------------------
+
+function lock(file, options, callback) {
+    /* istanbul ignore next */
+    options = {
+        stale: 10000,
+        update: null,
+        realpath: true,
+        retries: 0,
+        fs,
+        onCompromised: (err) => { throw err; },
+        ...options,
+    };
+
+    options.retries = options.retries || 0;
+    options.retries = typeof options.retries === 'number' ? { retries: options.retries } : options.retries;
+    options.stale = Math.max(options.stale || 0, 2000);
+    options.update = options.update == null ? options.stale / 2 : options.update || 0;
+    options.update = Math.max(Math.min(options.update, options.stale / 2), 1000);
+
+    // Resolve to a canonical file path
+    resolveCanonicalPath(file, options, (err, file) => {
+        if (err) {
+            return callback(err);
+        }
+
+        // Attempt to acquire the lock
+        const operation = retry.operation(options.retries);
+
+        operation.attempt(() => {
+            acquireLock(file, options, (err, mtime, mtimePrecision) => {
+                if (operation.retry(err)) {
+                    return;
+                }
+
+                if (err) {
+                    return callback(operation.mainError());
+                }
+
+                // We now own the lock
+                const lock = locks[file] = {
+                    lockfilePath: getLockFile(file, options),
+                    mtime,
+                    mtimePrecision,
+                    options,
+                    lastUpdate: Date.now(),
+                };
+
+                // We must keep the lock fresh to avoid staleness
+                updateLock(file, options);
+
+                callback(null, (releasedCallback) => {
+                    if (lock.released) {
+                        return releasedCallback &&
+                            releasedCallback(Object.assign(new Error('Lock is already released'), { code: 'ERELEASED' }));
+                    }
+
+                    // Not necessary to use realpath twice when unlocking
+                    unlock(file, { ...options, realpath: false }, releasedCallback);
+                });
+            });
+        });
+    });
+}
+
+function unlock(file, options, callback) {
+    options = {
+        fs,
+        realpath: true,
+        ...options,
+    };
+
+    // Resolve to a canonical file path
+    resolveCanonicalPath(file, options, (err, file) => {
+        if (err) {
+            return callback(err);
+        }
+
+        // Skip if the lock is not acquired
+        const lock = locks[file];
+
+        if (!lock) {
+            return callback(Object.assign(new Error('Lock is not acquired/owned by you'), { code: 'ENOTACQUIRED' }));
+        }
+
+        lock.updateTimeout && clearTimeout(lock.updateTimeout); // Cancel lock mtime update
+        lock.released = true; // Signal the lock has been released
+        delete locks[file]; // Delete from locks
+
+        removeLock(file, options, callback);
+    });
+}
+
+function check(file, options, callback) {
+    options = {
+        stale: 10000,
+        realpath: true,
+        fs,
+        ...options,
+    };
+
+    options.stale = Math.max(options.stale || 0, 2000);
+
+    // Resolve to a canonical file path
+    resolveCanonicalPath(file, options, (err, file) => {
+        if (err) {
+            return callback(err);
+        }
+
+        // Check if lockfile exists
+        options.fs.stat(getLockFile(file, options), (err, stat) => {
+            if (err) {
+                // If does not exist, file is not locked. Otherwise, callback with error
+                return err.code === 'ENOENT' ? callback(null, false) : callback(err);
+            }
+
+            // Otherwise, check if lock is stale by analyzing the file mtime
+            return callback(null, !isLockStale(stat, options));
+        });
+    });
+}
+
+function getLocks() {
+    return locks;
+}
+
+// Remove acquired locks on exit
+/* istanbul ignore next */
+onExit(() => {
+    for (const file in locks) {
+        const options = locks[file].options;
+
+        try { options.fs.rmdirSync(getLockFile(file, options)); } catch (e) { /* Empty */ }
+    }
+});
+
+module.exports.lock = lock;
+module.exports.unlock = unlock;
+module.exports.check = check;
+module.exports.getLocks = getLocks;
+
+
+/***/ }),
+
+/***/ 1666:
+/***/ ((module) => {
+
+"use strict";
+
+
+const cacheSymbol = Symbol();
+
+function probe(file, fs, callback) {
+    const cachedPrecision = fs[cacheSymbol];
+
+    if (cachedPrecision) {
+        return fs.stat(file, (err, stat) => {
+            /* istanbul ignore if */
+            if (err) {
+                return callback(err);
+            }
+
+            callback(null, stat.mtime, cachedPrecision);
+        });
+    }
+
+    // Set mtime by ceiling Date.now() to seconds + 5ms so that it's "not on the second"
+    const mtime = new Date((Math.ceil(Date.now() / 1000) * 1000) + 5);
+
+    fs.utimes(file, mtime, mtime, (err) => {
+        /* istanbul ignore if */
+        if (err) {
+            return callback(err);
+        }
+
+        fs.stat(file, (err, stat) => {
+            /* istanbul ignore if */
+            if (err) {
+                return callback(err);
+            }
+
+            const precision = stat.mtime.getTime() % 1000 === 0 ? 's' : 'ms';
+
+            // Cache the precision in a non-enumerable way
+            Object.defineProperty(fs, cacheSymbol, { value: precision });
+
+            callback(null, stat.mtime, precision);
+        });
+    });
+}
+
+function getMtime(precision) {
+    let now = Date.now();
+
+    if (precision === 's') {
+        now = Math.ceil(now / 1000) * 1000;
+    }
+
+    return new Date(now);
+}
+
+module.exports.probe = probe;
+module.exports.getMtime = getMtime;
+
+
+/***/ }),
+
+/***/ 1604:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+module.exports = __nccwpck_require__(6244);
+
+/***/ }),
+
+/***/ 6244:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+var RetryOperation = __nccwpck_require__(5369);
+
+exports.operation = function(options) {
+  var timeouts = exports.timeouts(options);
+  return new RetryOperation(timeouts, {
+      forever: options && options.forever,
+      unref: options && options.unref,
+      maxRetryTime: options && options.maxRetryTime
+  });
+};
+
+exports.timeouts = function(options) {
+  if (options instanceof Array) {
+    return [].concat(options);
+  }
+
+  var opts = {
+    retries: 10,
+    factor: 2,
+    minTimeout: 1 * 1000,
+    maxTimeout: Infinity,
+    randomize: false
+  };
+  for (var key in options) {
+    opts[key] = options[key];
+  }
+
+  if (opts.minTimeout > opts.maxTimeout) {
+    throw new Error('minTimeout is greater than maxTimeout');
+  }
+
+  var timeouts = [];
+  for (var i = 0; i < opts.retries; i++) {
+    timeouts.push(this.createTimeout(i, opts));
+  }
+
+  if (options && options.forever && !timeouts.length) {
+    timeouts.push(this.createTimeout(i, opts));
+  }
+
+  // sort the array numerically ascending
+  timeouts.sort(function(a,b) {
+    return a - b;
+  });
+
+  return timeouts;
+};
+
+exports.createTimeout = function(attempt, opts) {
+  var random = (opts.randomize)
+    ? (Math.random() + 1)
+    : 1;
+
+  var timeout = Math.round(random * opts.minTimeout * Math.pow(opts.factor, attempt));
+  timeout = Math.min(timeout, opts.maxTimeout);
+
+  return timeout;
+};
+
+exports.wrap = function(obj, options, methods) {
+  if (options instanceof Array) {
+    methods = options;
+    options = null;
+  }
+
+  if (!methods) {
+    methods = [];
+    for (var key in obj) {
+      if (typeof obj[key] === 'function') {
+        methods.push(key);
+      }
+    }
+  }
+
+  for (var i = 0; i < methods.length; i++) {
+    var method   = methods[i];
+    var original = obj[method];
+
+    obj[method] = function retryWrapper(original) {
+      var op       = exports.operation(options);
+      var args     = Array.prototype.slice.call(arguments, 1);
+      var callback = args.pop();
+
+      args.push(function(err) {
+        if (op.retry(err)) {
+          return;
+        }
+        if (err) {
+          arguments[0] = op.mainError();
+        }
+        callback.apply(this, arguments);
+      });
+
+      op.attempt(function() {
+        original.apply(obj, args);
+      });
+    }.bind(obj, original);
+    obj[method].options = options;
+  }
+};
+
+
+/***/ }),
+
+/***/ 5369:
+/***/ ((module) => {
+
+function RetryOperation(timeouts, options) {
+  // Compatibility for the old (timeouts, retryForever) signature
+  if (typeof options === 'boolean') {
+    options = { forever: options };
+  }
+
+  this._originalTimeouts = JSON.parse(JSON.stringify(timeouts));
+  this._timeouts = timeouts;
+  this._options = options || {};
+  this._maxRetryTime = options && options.maxRetryTime || Infinity;
+  this._fn = null;
+  this._errors = [];
+  this._attempts = 1;
+  this._operationTimeout = null;
+  this._operationTimeoutCb = null;
+  this._timeout = null;
+  this._operationStart = null;
+
+  if (this._options.forever) {
+    this._cachedTimeouts = this._timeouts.slice(0);
+  }
+}
+module.exports = RetryOperation;
+
+RetryOperation.prototype.reset = function() {
+  this._attempts = 1;
+  this._timeouts = this._originalTimeouts;
+}
+
+RetryOperation.prototype.stop = function() {
+  if (this._timeout) {
+    clearTimeout(this._timeout);
+  }
+
+  this._timeouts       = [];
+  this._cachedTimeouts = null;
+};
+
+RetryOperation.prototype.retry = function(err) {
+  if (this._timeout) {
+    clearTimeout(this._timeout);
+  }
+
+  if (!err) {
+    return false;
+  }
+  var currentTime = new Date().getTime();
+  if (err && currentTime - this._operationStart >= this._maxRetryTime) {
+    this._errors.unshift(new Error('RetryOperation timeout occurred'));
+    return false;
+  }
+
+  this._errors.push(err);
+
+  var timeout = this._timeouts.shift();
+  if (timeout === undefined) {
+    if (this._cachedTimeouts) {
+      // retry forever, only keep last error
+      this._errors.splice(this._errors.length - 1, this._errors.length);
+      this._timeouts = this._cachedTimeouts.slice(0);
+      timeout = this._timeouts.shift();
+    } else {
+      return false;
+    }
+  }
+
+  var self = this;
+  var timer = setTimeout(function() {
+    self._attempts++;
+
+    if (self._operationTimeoutCb) {
+      self._timeout = setTimeout(function() {
+        self._operationTimeoutCb(self._attempts);
+      }, self._operationTimeout);
+
+      if (self._options.unref) {
+          self._timeout.unref();
+      }
+    }
+
+    self._fn(self._attempts);
+  }, timeout);
+
+  if (this._options.unref) {
+      timer.unref();
+  }
+
+  return true;
+};
+
+RetryOperation.prototype.attempt = function(fn, timeoutOps) {
+  this._fn = fn;
+
+  if (timeoutOps) {
+    if (timeoutOps.timeout) {
+      this._operationTimeout = timeoutOps.timeout;
+    }
+    if (timeoutOps.cb) {
+      this._operationTimeoutCb = timeoutOps.cb;
+    }
+  }
+
+  var self = this;
+  if (this._operationTimeoutCb) {
+    this._timeout = setTimeout(function() {
+      self._operationTimeoutCb();
+    }, self._operationTimeout);
+  }
+
+  this._operationStart = new Date().getTime();
+
+  this._fn(this._attempts);
+};
+
+RetryOperation.prototype.try = function(fn) {
+  console.log('Using RetryOperation.try() is deprecated');
+  this.attempt(fn);
+};
+
+RetryOperation.prototype.start = function(fn) {
+  console.log('Using RetryOperation.start() is deprecated');
+  this.attempt(fn);
+};
+
+RetryOperation.prototype.start = RetryOperation.prototype.try;
+
+RetryOperation.prototype.errors = function() {
+  return this._errors;
+};
+
+RetryOperation.prototype.attempts = function() {
+  return this._attempts;
+};
+
+RetryOperation.prototype.mainError = function() {
+  if (this._errors.length === 0) {
+    return null;
+  }
+
+  var counts = {};
+  var mainError = null;
+  var mainErrorCount = 0;
+
+  for (var i = 0; i < this._errors.length; i++) {
+    var error = this._errors[i];
+    var message = error.message;
+    var count = (counts[message] || 0) + 1;
+
+    counts[message] = count;
+
+    if (count >= mainErrorCount) {
+      mainError = error;
+      mainErrorCount = count;
+    }
+  }
+
+  return mainError;
+};
 
 
 /***/ }),
@@ -13392,6 +15529,275 @@ function coerce (version, options) {
   return parse(match[2] +
     '.' + (match[3] || '0') +
     '.' + (match[4] || '0'), options)
+}
+
+
+/***/ }),
+
+/***/ 4931:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Note: since nyc uses this module to output coverage, any lines
+// that are in the direct sync flow of nyc's outputCoverage are
+// ignored, since we can never get coverage for them.
+// grab a reference to node's real process object right away
+var process = global.process
+
+const processOk = function (process) {
+  return process &&
+    typeof process === 'object' &&
+    typeof process.removeListener === 'function' &&
+    typeof process.emit === 'function' &&
+    typeof process.reallyExit === 'function' &&
+    typeof process.listeners === 'function' &&
+    typeof process.kill === 'function' &&
+    typeof process.pid === 'number' &&
+    typeof process.on === 'function'
+}
+
+// some kind of non-node environment, just no-op
+/* istanbul ignore if */
+if (!processOk(process)) {
+  module.exports = function () {
+    return function () {}
+  }
+} else {
+  var assert = __nccwpck_require__(9491)
+  var signals = __nccwpck_require__(3710)
+  var isWin = /^win/i.test(process.platform)
+
+  var EE = __nccwpck_require__(2361)
+  /* istanbul ignore if */
+  if (typeof EE !== 'function') {
+    EE = EE.EventEmitter
+  }
+
+  var emitter
+  if (process.__signal_exit_emitter__) {
+    emitter = process.__signal_exit_emitter__
+  } else {
+    emitter = process.__signal_exit_emitter__ = new EE()
+    emitter.count = 0
+    emitter.emitted = {}
+  }
+
+  // Because this emitter is a global, we have to check to see if a
+  // previous version of this library failed to enable infinite listeners.
+  // I know what you're about to say.  But literally everything about
+  // signal-exit is a compromise with evil.  Get used to it.
+  if (!emitter.infinite) {
+    emitter.setMaxListeners(Infinity)
+    emitter.infinite = true
+  }
+
+  module.exports = function (cb, opts) {
+    /* istanbul ignore if */
+    if (!processOk(global.process)) {
+      return function () {}
+    }
+    assert.equal(typeof cb, 'function', 'a callback must be provided for exit handler')
+
+    if (loaded === false) {
+      load()
+    }
+
+    var ev = 'exit'
+    if (opts && opts.alwaysLast) {
+      ev = 'afterexit'
+    }
+
+    var remove = function () {
+      emitter.removeListener(ev, cb)
+      if (emitter.listeners('exit').length === 0 &&
+          emitter.listeners('afterexit').length === 0) {
+        unload()
+      }
+    }
+    emitter.on(ev, cb)
+
+    return remove
+  }
+
+  var unload = function unload () {
+    if (!loaded || !processOk(global.process)) {
+      return
+    }
+    loaded = false
+
+    signals.forEach(function (sig) {
+      try {
+        process.removeListener(sig, sigListeners[sig])
+      } catch (er) {}
+    })
+    process.emit = originalProcessEmit
+    process.reallyExit = originalProcessReallyExit
+    emitter.count -= 1
+  }
+  module.exports.unload = unload
+
+  var emit = function emit (event, code, signal) {
+    /* istanbul ignore if */
+    if (emitter.emitted[event]) {
+      return
+    }
+    emitter.emitted[event] = true
+    emitter.emit(event, code, signal)
+  }
+
+  // { <signal>: <listener fn>, ... }
+  var sigListeners = {}
+  signals.forEach(function (sig) {
+    sigListeners[sig] = function listener () {
+      /* istanbul ignore if */
+      if (!processOk(global.process)) {
+        return
+      }
+      // If there are no other listeners, an exit is coming!
+      // Simplest way: remove us and then re-send the signal.
+      // We know that this will kill the process, so we can
+      // safely emit now.
+      var listeners = process.listeners(sig)
+      if (listeners.length === emitter.count) {
+        unload()
+        emit('exit', null, sig)
+        /* istanbul ignore next */
+        emit('afterexit', null, sig)
+        /* istanbul ignore next */
+        if (isWin && sig === 'SIGHUP') {
+          // "SIGHUP" throws an `ENOSYS` error on Windows,
+          // so use a supported signal instead
+          sig = 'SIGINT'
+        }
+        /* istanbul ignore next */
+        process.kill(process.pid, sig)
+      }
+    }
+  })
+
+  module.exports.signals = function () {
+    return signals
+  }
+
+  var loaded = false
+
+  var load = function load () {
+    if (loaded || !processOk(global.process)) {
+      return
+    }
+    loaded = true
+
+    // This is the number of onSignalExit's that are in play.
+    // It's important so that we can count the correct number of
+    // listeners on signals, and don't wait for the other one to
+    // handle it instead of us.
+    emitter.count += 1
+
+    signals = signals.filter(function (sig) {
+      try {
+        process.on(sig, sigListeners[sig])
+        return true
+      } catch (er) {
+        return false
+      }
+    })
+
+    process.emit = processEmit
+    process.reallyExit = processReallyExit
+  }
+  module.exports.load = load
+
+  var originalProcessReallyExit = process.reallyExit
+  var processReallyExit = function processReallyExit (code) {
+    /* istanbul ignore if */
+    if (!processOk(global.process)) {
+      return
+    }
+    process.exitCode = code || /* istanbul ignore next */ 0
+    emit('exit', process.exitCode, null)
+    /* istanbul ignore next */
+    emit('afterexit', process.exitCode, null)
+    /* istanbul ignore next */
+    originalProcessReallyExit.call(process, process.exitCode)
+  }
+
+  var originalProcessEmit = process.emit
+  var processEmit = function processEmit (ev, arg) {
+    if (ev === 'exit' && processOk(global.process)) {
+      /* istanbul ignore else */
+      if (arg !== undefined) {
+        process.exitCode = arg
+      }
+      var ret = originalProcessEmit.apply(this, arguments)
+      /* istanbul ignore next */
+      emit('exit', process.exitCode, null)
+      /* istanbul ignore next */
+      emit('afterexit', process.exitCode, null)
+      /* istanbul ignore next */
+      return ret
+    } else {
+      return originalProcessEmit.apply(this, arguments)
+    }
+  }
+}
+
+
+/***/ }),
+
+/***/ 3710:
+/***/ ((module) => {
+
+// This is not the set of all possible signals.
+//
+// It IS, however, the set of all signals that trigger
+// an exit on either Linux or BSD systems.  Linux is a
+// superset of the signal names supported on BSD, and
+// the unknown signals just fail to register, so we can
+// catch that easily enough.
+//
+// Don't bother with SIGKILL.  It's uncatchable, which
+// means that we can't fire any callbacks anyway.
+//
+// If a user does happen to register a handler on a non-
+// fatal signal like SIGWINCH or something, and then
+// exit, it'll end up firing `process.emit('exit')`, so
+// the handler will be fired anyway.
+//
+// SIGBUS, SIGFPE, SIGSEGV and SIGILL, when not raised
+// artificially, inherently leave the process in a
+// state from which it is not safe to try and enter JS
+// listeners.
+module.exports = [
+  'SIGABRT',
+  'SIGALRM',
+  'SIGHUP',
+  'SIGINT',
+  'SIGTERM'
+]
+
+if (process.platform !== 'win32') {
+  module.exports.push(
+    'SIGVTALRM',
+    'SIGXCPU',
+    'SIGXFSZ',
+    'SIGUSR2',
+    'SIGTRAP',
+    'SIGSYS',
+    'SIGQUIT',
+    'SIGIOT'
+    // should detect profiler and enable/disable accordingly.
+    // see #21
+    // 'SIGPROF'
+  )
+}
+
+if (process.platform === 'linux') {
+  module.exports.push(
+    'SIGIO',
+    'SIGPOLL',
+    'SIGPWR',
+    'SIGSTKFLT',
+    'SIGUNUSED'
+  )
 }
 
 
@@ -36629,6 +39035,14 @@ module.exports = require("child_process");
 
 "use strict";
 module.exports = require("console");
+
+/***/ }),
+
+/***/ 2057:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("constants");
 
 /***/ }),
 

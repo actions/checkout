@@ -21,6 +21,7 @@ export interface IGitAuthHelper {
   configureSubmoduleAuth(): Promise<void>
   configureTempGlobalConfig(): Promise<string>
   removeAuth(): Promise<void>
+  removeGlobalAuth(): Promise<void>
   removeGlobalConfig(): Promise<void>
 }
 
@@ -233,6 +234,12 @@ class GitAuthHelper {
   async removeAuth(): Promise<void> {
     await this.removeSsh()
     await this.removeToken()
+  }
+
+  async removeGlobalAuth(): Promise<void> {
+    core.debug('Removing global auth entries')
+    await this.git.tryConfigUnset('include.path', true)
+    await this.git.tryConfigUnset(this.insteadOfKey, true)
   }
 
   async removeGlobalConfig(): Promise<void> {

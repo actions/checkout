@@ -60,6 +60,11 @@ export interface IGitSourceSettings {
   showProgress: boolean
 
   /**
+   * The path to a local directory used as a reference cache for Git clones
+   */
+  referenceCache: string
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean

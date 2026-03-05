@@ -14,6 +14,156 @@ import {
   IGitCommandManager
 } from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
+import {GitCacheHelper} from './git-cache-helper'
+import * as fs from 'fs'
+
+interface SubmoduleInfo {
+  name: string
+  path: string
+  url: string
+}
+
+async function iterativeSubmoduleUpdate(
+  git: IGitCommandManager,
+  cacheHelper: GitCacheHelper,
+  repositoryPath: string,
+  fetchDepth: number,
+  nestedSubmodules: boolean
+): Promise<void> {
+  const gitmodulesPath = path.join(repositoryPath, '.gitmodules')
+  if (!fs.existsSync(gitmodulesPath)) {
+    return
+  }
+
+  const submodules = new Map<string, SubmoduleInfo>()
+
+  // Get all submodule config keys
+  try {
+    const output = await git.execGit([
+      '-C', repositoryPath,
+      'config', '--file', gitmodulesPath, '--get-regexp', 'submodule\\..*'
+    ], true, true)
+
+    const lines = output.stdout.split('\n').filter(l => l.trim().length > 0)
+    for (const line of lines) {
+      const match = line.match(/^submodule\.(.+?)\.(path|url)\s+(.*)$/)
+      if (match) {
+        const [, name, key, value] = match
+        if (!submodules.has(name)) {
+          submodules.set(name, { name, path: '', url: '' })
+        }
+        const info = submodules.get(name)!
+        if (key === 'path') info.path = value
+        if (key === 'url') info.url = value
+      }
+    }
+  } catch (err) {
+    core.warning(`Failed to read .gitmodules: ${err}`)
+    return
+  }
+
+  for (const info of submodules.values()) {
+    if (!info.path || !info.url) continue
+
+    core.info(`Processing submodule ${info.name} at ${info.path}`)
+    
+    // Resolve relative URLs or valid URLs
+    let subUrl = info.url
+    if (subUrl.startsWith('../') || subUrl.startsWith('./')) {
+      // In checkout action, relative URLs are handled automatically by git.
+      // But for our bare cache clone, we need an absolute URL.
+      let originUrl = ''
+      try {
+        const originOut = await git.execGit(['-C', repositoryPath, 'remote', 'get-url', 'origin'], true, true)
+        if (originOut.exitCode === 0) {
+          originUrl = originOut.stdout.trim()
+        }
+        
+        if (originUrl) {
+          try {
+            if (originUrl.match(/^https?:\/\//)) {
+              // Using Node's URL class to resolve relative paths for HTTP(s)
+              const parsedOrigin = new URL(originUrl.replace(/\.git$/, ''))
+              const resolvedUrl = new URL(subUrl, parsedOrigin.href + '/')
+              subUrl = resolvedUrl.href
+            } else {
+              // Fallback for SSH URLs which new URL() cannot parse (e.g. git@github.com:org/repo)
+              let originParts = originUrl.replace(/\.git$/, '').split('/')
+              originParts.pop() // remove current repo
+              
+              // Handle multiple ../
+              let subTarget = subUrl
+              while (subTarget.startsWith('../')) {
+                if (originParts.length === 0) break // Can't go higher
+                originParts.pop()
+                subTarget = subTarget.substring(3)
+              }
+              if (subTarget.startsWith('./')) {
+                subTarget = subTarget.substring(2)
+              }
+              
+              if (originParts.length > 0) {
+                subUrl = originParts.join('/') + '/' + subTarget
+              }
+            }
+          } catch {
+            // Fallback does not work
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!subUrl || subUrl.startsWith('../') || subUrl.startsWith('./')) {
+      core.warning(`Could not resolve absolute URL for submodule ${info.name}. Falling back to standard clone.`)
+      await invokeStandardSubmoduleUpdate(git, repositoryPath, fetchDepth, info.path)
+      continue
+    }
+
+    try {
+      // Prepare cache
+      const cachePath = await cacheHelper.setupCache(git, subUrl)
+      
+      // Submodule update for this specific one
+      const args = ['-C', repositoryPath, '-c', 'protocol.version=2', 'submodule', 'update', '--init', '--force']
+      if (fetchDepth > 0) {
+        args.push(`--depth=${fetchDepth}`)
+      }
+      args.push('--reference', cachePath)
+      args.push(info.path)
+
+      const output = await git.execGit(args, true)
+      if (output.exitCode !== 0) {
+        throw new Error(`Submodule update failed with exit code ${output.exitCode}`)
+      }
+    } catch (err) {
+      core.warning(`Reference cache failed for submodule ${info.name} (${err}). Falling back to standard clone...`)
+      await invokeStandardSubmoduleUpdate(git, repositoryPath, fetchDepth, info.path)
+    }
+    
+    // Recursive update inside the submodule
+    if (nestedSubmodules) {
+      const subRepoPath = path.join(repositoryPath, info.path)
+      await iterativeSubmoduleUpdate(
+        git,
+        cacheHelper,
+        subRepoPath,
+        fetchDepth,
+        nestedSubmodules
+      )
+    }
+  }
+}
+
+async function invokeStandardSubmoduleUpdate(git: IGitCommandManager, repositoryPath: string, fetchDepth: number, submodulePath: string) {
+  const args = ['-C', repositoryPath, '-c', 'protocol.version=2', 'submodule', 'update', '--init', '--force']
+  if (fetchDepth > 0) {
+    args.push(`--depth=${fetchDepth}`)
+  }
+  args.push(submodulePath)
+  await git.execGit(args)
+}
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
   // Repository URL
@@ -105,6 +255,19 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     // Save state for POST action
     stateHelper.setRepositoryPath(settings.repositoryPath)
 
+    // If we didn't initialize it above, do it now
+    if (!authHelper) {
+      authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    }
+
+    // Check if we need global auth setup early for reference cache
+    // Global auth does not require a local .git directory
+    if (settings.referenceCache) {
+      core.startGroup('Setting up global auth for reference cache')
+      await authHelper.configureGlobalAuth()
+      core.endGroup()
+    }
+
     // Initialize the repository
     if (
       !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
@@ -113,7 +276,34 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.init()
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
+
+      // Setup reference cache if requested
+      if (settings.referenceCache) {
+        core.startGroup('Setting up reference repository cache')
+        const cacheHelper = new GitCacheHelper(settings.referenceCache)
+        const cachePath = await cacheHelper.setupCache(git, repositoryUrl)
+        const cacheObjects = path.join(cachePath, 'objects')
+        if (fsHelper.directoryExistsSync(cacheObjects, false)) {
+          await git.referenceAdd(cacheObjects)
+        } else {
+          core.warning(`Reference repository cache objects directory ${cacheObjects} does not exist`)
+        }
+        core.endGroup()
+      }
     }
+
+    // Remove global auth if it was set for reference cache,
+    // to avoid duplicate AUTHORIZATION headers during fetch
+    if (settings.referenceCache) {
+      core.startGroup('Removing global auth after reference cache setup')
+      await authHelper.removeGlobalAuth()
+      core.endGroup()
+    }
+
+    // Configure auth (must happen after git init so .git exists)
+    core.startGroup('Setting up auth')
+    await authHelper.configureAuth()
+    core.endGroup()
 
     // Disable automatic garbage collection
     core.startGroup('Disabling automatic garbage collection')
@@ -122,15 +312,6 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         `Unable to turn off git automatic garbage collection. The git fetch operation may trigger garbage collection and cause a delay.`
       )
     }
-    core.endGroup()
-
-    // If we didn't initialize it above, do it now
-    if (!authHelper) {
-      authHelper = gitAuthHelper.createAuthHelper(git, settings)
-    }
-    // Configure auth
-    core.startGroup('Setting up auth')
-    await authHelper.configureAuth()
     core.endGroup()
 
     // Determine the default branch
@@ -264,7 +445,21 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       // Checkout submodules
       core.startGroup('Fetching submodules')
       await git.submoduleSync(settings.nestedSubmodules)
-      await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules)
+      
+      if (settings.referenceCache) {
+        core.info('Iterative submodule update using reference cache')
+        const cacheHelper = new GitCacheHelper(settings.referenceCache)
+        await iterativeSubmoduleUpdate(
+          git,
+          cacheHelper,
+          settings.repositoryPath,
+          settings.fetchDepth,
+          settings.nestedSubmodules
+        )
+      } else {
+        await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules)
+      }
+      
       await git.submoduleForeach(
         'git config --local gc.auto 0',
         settings.nestedSubmodules
