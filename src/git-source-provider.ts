@@ -335,6 +335,10 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.lfsInstall()
     }
 
+    // When using reference cache, fetch-depth > 0 is counterproductive:
+    // objects are served from the local cache, so shallow negotiation only adds latency.
+    adjustFetchDepthForCache(settings)
+
     // Fetch
     core.startGroup('Fetching the repository')
     const fetchOptions: {
@@ -566,5 +570,32 @@ async function getGitCommandManager(
 
     // Otherwise fallback to REST API
     return undefined
+  }
+}
+
+/**
+ * Adjusts fetchDepth when reference-cache is active.
+ * Shallow fetches are counterproductive with a local cache because
+ * objects are served from disk, making shallow negotiation pure overhead.
+ */
+export function adjustFetchDepthForCache(
+  settings: Pick<
+    IGitSourceSettings,
+    'referenceCache' | 'fetchDepth' | 'fetchDepthExplicit'
+  >
+): void {
+  if (settings.referenceCache && settings.fetchDepth > 0) {
+    if (settings.fetchDepthExplicit) {
+      core.warning(
+        `'fetch-depth: ${settings.fetchDepth}' is set with reference-cache enabled. ` +
+          `This may slow down checkout because shallow negotiation bypasses the local cache. ` +
+          `Consider using 'fetch-depth: 0' for best performance with reference-cache.`
+      )
+    } else {
+      core.info(
+        `Overriding fetch-depth from ${settings.fetchDepth} to 0 because reference-cache is enabled`
+      )
+      settings.fetchDepth = 0
+    }
   }
 }

@@ -50,6 +50,11 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
+   * Whether fetch-depth was explicitly set by the user
+   */
+  fetchDepthExplicit: boolean
+
+  /**
    * Fetch tags, even if fetchDepth > 0 (default: false)
    */
   fetchTags: boolean

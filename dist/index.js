@@ -1581,6 +1581,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSource = getSource;
 exports.cleanup = cleanup;
+exports.adjustFetchDepthForCache = adjustFetchDepthForCache;
 const core = __importStar(__nccwpck_require__(2186));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const gitAuthHelper = __importStar(__nccwpck_require__(2565));
@@ -1841,6 +1842,9 @@ function getSource(settings) {
             if (settings.lfs) {
                 yield git.lfsInstall();
             }
+            // When using reference cache, fetch-depth > 0 is counterproductive:
+            // objects are served from the local cache, so shallow negotiation only adds latency.
+            adjustFetchDepthForCache(settings);
             // Fetch
             core.startGroup('Fetching the repository');
             const fetchOptions = {};
@@ -2013,6 +2017,24 @@ function getGitCommandManager(settings) {
             return undefined;
         }
     });
+}
+/**
+ * Adjusts fetchDepth when reference-cache is active.
+ * Shallow fetches are counterproductive with a local cache because
+ * objects are served from disk, making shallow negotiation pure overhead.
+ */
+function adjustFetchDepthForCache(settings) {
+    if (settings.referenceCache && settings.fetchDepth > 0) {
+        if (settings.fetchDepthExplicit) {
+            core.warning(`'fetch-depth: ${settings.fetchDepth}' is set with reference-cache enabled. ` +
+                `This may slow down checkout because shallow negotiation bypasses the local cache. ` +
+                `Consider using 'fetch-depth: 0' for best performance with reference-cache.`);
+        }
+        else {
+            core.info(`Overriding fetch-depth from ${settings.fetchDepth} to 0 because reference-cache is enabled`);
+            settings.fetchDepth = 0;
+        }
+    }
 }
 
 
@@ -2374,7 +2396,9 @@ function getInputs() {
             (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
                 'TRUE';
         // Fetch depth
-        result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'));
+        const fetchDepthInput = core.getInput('fetch-depth');
+        result.fetchDepthExplicit = fetchDepthInput !== '';
+        result.fetchDepth = Math.floor(Number(fetchDepthInput || '1'));
         if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
             result.fetchDepth = 0;
         }

@@ -102,7 +102,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     'TRUE'
 
   // Fetch depth
-  result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
+  const fetchDepthInput = core.getInput('fetch-depth')
+  result.fetchDepthExplicit = fetchDepthInput !== ''
+  result.fetchDepth = Math.floor(Number(fetchDepthInput || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
     result.fetchDepth = 0
   }
