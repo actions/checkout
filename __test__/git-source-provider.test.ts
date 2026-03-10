@@ -1,5 +1,10 @@
 import * as core from '@actions/core'
-import {adjustFetchDepthForCache} from '../src/git-source-provider'
+import * as fsHelper from '../src/fs-helper'
+import {GitCacheHelper} from '../src/git-cache-helper'
+import {
+  adjustFetchDepthForCache,
+  setupReferenceCache
+} from '../src/git-source-provider'
 
 // Mock @actions/core
 jest.mock('@actions/core')
@@ -83,6 +88,76 @@ describe('adjustFetchDepthForCache', () => {
     expect(settings.fetchDepth).toBe(42)
     expect(core.warning).toHaveBeenCalledWith(
       expect.stringContaining("'fetch-depth: 42' is set with reference-cache enabled")
+    )
+  })
+})
+
+describe('setupReferenceCache', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('does nothing when referenceCache is not set', async () => {
+    const git = {
+      referenceAdd: jest.fn()
+    } as any
+
+    await setupReferenceCache(git, '', 'https://github.com/actions/checkout.git')
+
+    expect(git.referenceAdd).not.toHaveBeenCalled()
+    expect(core.startGroup).not.toHaveBeenCalled()
+  })
+
+  it('updates the cache and configures alternates when cache objects exist', async () => {
+    const git = {
+      referenceAdd: jest.fn().mockResolvedValue(undefined)
+    } as any
+    const setupCacheSpy = jest
+      .spyOn(GitCacheHelper.prototype, 'setupCache')
+      .mockResolvedValue('/tmp/reference-cache/repo.git')
+    jest
+      .spyOn(fsHelper, 'directoryExistsSync')
+      .mockReturnValue(true)
+
+    await setupReferenceCache(
+      git,
+      '/tmp/reference-cache',
+      'https://github.com/actions/checkout.git'
+    )
+
+    expect(setupCacheSpy).toHaveBeenCalledWith(
+      git,
+      'https://github.com/actions/checkout.git'
+    )
+    expect(git.referenceAdd).toHaveBeenCalledWith(
+      '/tmp/reference-cache/repo.git/objects'
+    )
+  })
+
+  it('warns when the cache objects directory is missing', async () => {
+    const git = {
+      referenceAdd: jest.fn().mockResolvedValue(undefined)
+    } as any
+    jest
+      .spyOn(GitCacheHelper.prototype, 'setupCache')
+      .mockResolvedValue('/tmp/reference-cache/repo.git')
+    jest
+      .spyOn(fsHelper, 'directoryExistsSync')
+      .mockReturnValue(false)
+
+    await setupReferenceCache(
+      git,
+      '/tmp/reference-cache',
+      'https://github.com/actions/checkout.git'
+    )
+
+    expect(git.referenceAdd).not.toHaveBeenCalled()
+    expect(core.warning).toHaveBeenCalledWith(
+      'Reference repository cache objects directory /tmp/reference-cache/repo.git/objects does not exist'
     )
   })
 })

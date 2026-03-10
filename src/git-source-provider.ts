@@ -23,6 +23,32 @@ interface SubmoduleInfo {
   url: string
 }
 
+export async function setupReferenceCache(
+  git: IGitCommandManager,
+  referenceCache: string,
+  repositoryUrl: string
+): Promise<void> {
+  if (!referenceCache) {
+    return
+  }
+
+  core.startGroup('Setting up reference repository cache')
+  try {
+    const cacheHelper = new GitCacheHelper(referenceCache)
+    const cachePath = await cacheHelper.setupCache(git, repositoryUrl)
+    const cacheObjects = path.join(cachePath, 'objects')
+    if (fsHelper.directoryExistsSync(cacheObjects, false)) {
+      await git.referenceAdd(cacheObjects)
+    } else {
+      core.warning(
+        `Reference repository cache objects directory ${cacheObjects} does not exist`
+      )
+    }
+  } finally {
+    core.endGroup()
+  }
+}
+
 async function iterativeSubmoduleUpdate(
   git: IGitCommandManager,
   cacheHelper: GitCacheHelper,
@@ -276,21 +302,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.init()
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
-
-      // Setup reference cache if requested
-      if (settings.referenceCache) {
-        core.startGroup('Setting up reference repository cache')
-        const cacheHelper = new GitCacheHelper(settings.referenceCache)
-        const cachePath = await cacheHelper.setupCache(git, repositoryUrl)
-        const cacheObjects = path.join(cachePath, 'objects')
-        if (fsHelper.directoryExistsSync(cacheObjects, false)) {
-          await git.referenceAdd(cacheObjects)
-        } else {
-          core.warning(`Reference repository cache objects directory ${cacheObjects} does not exist`)
-        }
-        core.endGroup()
-      }
     }
+
+    await setupReferenceCache(git, settings.referenceCache, repositoryUrl)
 
     // Remove global auth if it was set for reference cache,
     // to avoid duplicate AUTHORIZATION headers during fetch
