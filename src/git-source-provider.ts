@@ -49,7 +49,7 @@ export async function setupReferenceCache(
   }
 }
 
-async function iterativeSubmoduleUpdate(
+async function recursiveSubmoduleUpdate(
   git: IGitCommandManager,
   cacheHelper: GitCacheHelper,
   repositoryPath: string,
@@ -171,7 +171,7 @@ async function iterativeSubmoduleUpdate(
     // Recursive update inside the submodule
     if (nestedSubmodules) {
       const subRepoPath = path.join(repositoryPath, info.path)
-      await iterativeSubmoduleUpdate(
+      await recursiveSubmoduleUpdate(
         git,
         cacheHelper,
         subRepoPath,
@@ -465,9 +465,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.submoduleSync(settings.nestedSubmodules)
       
       if (settings.referenceCache) {
-        core.info('Iterative submodule update using reference cache')
+        core.info('Recursive submodule update using reference cache')
         const cacheHelper = new GitCacheHelper(settings.referenceCache)
-        await iterativeSubmoduleUpdate(
+        await recursiveSubmoduleUpdate(
           git,
           cacheHelper,
           settings.repositoryPath,
