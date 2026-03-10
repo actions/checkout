@@ -68,8 +68,8 @@ export class GitCacheHelper {
           await git.execGit(args)
           
           if (fs.existsSync(cachePath)) {
-             // In rare cases where it somehow exists but objects/ didn't, clean it up
-             await fs.promises.rm(cachePath, { recursive: true, force: true })
+            // In rare cases where it somehow exists but objects/ didn't, clean it up
+            await fs.promises.rm(cachePath, { recursive: true, force: true })
           }
           await fs.promises.rename(tmpPath, cachePath)
         } catch (cloneErr) {
