@@ -645,7 +645,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
+exports.MinimumGitSparseIndexVersion = exports.MinimumGitSparseCheckoutVersion = exports.MinimumGitVersion = void 0;
 exports.createCommandManager = createCommandManager;
 const core = __importStar(__nccwpck_require__(2186));
 const exec = __importStar(__nccwpck_require__(1514));
@@ -661,6 +661,7 @@ const git_version_1 = __nccwpck_require__(3142);
 // sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 exports.MinimumGitVersion = new git_version_1.GitVersion('2.18');
 exports.MinimumGitSparseCheckoutVersion = new git_version_1.GitVersion('2.28');
+exports.MinimumGitSparseIndexVersion = new git_version_1.GitVersion('2.32');
 function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
@@ -1573,9 +1574,9 @@ function getSource(settings) {
                 yield git.lfsFetch(checkoutInfo.startPoint || checkoutInfo.ref);
                 core.endGroup();
             }
+            let gitVersion = yield git.version();
             // Sparse checkout
             if (!settings.sparseCheckout) {
-                let gitVersion = yield git.version();
                 // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
                 if (gitVersion.checkMinimum(git_command_manager_1.MinimumGitSparseCheckoutVersion)) {
                     yield git.disableSparseCheckout();
@@ -1588,6 +1589,9 @@ function getSource(settings) {
                 }
                 else {
                     yield git.sparseCheckoutNonConeMode(settings.sparseCheckout);
+                }
+                if (gitVersion.checkMinimum(git_command_manager_1.MinimumGitSparseIndexVersion)) {
+                    yield git.config('index.sparse', 'true', false);
                 }
                 core.endGroup();
             }
