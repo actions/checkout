@@ -95,6 +95,29 @@ inputs:
   set-safe-directory:
     description: Add repository path as safe.directory for Git global config by running `git config --global --add safe.directory <path>`
     default: true
+  timeout:
+    description: >
+      Timeout in seconds for each git network operation attempt (fetch, lfs-fetch, ls-remote).
+      If a single attempt exceeds this, it is killed and retried.
+      Set to 0 to disable. Default is 300 (5 minutes).
+      Similar to Kubernetes probe timeoutSeconds.
+    default: 300
+  retry-max-attempts:
+    description: >
+      Maximum number of retry attempts for failed git network operations.
+      Similar to Kubernetes probe failureThreshold.
+    default: 3
+  retry-min-backoff:
+    description: >
+      Minimum backoff time in seconds between retry attempts.
+      The actual backoff is randomly chosen between min and max.
+      Similar to Kubernetes probe periodSeconds.
+    default: 10
+  retry-max-backoff:
+    description: >
+      Maximum backoff time in seconds between retry attempts.
+      The actual backoff is randomly chosen between min and max.
+    default: 20
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false

@@ -80,6 +80,12 @@ export interface IGitCommandManager {
   ): Promise<string[]>
   tryReset(): Promise<boolean>
   version(): Promise<GitVersion>
+  setTimeout(timeoutSeconds: number): void
+  setRetryConfig(
+    maxAttempts: number,
+    minBackoffSeconds: number,
+    maxBackoffSeconds: number
+  ): void
 }
 
 export async function createCommandManager(
@@ -104,6 +110,8 @@ class GitCommandManager {
   private doSparseCheckout = false
   private workingDirectory = ''
   private gitVersion: GitVersion = new GitVersion()
+  private timeoutMs = 0
+  private networkRetryHelper = new retryHelper.RetryHelper()
 
   // Private constructor; use createCommandManager()
   private constructor() {}
@@ -312,22 +320,28 @@ class GitCommandManager {
     }
 
     const that = this
-    await retryHelper.execute(async () => {
-      await that.execGit(args)
+    await this.networkRetryHelper.execute(async () => {
+      await that.execGit(args, false, false, {}, that.timeoutMs)
     })
   }
 
   async getDefaultBranch(repositoryUrl: string): Promise<string> {
     let output: GitOutput | undefined
-    await retryHelper.execute(async () => {
-      output = await this.execGit([
-        'ls-remote',
-        '--quiet',
-        '--exit-code',
-        '--symref',
-        repositoryUrl,
-        'HEAD'
-      ])
+    await this.networkRetryHelper.execute(async () => {
+      output = await this.execGit(
+        [
+          'ls-remote',
+          '--quiet',
+          '--exit-code',
+          '--symref',
+          repositoryUrl,
+          'HEAD'
+        ],
+        false,
+        false,
+        {},
+        this.timeoutMs
+      )
     })
 
     if (output) {
@@ -381,8 +395,8 @@ class GitCommandManager {
     const args = ['lfs', 'fetch', 'origin', ref]
 
     const that = this
-    await retryHelper.execute(async () => {
-      await that.execGit(args)
+    await this.networkRetryHelper.execute(async () => {
+      await that.execGit(args, false, false, {}, that.timeoutMs)
     })
   }
 
@@ -595,6 +609,22 @@ class GitCommandManager {
     return this.gitVersion
   }
 
+  setTimeout(timeoutSeconds: number): void {
+    this.timeoutMs = timeoutSeconds * 1000
+  }
+
+  setRetryConfig(
+    maxAttempts: number,
+    minBackoffSeconds: number,
+    maxBackoffSeconds: number
+  ): void {
+    this.networkRetryHelper = new retryHelper.RetryHelper(
+      maxAttempts,
+      minBackoffSeconds,
+      maxBackoffSeconds
+    )
+  }
+
   static async createCommandManager(
     workingDirectory: string,
     lfs: boolean,
@@ -613,7 +643,8 @@ class GitCommandManager {
     args: string[],
     allowAllExitCodes = false,
     silent = false,
-    customListeners = {}
+    customListeners = {},
+    timeoutMs = 0
   ): Promise<GitOutput> {
     fshelper.directoryExistsSync(this.workingDirectory, true)
 
@@ -644,7 +675,28 @@ class GitCommandManager {
       listeners: mergedListeners
     }
 
-    result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
+    const execPromise = exec.exec(`"${this.gitPath}"`, args, options)
+
+    if (timeoutMs > 0) {
+      let timer: ReturnType<typeof setTimeout>
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = global.setTimeout(() => {
+          reject(
+            new Error(
+              `Git operation timed out after ${timeoutMs / 1000} seconds: git ${args.slice(0, 3).join(' ')}...`
+            )
+          )
+        }, timeoutMs)
+      })
+      try {
+        result.exitCode = await Promise.race([execPromise, timeoutPromise])
+      } finally {
+        clearTimeout(timer!)
+      }
+    } else {
+      result.exitCode = await execPromise
+    }
+
     result.stdout = stdout.join('')
 
     core.debug(result.exitCode.toString())

@@ -678,6 +678,8 @@ class GitCommandManager {
         this.doSparseCheckout = false;
         this.workingDirectory = '';
         this.gitVersion = new git_version_1.GitVersion();
+        this.timeoutMs = 0;
+        this.networkRetryHelper = new retryHelper.RetryHelper();
     }
     branchDelete(remote, branch) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -851,15 +853,15 @@ class GitCommandManager {
                 args.push(arg);
             }
             const that = this;
-            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                yield that.execGit(args);
+            yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args, false, false, {}, that.timeoutMs);
             }));
         });
     }
     getDefaultBranch(repositoryUrl) {
         return __awaiter(this, void 0, void 0, function* () {
             let output;
-            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+            yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
                 output = yield this.execGit([
                     'ls-remote',
                     '--quiet',
@@ -867,7 +869,7 @@ class GitCommandManager {
                     '--symref',
                     repositoryUrl,
                     'HEAD'
-                ]);
+                ], false, false, {}, this.timeoutMs);
             }));
             if (output) {
                 // Satisfy compiler, will always be set
@@ -912,8 +914,8 @@ class GitCommandManager {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['lfs', 'fetch', 'origin', ref];
             const that = this;
-            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                yield that.execGit(args);
+            yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args, false, false, {}, that.timeoutMs);
             }));
         });
     }
@@ -1107,6 +1109,12 @@ class GitCommandManager {
             return this.gitVersion;
         });
     }
+    setTimeout(timeoutSeconds) {
+        this.timeoutMs = timeoutSeconds * 1000;
+    }
+    setRetryConfig(maxAttempts, minBackoffSeconds, maxBackoffSeconds) {
+        this.networkRetryHelper = new retryHelper.RetryHelper(maxAttempts, minBackoffSeconds, maxBackoffSeconds);
+    }
     static createCommandManager(workingDirectory, lfs, doSparseCheckout) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = new GitCommandManager();
@@ -1115,7 +1123,7 @@ class GitCommandManager {
         });
     }
     execGit(args_1) {
-        return __awaiter(this, arguments, void 0, function* (args, allowAllExitCodes = false, silent = false, customListeners = {}) {
+        return __awaiter(this, arguments, void 0, function* (args, allowAllExitCodes = false, silent = false, customListeners = {}, timeoutMs = 0) {
             fshelper.directoryExistsSync(this.workingDirectory, true);
             const result = new GitOutput();
             const env = {};
@@ -1139,7 +1147,24 @@ class GitCommandManager {
                 ignoreReturnCode: allowAllExitCodes,
                 listeners: mergedListeners
             };
-            result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, options);
+            const execPromise = exec.exec(`"${this.gitPath}"`, args, options);
+            if (timeoutMs > 0) {
+                let timer;
+                const timeoutPromise = new Promise((_, reject) => {
+                    timer = global.setTimeout(() => {
+                        reject(new Error(`Git operation timed out after ${timeoutMs / 1000} seconds: git ${args.slice(0, 3).join(' ')}...`));
+                    }, timeoutMs);
+                });
+                try {
+                    result.exitCode = yield Promise.race([execPromise, timeoutPromise]);
+                }
+                finally {
+                    clearTimeout(timer);
+                }
+            }
+            else {
+                result.exitCode = yield execPromise;
+            }
             result.stdout = stdout.join('');
             core.debug(result.exitCode.toString());
             core.debug(result.stdout);
@@ -1448,6 +1473,10 @@ function getSource(settings) {
         core.startGroup('Getting Git version info');
         const git = yield getGitCommandManager(settings);
         core.endGroup();
+        if (git) {
+            git.setTimeout(settings.timeout);
+            git.setRetryConfig(settings.retryMaxAttempts, settings.retryMinBackoff, settings.retryMaxBackoff);
+        }
         let authHelper = null;
         try {
             if (git) {
@@ -2095,6 +2124,32 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
+        // Timeout (per-attempt, like k8s timeoutSeconds)
+        result.timeout = Math.floor(Number(core.getInput('timeout') || '300'));
+        if (isNaN(result.timeout) || result.timeout < 0) {
+            result.timeout = 300;
+        }
+        core.debug(`timeout = ${result.timeout}`);
+        // Retry max attempts (like k8s failureThreshold)
+        result.retryMaxAttempts = Math.floor(Number(core.getInput('retry-max-attempts') || '3'));
+        if (isNaN(result.retryMaxAttempts) || result.retryMaxAttempts < 1) {
+            result.retryMaxAttempts = 3;
+        }
+        core.debug(`retry max attempts = ${result.retryMaxAttempts}`);
+        // Retry backoff (like k8s periodSeconds, but as a min/max range)
+        result.retryMinBackoff = Math.floor(Number(core.getInput('retry-min-backoff') || '10'));
+        if (isNaN(result.retryMinBackoff) || result.retryMinBackoff < 0) {
+            result.retryMinBackoff = 10;
+        }
+        core.debug(`retry min backoff = ${result.retryMinBackoff}`);
+        result.retryMaxBackoff = Math.floor(Number(core.getInput('retry-max-backoff') || '20'));
+        if (isNaN(result.retryMaxBackoff) || result.retryMaxBackoff < 0) {
+            result.retryMaxBackoff = 20;
+        }
+        if (result.retryMaxBackoff < result.retryMinBackoff) {
+            result.retryMaxBackoff = result.retryMinBackoff;
+        }
+        core.debug(`retry max backoff = ${result.retryMaxBackoff}`);
         return result;
     });
 }
@@ -5260,6 +5315,7 @@ class Context {
         this.action = process.env.GITHUB_ACTION;
         this.actor = process.env.GITHUB_ACTOR;
         this.job = process.env.GITHUB_JOB;
+        this.runAttempt = parseInt(process.env.GITHUB_RUN_ATTEMPT, 10);
         this.runNumber = parseInt(process.env.GITHUB_RUN_NUMBER, 10);
         this.runId = parseInt(process.env.GITHUB_RUN_ID, 10);
         this.apiUrl = (_a = process.env.GITHUB_API_URL) !== null && _a !== void 0 ? _a : `https://api.github.com`;
@@ -6136,7 +6192,7 @@ class HttpClient {
         }
         const usingSsl = parsedUrl.protocol === 'https:';
         proxyAgent = new undici_1.ProxyAgent(Object.assign({ uri: proxyUrl.href, pipelining: !this._keepAlive ? 0 : 1 }, ((proxyUrl.username || proxyUrl.password) && {
-            token: `${proxyUrl.username}:${proxyUrl.password}`
+            token: `Basic ${Buffer.from(`${proxyUrl.username}:${proxyUrl.password}`).toString('base64')}`
         })));
         this._proxyAgentDispatcher = proxyAgent;
         if (usingSsl && this._ignoreSslError) {
@@ -6250,11 +6306,11 @@ function getProxyUrl(reqUrl) {
     })();
     if (proxyVar) {
         try {
-            return new URL(proxyVar);
+            return new DecodedURL(proxyVar);
         }
         catch (_a) {
             if (!proxyVar.startsWith('http://') && !proxyVar.startsWith('https://'))
-                return new URL(`http://${proxyVar}`);
+                return new DecodedURL(`http://${proxyVar}`);
         }
     }
     else {
@@ -6312,6 +6368,19 @@ function isLoopbackAddress(host) {
         hostLower.startsWith('127.') ||
         hostLower.startsWith('[::1]') ||
         hostLower.startsWith('[0:0:0:0:0:0:0:1]'));
+}
+class DecodedURL extends URL {
+    constructor(url, base) {
+        super(url, base);
+        this._decodedUsername = decodeURIComponent(super.username);
+        this._decodedPassword = decodeURIComponent(super.password);
+    }
+    get username() {
+        return this._decodedUsername;
+    }
+    get password() {
+        return this._decodedPassword;
+    }
 }
 //# sourceMappingURL=proxy.js.map
 
