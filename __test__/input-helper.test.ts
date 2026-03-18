@@ -144,4 +144,58 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
   })
+
+  it('sets timeout and retry defaults', async () => {
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.timeout).toBe(300)
+    expect(settings.retryMaxAttempts).toBe(3)
+    expect(settings.retryMinBackoff).toBe(10)
+    expect(settings.retryMaxBackoff).toBe(20)
+  })
+
+  it('allows timeout 0 to disable', async () => {
+    inputs.timeout = '0'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.timeout).toBe(0)
+  })
+
+  it('parses custom timeout and retry values', async () => {
+    inputs.timeout = '30'
+    inputs['retry-max-attempts'] = '5'
+    inputs['retry-min-backoff'] = '2'
+    inputs['retry-max-backoff'] = '15'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.timeout).toBe(30)
+    expect(settings.retryMaxAttempts).toBe(5)
+    expect(settings.retryMinBackoff).toBe(2)
+    expect(settings.retryMaxBackoff).toBe(15)
+  })
+
+  it('clamps retry-max-backoff to min when less than min and warns', async () => {
+    inputs['retry-min-backoff'] = '20'
+    inputs['retry-max-backoff'] = '5'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.retryMaxBackoff).toBe(20)
+    expect(core.warning).toHaveBeenCalledWith(
+      expect.stringContaining("'retry-max-backoff' (5) is less than 'retry-min-backoff' (20)")
+    )
+  })
+
+  it('defaults invalid timeout to 300 and warns', async () => {
+    inputs.timeout = 'garbage'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.timeout).toBe(300)
+    expect(core.warning).toHaveBeenCalledWith(
+      expect.stringContaining("Invalid value 'garbage' for 'timeout'")
+    )
+  })
+
+  it('defaults negative retry-max-attempts to 3 and warns', async () => {
+    inputs['retry-max-attempts'] = '-1'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.retryMaxAttempts).toBe(3)
+    expect(core.warning).toHaveBeenCalledWith(
+      expect.stringContaining("Invalid value '-1' for 'retry-max-attempts'")
+    )
+  })
 })

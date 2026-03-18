@@ -161,38 +161,57 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
-  // Timeout (per-attempt, like k8s timeoutSeconds)
-  result.timeout = Math.floor(Number(core.getInput('timeout') || '300'))
+  // Timeout per network operation attempt
+  const timeoutInput = core.getInput('timeout')
+  result.timeout = Math.floor(Number(timeoutInput !== '' ? timeoutInput : '300'))
   if (isNaN(result.timeout) || result.timeout < 0) {
+    core.warning(
+      `Invalid value '${timeoutInput}' for 'timeout' input. Using default: 300 seconds.`
+    )
     result.timeout = 300
   }
   core.debug(`timeout = ${result.timeout}`)
 
-  // Retry max attempts (like k8s failureThreshold)
+  // Retry max attempts (total attempts including initial)
+  const retryMaxAttemptsInput = core.getInput('retry-max-attempts')
   result.retryMaxAttempts = Math.floor(
-    Number(core.getInput('retry-max-attempts') || '3')
+    Number(retryMaxAttemptsInput !== '' ? retryMaxAttemptsInput : '3')
   )
   if (isNaN(result.retryMaxAttempts) || result.retryMaxAttempts < 1) {
+    core.warning(
+      `Invalid value '${retryMaxAttemptsInput}' for 'retry-max-attempts' input. Using default: 3.`
+    )
     result.retryMaxAttempts = 3
   }
   core.debug(`retry max attempts = ${result.retryMaxAttempts}`)
 
-  // Retry backoff (like k8s periodSeconds, but as a min/max range)
+  // Retry backoff range
+  const retryMinBackoffInput = core.getInput('retry-min-backoff')
   result.retryMinBackoff = Math.floor(
-    Number(core.getInput('retry-min-backoff') || '10')
+    Number(retryMinBackoffInput !== '' ? retryMinBackoffInput : '10')
   )
   if (isNaN(result.retryMinBackoff) || result.retryMinBackoff < 0) {
+    core.warning(
+      `Invalid value '${retryMinBackoffInput}' for 'retry-min-backoff' input. Using default: 10 seconds.`
+    )
     result.retryMinBackoff = 10
   }
   core.debug(`retry min backoff = ${result.retryMinBackoff}`)
 
+  const retryMaxBackoffInput = core.getInput('retry-max-backoff')
   result.retryMaxBackoff = Math.floor(
-    Number(core.getInput('retry-max-backoff') || '20')
+    Number(retryMaxBackoffInput !== '' ? retryMaxBackoffInput : '20')
   )
   if (isNaN(result.retryMaxBackoff) || result.retryMaxBackoff < 0) {
+    core.warning(
+      `Invalid value '${retryMaxBackoffInput}' for 'retry-max-backoff' input. Using default: 20 seconds.`
+    )
     result.retryMaxBackoff = 20
   }
   if (result.retryMaxBackoff < result.retryMinBackoff) {
+    core.warning(
+      `'retry-max-backoff' (${result.retryMaxBackoff}) is less than 'retry-min-backoff' (${result.retryMinBackoff}). Using retry-min-backoff value for both.`
+    )
     result.retryMaxBackoff = result.retryMinBackoff
   }
   core.debug(`retry max backoff = ${result.retryMaxBackoff}`)

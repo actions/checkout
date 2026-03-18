@@ -655,6 +655,7 @@ const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
 const regexpHelper = __importStar(__nccwpck_require__(3120));
 const retryHelper = __importStar(__nccwpck_require__(2155));
+const child_process_1 = __nccwpck_require__(2081);
 const git_version_1 = __nccwpck_require__(3142);
 // Auth header not supported before 2.9
 // Wire protocol v2 not supported before 2.18
@@ -737,7 +738,7 @@ class GitCommandManager {
                 }
             };
             // Suppress the output in order to avoid flooding annotations with innocuous errors.
-            yield this.execGit(args, false, true, listeners);
+            yield this.execGit(args, { silent: true, customListeners: listeners });
             core.debug(`stderr callback is: ${stderr}`);
             core.debug(`errline callback is: ${errline}`);
             core.debug(`stdout callback is: ${stdout}`);
@@ -825,7 +826,7 @@ class GitCommandManager {
                 '--name-only',
                 '--get-regexp',
                 pattern
-            ], true);
+            ], { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
@@ -854,7 +855,7 @@ class GitCommandManager {
             }
             const that = this;
             yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                yield that.execGit(args, false, false, {}, that.timeoutMs);
+                yield that.execGit(args, { timeoutMs: that.timeoutMs });
             }));
         });
     }
@@ -869,7 +870,7 @@ class GitCommandManager {
                     '--symref',
                     repositoryUrl,
                     'HEAD'
-                ], false, false, {}, this.timeoutMs);
+                ], { timeoutMs: this.timeoutMs });
             }));
             if (output) {
                 // Satisfy compiler, will always be set
@@ -906,7 +907,7 @@ class GitCommandManager {
     isDetached() {
         return __awaiter(this, void 0, void 0, function* () {
             // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
-            const output = yield this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], true);
+            const output = yield this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], { allowAllExitCodes: true });
             return !output.stdout.trim().startsWith('refs/heads/');
         });
     }
@@ -915,7 +916,7 @@ class GitCommandManager {
             const args = ['lfs', 'fetch', 'origin', ref];
             const that = this;
             yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
-                yield that.execGit(args, false, false, {}, that.timeoutMs);
+                yield that.execGit(args, { timeoutMs: that.timeoutMs });
             }));
         });
     }
@@ -927,8 +928,8 @@ class GitCommandManager {
     log1(format) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = format ? ['log', '-1', format] : ['log', '-1'];
-            const silent = format ? false : true;
-            const output = yield this.execGit(args, false, silent);
+            const silent = !format;
+            const output = yield this.execGit(args, { silent });
             return output.stdout;
         });
     }
@@ -958,7 +959,7 @@ class GitCommandManager {
     shaExists(sha) {
         return __awaiter(this, void 0, void 0, function* () {
             const args = ['rev-parse', '--verify', '--quiet', `${sha}^{object}`];
-            const output = yield this.execGit(args, true);
+            const output = yield this.execGit(args, { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
@@ -979,7 +980,10 @@ class GitCommandManager {
             if (recursive) {
                 args.push('--recursive');
             }
-            yield this.execGit(args);
+            const that = this;
+            yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args, { timeoutMs: that.timeoutMs });
+            }));
         });
     }
     submoduleUpdate(fetchDepth, recursive) {
@@ -992,12 +996,15 @@ class GitCommandManager {
             if (recursive) {
                 args.push('--recursive');
             }
-            yield this.execGit(args);
+            const that = this;
+            yield this.networkRetryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args, { timeoutMs: that.timeoutMs });
+            }));
         });
     }
     submoduleStatus() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['submodule', 'status'], true);
+            const output = yield this.execGit(['submodule', 'status'], { allowAllExitCodes: true });
             core.debug(output.stdout);
             return output.exitCode === 0;
         });
@@ -1010,7 +1017,7 @@ class GitCommandManager {
     }
     tryClean() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['clean', '-ffdx'], true);
+            const output = yield this.execGit(['clean', '-ffdx'], { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
@@ -1021,7 +1028,7 @@ class GitCommandManager {
                 globalConfig ? '--global' : '--local',
                 '--unset-all',
                 configKey
-            ], true);
+            ], { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
@@ -1035,19 +1042,19 @@ class GitCommandManager {
                 args.push(globalConfig ? '--global' : '--local');
             }
             args.push('--unset', configKey, configValue);
-            const output = yield this.execGit(args, true);
+            const output = yield this.execGit(args, { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
     tryDisableAutomaticGarbageCollection() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--local', 'gc.auto', '0'], true);
+            const output = yield this.execGit(['config', '--local', 'gc.auto', '0'], { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
     tryGetFetchUrl() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['config', '--local', '--get', 'remote.origin.url'], true);
+            const output = yield this.execGit(['config', '--local', '--get', 'remote.origin.url'], { allowAllExitCodes: true });
             if (output.exitCode !== 0) {
                 return '';
             }
@@ -1068,7 +1075,7 @@ class GitCommandManager {
                 args.push(globalConfig ? '--global' : '--local');
             }
             args.push('--get-all', configKey);
-            const output = yield this.execGit(args, true);
+            const output = yield this.execGit(args, { allowAllExitCodes: true });
             if (output.exitCode !== 0) {
                 return [];
             }
@@ -1088,7 +1095,7 @@ class GitCommandManager {
                 args.push(globalConfig ? '--global' : '--local');
             }
             args.push('--name-only', '--get-regexp', pattern);
-            const output = yield this.execGit(args, true);
+            const output = yield this.execGit(args, { allowAllExitCodes: true });
             if (output.exitCode !== 0) {
                 return [];
             }
@@ -1100,7 +1107,7 @@ class GitCommandManager {
     }
     tryReset() {
         return __awaiter(this, void 0, void 0, function* () {
-            const output = yield this.execGit(['reset', '--hard', 'HEAD'], true);
+            const output = yield this.execGit(['reset', '--hard', 'HEAD'], { allowAllExitCodes: true });
             return output.exitCode === 0;
         });
     }
@@ -1109,9 +1116,22 @@ class GitCommandManager {
             return this.gitVersion;
         });
     }
+    /**
+     * Sets the timeout for network git operations.
+     * @param timeoutSeconds Timeout in seconds. 0 disables the timeout.
+     */
     setTimeout(timeoutSeconds) {
+        if (timeoutSeconds < 0) {
+            throw new Error(`Timeout must be non-negative, got ${timeoutSeconds}`);
+        }
         this.timeoutMs = timeoutSeconds * 1000;
     }
+    /**
+     * Configures retry behavior for network git operations.
+     * @param maxAttempts Total attempts including the initial one. Must be >= 1.
+     * @param minBackoffSeconds Minimum backoff between retries. Must be <= maxBackoffSeconds.
+     * @param maxBackoffSeconds Maximum backoff between retries.
+     */
     setRetryConfig(maxAttempts, minBackoffSeconds, maxBackoffSeconds) {
         this.networkRetryHelper = new retryHelper.RetryHelper(maxAttempts, minBackoffSeconds, maxBackoffSeconds);
     }
@@ -1123,8 +1143,19 @@ class GitCommandManager {
         });
     }
     execGit(args_1) {
-        return __awaiter(this, arguments, void 0, function* (args, allowAllExitCodes = false, silent = false, customListeners = {}, timeoutMs = 0) {
+        return __awaiter(this, arguments, void 0, function* (args, options = {}) {
+            const { allowAllExitCodes = false, silent = false, customListeners = {}, timeoutMs = 0 } = options;
             fshelper.directoryExistsSync(this.workingDirectory, true);
+            // Use child_process.spawn directly when timeout is set,
+            // so we can kill the process on timeout and avoid orphaned git processes.
+            // Note: customListeners are not supported in the timeout path.
+            if (timeoutMs > 0) {
+                if (customListeners &&
+                    Object.keys(customListeners).length > 0) {
+                    core.debug('customListeners are not supported with timeoutMs and will be ignored');
+                }
+                return yield this.execGitWithTimeout(args, timeoutMs, silent, allowAllExitCodes);
+            }
             const result = new GitOutput();
             const env = {};
             for (const key of Object.keys(process.env)) {
@@ -1140,35 +1171,121 @@ class GitCommandManager {
             };
             const mergedListeners = Object.assign(Object.assign({}, defaultListener), customListeners);
             const stdout = [];
-            const options = {
+            const execOptions = {
                 cwd: this.workingDirectory,
                 env,
                 silent,
                 ignoreReturnCode: allowAllExitCodes,
                 listeners: mergedListeners
             };
-            const execPromise = exec.exec(`"${this.gitPath}"`, args, options);
-            if (timeoutMs > 0) {
-                let timer;
-                const timeoutPromise = new Promise((_, reject) => {
-                    timer = global.setTimeout(() => {
-                        reject(new Error(`Git operation timed out after ${timeoutMs / 1000} seconds: git ${args.slice(0, 3).join(' ')}...`));
-                    }, timeoutMs);
-                });
-                try {
-                    result.exitCode = yield Promise.race([execPromise, timeoutPromise]);
-                }
-                finally {
-                    clearTimeout(timer);
-                }
-            }
-            else {
-                result.exitCode = yield execPromise;
-            }
+            result.exitCode = yield exec.exec(`"${this.gitPath}"`, args, execOptions);
             result.stdout = stdout.join('');
             core.debug(result.exitCode.toString());
             core.debug(result.stdout);
             return result;
+        });
+    }
+    /**
+     * Executes a git command with a timeout. Uses child_process.spawn directly
+     * (instead of @actions/exec) so we can kill the process on timeout and
+     * terminate it cleanly. Does not support customListeners.
+     */
+    execGitWithTimeout(args, timeoutMs, silent, allowAllExitCodes) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const result = new GitOutput();
+            const env = {};
+            for (const key of Object.keys(process.env)) {
+                env[key] = process.env[key];
+            }
+            for (const key of Object.keys(this.gitEnv)) {
+                env[key] = this.gitEnv[key];
+            }
+            const stdout = [];
+            const stderr = [];
+            return new Promise((resolve, reject) => {
+                var _a;
+                const child = (0, child_process_1.spawn)(this.gitPath, args, {
+                    cwd: this.workingDirectory,
+                    env,
+                    stdio: ['ignore', 'pipe', 'pipe']
+                });
+                (_a = child.stdout) === null || _a === void 0 ? void 0 : _a.on('data', (data) => {
+                    stdout.push(data.toString());
+                });
+                if (child.stderr) {
+                    child.stderr.on('data', (data) => {
+                        stderr.push(data.toString());
+                        if (!silent) {
+                            process.stderr.write(data);
+                        }
+                    });
+                }
+                let settled = false;
+                let timedOut = false;
+                let forceKillTimer;
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    if (forceKillTimer) {
+                        clearTimeout(forceKillTimer);
+                    }
+                };
+                const timer = global.setTimeout(() => {
+                    timedOut = true;
+                    // SIGTERM first, then force SIGKILL after 5 seconds.
+                    // On Windows, SIGTERM is equivalent to a forced kill, so
+                    // the SIGKILL fallback is effectively a no-op there.
+                    child.kill('SIGTERM');
+                    forceKillTimer = global.setTimeout(() => {
+                        try {
+                            child.kill('SIGKILL');
+                        }
+                        catch (killErr) {
+                            core.debug(`Failed to SIGKILL git process: ${killErr}`);
+                        }
+                    }, 5000);
+                    if (forceKillTimer.unref) {
+                        forceKillTimer.unref();
+                    }
+                }, timeoutMs);
+                if (timer.unref) {
+                    timer.unref();
+                }
+                child.on('close', (code) => {
+                    if (settled)
+                        return;
+                    settled = true;
+                    cleanup();
+                    if (timedOut) {
+                        reject(new Error(`Git operation timed out after ${timeoutMs / 1000} seconds: git ${args.slice(0, 5).join(' ')}...`));
+                        return;
+                    }
+                    // null code means killed by signal (e.g. OOM killer, external SIGTERM)
+                    if (code === null) {
+                        const stderrText = stderr.join('').trim();
+                        reject(new Error(`The process 'git' was killed by a signal` +
+                            (stderrText ? `\n${stderrText}` : '')));
+                        return;
+                    }
+                    if (code !== 0 && !allowAllExitCodes) {
+                        const stderrText = stderr.join('').trim();
+                        reject(new Error(`The process 'git' failed with exit code ${code}` +
+                            (stderrText ? `\n${stderrText}` : '')));
+                        return;
+                    }
+                    result.exitCode = code;
+                    result.stdout = stdout.join('');
+                    core.debug(result.exitCode.toString());
+                    core.debug(result.stdout);
+                    resolve(result);
+                });
+                child.on('error', (err) => {
+                    if (settled)
+                        return;
+                    settled = true;
+                    cleanup();
+                    reject(err);
+                });
+            });
         });
     }
     initializeCommandManager(workingDirectory, lfs, doSparseCheckout) {
@@ -2124,29 +2241,38 @@ function getInputs() {
         // Determine the GitHub URL that the repository is being hosted from
         result.githubServerUrl = core.getInput('github-server-url');
         core.debug(`GitHub Host URL = ${result.githubServerUrl}`);
-        // Timeout (per-attempt, like k8s timeoutSeconds)
-        result.timeout = Math.floor(Number(core.getInput('timeout') || '300'));
+        // Timeout per network operation attempt
+        const timeoutInput = core.getInput('timeout');
+        result.timeout = Math.floor(Number(timeoutInput !== '' ? timeoutInput : '300'));
         if (isNaN(result.timeout) || result.timeout < 0) {
+            core.warning(`Invalid value '${timeoutInput}' for 'timeout' input. Using default: 300 seconds.`);
             result.timeout = 300;
         }
         core.debug(`timeout = ${result.timeout}`);
-        // Retry max attempts (like k8s failureThreshold)
-        result.retryMaxAttempts = Math.floor(Number(core.getInput('retry-max-attempts') || '3'));
+        // Retry max attempts (total attempts including initial)
+        const retryMaxAttemptsInput = core.getInput('retry-max-attempts');
+        result.retryMaxAttempts = Math.floor(Number(retryMaxAttemptsInput !== '' ? retryMaxAttemptsInput : '3'));
         if (isNaN(result.retryMaxAttempts) || result.retryMaxAttempts < 1) {
+            core.warning(`Invalid value '${retryMaxAttemptsInput}' for 'retry-max-attempts' input. Using default: 3.`);
             result.retryMaxAttempts = 3;
         }
         core.debug(`retry max attempts = ${result.retryMaxAttempts}`);
-        // Retry backoff (like k8s periodSeconds, but as a min/max range)
-        result.retryMinBackoff = Math.floor(Number(core.getInput('retry-min-backoff') || '10'));
+        // Retry backoff range
+        const retryMinBackoffInput = core.getInput('retry-min-backoff');
+        result.retryMinBackoff = Math.floor(Number(retryMinBackoffInput !== '' ? retryMinBackoffInput : '10'));
         if (isNaN(result.retryMinBackoff) || result.retryMinBackoff < 0) {
+            core.warning(`Invalid value '${retryMinBackoffInput}' for 'retry-min-backoff' input. Using default: 10 seconds.`);
             result.retryMinBackoff = 10;
         }
         core.debug(`retry min backoff = ${result.retryMinBackoff}`);
-        result.retryMaxBackoff = Math.floor(Number(core.getInput('retry-max-backoff') || '20'));
+        const retryMaxBackoffInput = core.getInput('retry-max-backoff');
+        result.retryMaxBackoff = Math.floor(Number(retryMaxBackoffInput !== '' ? retryMaxBackoffInput : '20'));
         if (isNaN(result.retryMaxBackoff) || result.retryMaxBackoff < 0) {
+            core.warning(`Invalid value '${retryMaxBackoffInput}' for 'retry-max-backoff' input. Using default: 20 seconds.`);
             result.retryMaxBackoff = 20;
         }
         if (result.retryMaxBackoff < result.retryMinBackoff) {
+            core.warning(`'retry-max-backoff' (${result.retryMaxBackoff}) is less than 'retry-min-backoff' (${result.retryMinBackoff}). Using retry-min-backoff value for both.`);
             result.retryMaxBackoff = result.retryMinBackoff;
         }
         core.debug(`retry max backoff = ${result.retryMaxBackoff}`);

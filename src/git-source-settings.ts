@@ -120,20 +120,19 @@ export interface IGitSourceSettings {
   githubServerUrl: string | undefined
 
   /**
-   * Timeout in seconds for each network git operation attempt (fetch, lfs-fetch, ls-remote).
-   * 0 means no timeout. Similar to Kubernetes probe timeoutSeconds.
+   * Timeout in seconds for each network git operation attempt (e.g. fetch, lfs-fetch, ls-remote).
+   * 0 means no timeout.
    */
   timeout: number
 
   /**
-   * Maximum number of retry attempts for failed network git operations.
-   * Similar to Kubernetes probe failureThreshold.
+   * Total number of attempts for each network git operation (including the initial attempt).
+   * For example, 3 means one initial attempt plus up to 2 retries.
    */
   retryMaxAttempts: number
 
   /**
    * Minimum backoff time in seconds between retry attempts.
-   * Similar to Kubernetes probe periodSeconds.
    */
   retryMinBackoff: number
 
