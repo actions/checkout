@@ -789,7 +789,14 @@ class GitCommandManager {
             else {
                 args.push(ref);
             }
-            yield this.execGit(args);
+            // Retry checkout because it can trigger network I/O when using partial
+            // clones (filter=blob:none).  In that mode git lazily fetches missing
+            // blobs from the promisor remote during checkout, so a transient network
+            // failure would otherwise surface as a hard error here.
+            const that = this;
+            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args);
+            }));
         });
     }
     checkoutDetach() {
@@ -990,7 +997,10 @@ class GitCommandManager {
             if (recursive) {
                 args.push('--recursive');
             }
-            yield this.execGit(args);
+            const that = this;
+            yield retryHelper.execute(() => __awaiter(this, void 0, void 0, function* () {
+                yield that.execGit(args);
+            }));
         });
     }
     submoduleStatus() {
