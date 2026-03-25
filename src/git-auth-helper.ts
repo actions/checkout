@@ -371,9 +371,10 @@ class GitAuthHelper {
       let gitDir: string
       try {
         const constructed = path.join(this.git.getWorkingDirectory(), '.git')
-        gitDir = fs.realpathSync(constructed).replace(/\\/g, '/')
+        const resolved = await fs.promises.realpath(constructed)
+        gitDir = resolved.replace(/\\/g, '/')
       } catch {
-        // Fall back to constructed path if realpathSync fails
+        // Fall back to constructed path if realpath fails
         gitDir = path.join(this.git.getWorkingDirectory(), '.git')
         gitDir = gitDir.replace(/\\/g, '/')
       }

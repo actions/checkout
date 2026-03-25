@@ -251,36 +251,42 @@ describe('git-auth-helper tests', () => {
     // Arrange
     await setup(configureAuth_resolvesSymlinksInIncludeIfGitdir)
 
-    // Create a symlink pointing to the real workspace directory
     const symlinkPath = path.join(path.dirname(workspace), 'workspace-symlink')
-    await fs.promises.symlink(workspace, symlinkPath)
 
-    // Make git appear to be operating from the symlink path
-    ;(git.getWorkingDirectory as jest.Mock).mockReturnValue(symlinkPath)
-    process.env['GITHUB_WORKSPACE'] = symlinkPath
+    try {
+      // Ensure no pre-existing symlink or file remains at this path
+      await fs.promises.rm(symlinkPath, {force: true})
 
-    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      // Create a symlink pointing to the real workspace directory
+      await fs.promises.symlink(workspace, symlinkPath)
 
-    // Act
-    await authHelper.configureAuth()
+      // Make git appear to be operating from the symlink path
+      ;(git.getWorkingDirectory as jest.Mock).mockReturnValue(symlinkPath)
+      process.env['GITHUB_WORKSPACE'] = symlinkPath
 
-    // Assert the host includeIf uses the real resolved path, not the symlink path
-    const localConfigContent = (
-      await fs.promises.readFile(localGitConfigPath)
-    ).toString()
-    const realGitDir = fs
-      .realpathSync(path.join(symlinkPath, '.git'))
-      .replace(/\\/g, '/')
-    const symlinkGitDir = path.join(symlinkPath, '.git').replace(/\\/g, '/')
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
 
-    expect(realGitDir).not.toBe(symlinkGitDir) // sanity check: paths differ
-    expect(
-      localConfigContent.indexOf(`includeIf.gitdir:${realGitDir}.path`)
-    ).toBeGreaterThanOrEqual(0)
-    expect(localConfigContent.indexOf(symlinkGitDir)).toBeLessThan(0)
+      // Act
+      await authHelper.configureAuth()
 
-    // Clean up symlink
-    await fs.promises.unlink(symlinkPath)
+      // Assert the host includeIf uses the real resolved path, not the symlink path
+      const localConfigContent = (
+        await fs.promises.readFile(localGitConfigPath)
+      ).toString()
+      const realGitDir = (
+        await fs.promises.realpath(path.join(symlinkPath, '.git'))
+      ).replace(/\\/g, '/')
+      const symlinkGitDir = path.join(symlinkPath, '.git').replace(/\\/g, '/')
+
+      expect(realGitDir).not.toBe(symlinkGitDir) // sanity check: paths differ
+      expect(
+        localConfigContent.indexOf(`includeIf.gitdir:${realGitDir}.path`)
+      ).toBeGreaterThanOrEqual(0)
+      expect(localConfigContent.indexOf(symlinkGitDir)).toBeLessThan(0)
+    } finally {
+      // Clean up symlink (or any file) at the symlink path
+      await fs.promises.rm(symlinkPath, {force: true})
+    }
   })
 
   const configureAuth_fallsBackWhenRealpathSyncFails =

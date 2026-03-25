@@ -411,10 +411,11 @@ class GitAuthHelper {
                 let gitDir;
                 try {
                     const constructed = path.join(this.git.getWorkingDirectory(), '.git');
-                    gitDir = fs.realpathSync(constructed).replace(/\\/g, '/');
+                    const resolved = yield fs.promises.realpath(constructed);
+                    gitDir = resolved.replace(/\\/g, '/');
                 }
                 catch (_a) {
-                    // Fall back to constructed path if realpathSync fails
+                    // Fall back to constructed path if realpath fails
                     gitDir = path.join(this.git.getWorkingDirectory(), '.git');
                     gitDir = gitDir.replace(/\\/g, '/');
                 }
