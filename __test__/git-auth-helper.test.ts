@@ -238,6 +238,79 @@ describe('git-auth-helper tests', () => {
     expect(setSecretSpy).toHaveBeenCalledWith(expectedSecret)
   })
 
+  const configureAuth_resolvesSymlinksInIncludeIfGitdir =
+    'configureAuth resolves symlinks in includeIf gitdir'
+  it(configureAuth_resolvesSymlinksInIncludeIfGitdir, async () => {
+    if (isWindows) {
+      process.stdout.write(
+        `Skipped test "${configureAuth_resolvesSymlinksInIncludeIfGitdir}". Symlink creation requires admin privileges on Windows.\n`
+      )
+      return
+    }
+
+    // Arrange
+    await setup(configureAuth_resolvesSymlinksInIncludeIfGitdir)
+
+    // Create a symlink pointing to the real workspace directory
+    const symlinkPath = path.join(path.dirname(workspace), 'workspace-symlink')
+    await fs.promises.symlink(workspace, symlinkPath)
+
+    // Make git appear to be operating from the symlink path
+    ;(git.getWorkingDirectory as jest.Mock).mockReturnValue(symlinkPath)
+    process.env['GITHUB_WORKSPACE'] = symlinkPath
+
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+
+    // Assert the host includeIf uses the real resolved path, not the symlink path
+    const localConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    const realGitDir = fs
+      .realpathSync(path.join(symlinkPath, '.git'))
+      .replace(/\\/g, '/')
+    const symlinkGitDir = path.join(symlinkPath, '.git').replace(/\\/g, '/')
+
+    expect(realGitDir).not.toBe(symlinkGitDir) // sanity check: paths differ
+    expect(
+      localConfigContent.indexOf(`includeIf.gitdir:${realGitDir}.path`)
+    ).toBeGreaterThanOrEqual(0)
+    expect(localConfigContent.indexOf(symlinkGitDir)).toBeLessThan(0)
+
+    // Clean up symlink
+    await fs.promises.unlink(symlinkPath)
+  })
+
+  const configureAuth_fallsBackWhenRealpathSyncFails =
+    'configureAuth falls back to constructed path when realpathSync fails'
+  it(configureAuth_fallsBackWhenRealpathSyncFails, async () => {
+    // Arrange
+    await setup(configureAuth_fallsBackWhenRealpathSyncFails)
+
+    // Use a non-existent path so realpathSync throws ENOENT naturally,
+    // exercising the catch fallback in configureToken()
+    const nonexistentPath = path.join(runnerTemp, 'does-not-exist')
+    ;(git.getWorkingDirectory as jest.Mock).mockReturnValue(nonexistentPath)
+
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act - should not throw despite realpathSync failure
+    await authHelper.configureAuth()
+
+    // Assert the fallback constructed path is used in the includeIf entry
+    const localConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+    const fallbackGitDir = path
+      .join(nonexistentPath, '.git')
+      .replace(/\\/g, '/')
+    expect(
+      localConfigContent.indexOf(`includeIf.gitdir:${fallbackGitDir}.path`)
+    ).toBeGreaterThanOrEqual(0)
+  })
+
   const setsSshCommandEnvVarWhenPersistCredentialsFalse =
     'sets SSH command env var when persist-credentials false'
   it(setsSshCommandEnvVarWhenPersistCredentialsFalse, async () => {

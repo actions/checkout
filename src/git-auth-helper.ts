@@ -8,9 +8,9 @@ import * as path from 'path'
 import * as regexpHelper from './regexp-helper'
 import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
-import {v4 as uuid} from 'uuid'
-import {IGitCommandManager} from './git-command-manager'
-import {IGitSourceSettings} from './git-source-settings'
+import { v4 as uuid } from 'uuid'
+import { IGitCommandManager } from './git-command-manager'
+import { IGitSourceSettings } from './git-source-settings'
 
 const IS_WINDOWS = process.platform === 'win32'
 const SSH_COMMAND_KEY = 'core.sshCommand'
@@ -92,7 +92,7 @@ class GitAuthHelper {
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
     const uniqueId = uuid()
     this.temporaryHomePath = path.join(runnerTemp, uniqueId)
-    await fs.promises.mkdir(this.temporaryHomePath, {recursive: true})
+    await fs.promises.mkdir(this.temporaryHomePath, { recursive: true })
 
     // Copy the global git config
     const gitConfigPath = path.join(
@@ -258,11 +258,11 @@ class GitAuthHelper {
     const uniqueId = uuid()
     this.sshKeyPath = path.join(runnerTemp, uniqueId)
     stateHelper.setSshKeyPath(this.sshKeyPath)
-    await fs.promises.mkdir(runnerTemp, {recursive: true})
+    await fs.promises.mkdir(runnerTemp, { recursive: true })
     await fs.promises.writeFile(
       this.sshKeyPath,
       this.settings.sshKey.trim() + '\n',
-      {mode: 0o600}
+      { mode: 0o600 }
     )
 
     // Remove inherited permissions on Windows
@@ -366,9 +366,17 @@ class GitAuthHelper {
         true // globalConfig?
       )
     } else {
-      // Host git directory
-      let gitDir = path.join(this.git.getWorkingDirectory(), '.git')
-      gitDir = gitDir.replace(/\\/g, '/') // Use forward slashes, even on Windows
+      // Host git directory - resolve symlinks so includeIf gitdir matching works
+      // on self-hosted runners where _work is a symlink to an external volume.
+      let gitDir: string
+      try {
+        const constructed = path.join(this.git.getWorkingDirectory(), '.git')
+        gitDir = fs.realpathSync(constructed).replace(/\\/g, '/')
+      } catch {
+        // Fall back to constructed path if realpathSync fails
+        gitDir = path.join(this.git.getWorkingDirectory(), '.git')
+        gitDir = gitDir.replace(/\\/g, '/')
+      }
 
       // Configure host includeIf
       const hostIncludeKey = `includeIf.gitdir:${gitDir}.path`
