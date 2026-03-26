@@ -20,3 +20,4 @@ jobs:
               run: mvn test
             - name: create the package
               run: mvn package
+              
