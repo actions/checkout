@@ -1,4 +1,5 @@
 # Changelog
+pathum2583@gmail.com 
 
 ## v6.0.2
 * Fix tag handling: preserve annotations and explicit fetch-tags by @ericsciple in https://github.com/actions/checkout/pull/2356
