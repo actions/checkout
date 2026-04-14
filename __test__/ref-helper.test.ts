@@ -3,6 +3,8 @@ import * as refHelper from '../lib/ref-helper'
 import {IGitCommandManager} from '../lib/git-command-manager'
 
 const commit = '1234567890123456789012345678901234567890'
+const sha256Commit =
+  '1234567890123456789012345678901234567890123456789012345678901234'
 let git: IGitCommandManager
 
 describe('ref-helper tests', () => {
@@ -34,6 +36,12 @@ describe('ref-helper tests', () => {
   it('getCheckoutInfo sha only', async () => {
     const checkoutInfo = await refHelper.getCheckoutInfo(git, '', commit)
     expect(checkoutInfo.ref).toBe(commit)
+    expect(checkoutInfo.startPoint).toBeFalsy()
+  })
+
+  it('getCheckoutInfo sha-256 only', async () => {
+    const checkoutInfo = await refHelper.getCheckoutInfo(git, '', sha256Commit)
+    expect(checkoutInfo.ref).toBe(sha256Commit)
     expect(checkoutInfo.startPoint).toBeFalsy()
   })
 

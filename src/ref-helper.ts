@@ -258,7 +258,7 @@ export async function checkCommitInfo(
     }
 
     // Extract details from message
-    const match = commitInfo.match(/Merge ([0-9a-f]{40}) into ([0-9a-f]{40})/)
+    const match = commitInfo.match(/Merge ([0-9a-f]{40}|[0-9a-f]{64}) into ([0-9a-f]{40}|[0-9a-f]{64})/)
     if (!match) {
       core.debug('Unexpected message format')
       return

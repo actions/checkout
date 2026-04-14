@@ -2021,7 +2021,7 @@ function getInputs() {
             }
         }
         // SHA?
-        else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
+        else if (result.ref.match(/^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/)) {
             result.commit = result.ref;
             result.ref = '';
         }
@@ -2444,7 +2444,7 @@ function checkCommitInfo(token, commitInfo, repositoryOwner, repositoryName, ref
                 return;
             }
             // Extract details from message
-            const match = commitInfo.match(/Merge ([0-9a-f]{40}) into ([0-9a-f]{40})/);
+            const match = commitInfo.match(/Merge ([0-9a-f]{40}|[0-9a-f]{64}) into ([0-9a-f]{40}|[0-9a-f]{64})/);
             if (!match) {
                 core.debug('Unexpected message format');
                 return;
