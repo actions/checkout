@@ -134,7 +134,8 @@ describe('input-helper tests', () => {
   })
 
   it('sets ref to empty when explicit sha-256', async () => {
-    inputs.ref = '1111111111222222222233333333334444444444555555555566666666667777'
+    inputs.ref =
+      '1111111111222222222233333333334444444444555555555566666666667777'
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBeFalsy()
     expect(settings.commit).toBe(
