@@ -1,4 +1,6 @@
 import * as assert from 'assert'
+import * as core from '@actions/core'
+import * as github from '@actions/github'
 import * as refHelper from '../lib/ref-helper'
 import {IGitCommandManager} from '../lib/git-command-manager'
 
@@ -234,5 +236,143 @@ describe('ref-helper tests', () => {
     expect(refSpec[1]).toBe(
       '+refs/heads/my/branch:refs/remotes/origin/my/branch'
     )
+  })
+
+  describe('checkCommitInfo', () => {
+    const repositoryOwner = 'some-owner'
+    const repositoryName = 'some-repo'
+    const ref = 'refs/pull/123/merge'
+    const sha1Head = '1111111111222222222233333333334444444444'
+    const sha1Base = 'aaaaaaaaaabbbbbbbbbbccccccccccdddddddddd'
+    const sha256Head =
+      '1111111111222222222233333333334444444444555555555566666666667777'
+    const sha256Base =
+      'aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffff0000'
+    let debugSpy: jest.SpyInstance
+    let getOctokitSpy: jest.SpyInstance
+    let repoGetSpy: jest.Mock
+    let originalEventName: string
+    let originalPayload: unknown
+    let originalRef: string
+    let originalSha: string
+
+    function setPullRequestContext(
+      expectedHeadSha: string,
+      expectedBaseSha: string,
+      mergeCommit: string
+    ): void {
+      ;(github.context as any).eventName = 'pull_request'
+      github.context.ref = ref
+      github.context.sha = mergeCommit
+      ;(github.context as any).payload = {
+        action: 'synchronize',
+        after: expectedHeadSha,
+        number: 123,
+        pull_request: {
+          base: {
+            sha: expectedBaseSha
+          }
+        },
+        repository: {
+          private: false
+        }
+      }
+    }
+
+    beforeEach(() => {
+      originalEventName = github.context.eventName
+      originalPayload = github.context.payload
+      originalRef = github.context.ref
+      originalSha = github.context.sha
+
+      jest.spyOn(github.context, 'repo', 'get').mockReturnValue({
+        owner: repositoryOwner,
+        repo: repositoryName
+      })
+      debugSpy = jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+      repoGetSpy = jest.fn(async () => ({}))
+      getOctokitSpy = jest.spyOn(github, 'getOctokit').mockReturnValue({
+        rest: {
+          repos: {
+            get: repoGetSpy
+          }
+        }
+      } as any)
+    })
+
+    afterEach(() => {
+      ;(github.context as any).eventName = originalEventName
+      ;(github.context as any).payload = originalPayload
+      github.context.ref = originalRef
+      github.context.sha = originalSha
+      jest.restoreAllMocks()
+    })
+
+    it('returns early for SHA-1 merge commit', async () => {
+      setPullRequestContext(sha1Head, sha1Base, commit)
+
+      await refHelper.checkCommitInfo(
+        'token',
+        `Merge ${sha1Head} into ${sha1Base}`,
+        repositoryOwner,
+        repositoryName,
+        ref,
+        commit
+      )
+
+      expect(getOctokitSpy).not.toHaveBeenCalled()
+      expect(repoGetSpy).not.toHaveBeenCalled()
+    })
+
+    it('matches SHA-256 merge commit info', async () => {
+      const actualHeadSha =
+        '9999999999888888888877777777776666666666555555555544444444443333'
+      setPullRequestContext(sha256Head, sha256Base, sha256Commit)
+
+      await refHelper.checkCommitInfo(
+        'token',
+        `Merge ${actualHeadSha} into ${sha256Base}`,
+        repositoryOwner,
+        repositoryName,
+        ref,
+        sha256Commit
+      )
+
+      expect(getOctokitSpy).toHaveBeenCalledWith(
+        'token',
+        expect.objectContaining({
+          userAgent: expect.stringContaining(
+            `expected_head_sha=${sha256Head};actual_head_sha=${actualHeadSha}`
+          )
+        })
+      )
+      expect(repoGetSpy).toHaveBeenCalledWith({
+        owner: repositoryOwner,
+        repo: repositoryName
+      })
+      expect(debugSpy).toHaveBeenCalledWith(
+        `Expected head sha ${sha256Head}; actual head sha ${actualHeadSha}`
+      )
+      expect(debugSpy).not.toHaveBeenCalledWith('Unexpected message format')
+    })
+
+    it('does not match 50-char hex as a valid merge', async () => {
+      const invalidHeadSha =
+        '99999999998888888888777777777766666666665555555555'
+      setPullRequestContext(sha1Head, sha1Base, commit)
+
+      await refHelper.checkCommitInfo(
+        'token',
+        `Merge ${invalidHeadSha} into ${sha1Base}`,
+        repositoryOwner,
+        repositoryName,
+        ref,
+        commit
+      )
+
+      expect(getOctokitSpy).not.toHaveBeenCalled()
+      expect(repoGetSpy).not.toHaveBeenCalled()
+      expect(debugSpy).toHaveBeenCalledWith('Unexpected message format')
+    })
   })
 })
