@@ -44,13 +44,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     if (git) {
       authHelper = gitAuthHelper.createAuthHelper(git, settings)
       if (settings.setSafeDirectory) {
-        await addSafeDirectory(settings.repositoryPath, git)
+        await addSafeDirectory(settings.repositoryPath, git, authHelper)
         const containerPath = getContainerRepositoryPath(
           settings.repositoryPath,
           settings.githubWorkspacePath
         )
         if (containerPath && containerPath !== settings.repositoryPath) {
-          await addSafeDirectory(containerPath, git)
+          await addSafeDirectory(containerPath, git, authHelper)
         }
 
         stateHelper.setSafeDirectory()
@@ -327,18 +327,7 @@ export async function cleanup(repositoryPath: string): Promise<void> {
   const authHelper = gitAuthHelper.createAuthHelper(git)
   try {
     if (stateHelper.PostSetSafeDirectory) {
-      // Setup the repository path as a safe directory, so if we pass this into a container job with a different user it doesn't fail
-      // Otherwise all git commands we run in a container fail
-      await authHelper.configureTempGlobalConfig()
-      core.info(
-        `Adding repository directory to the temporary git global config as a safe directory`
-      )
-
-      await git
-        .config('safe.directory', repositoryPath, true, true)
-        .catch(error => {
-          core.info(`Failed to initialize safe directory with error: ${error}`)
-        })
+      await addSafeDirectory(repositoryPath, git, authHelper)
     }
 
     await authHelper.removeAuth()
@@ -370,8 +359,10 @@ async function getGitCommandManager(
 
 async function addSafeDirectory(
   safeDirectory: string,
-  git: IGitCommandManager
+  git: IGitCommandManager,
+  authHelper: gitAuthHelper.IGitAuthHelper
 ): Promise<void> {
+  await authHelper.configureTempGlobalConfig()
   core.info(`Adding '${safeDirectory}' to the git global config as a safe directory`)
   await git.config('safe.directory', safeDirectory, true, true).catch(error => {
     core.info(`Failed to initialize safe directory with error: ${error}`)
