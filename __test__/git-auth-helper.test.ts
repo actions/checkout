@@ -22,6 +22,11 @@ let settings: IGitSourceSettings
 let sshPath: string
 let githubServerUrl: string
 
+// Helper function to normalize path separators to forward slashes
+function convertBackslashes(file: string): string {
+  return file.replace(/\\/g, '/')
+}
+
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {
     // SSH
@@ -261,7 +266,8 @@ describe('git-auth-helper tests', () => {
       await fs.promises.symlink(workspace, symlinkPath)
 
       // Make git appear to be operating from the symlink path
-      ;(git.getWorkingDirectory as jest.Mock).mockReturnValue(symlinkPath)
+      const mockGetWorkingDirectory = git.getWorkingDirectory as jest.Mock
+      mockGetWorkingDirectory.mockReturnValue(symlinkPath)
       process.env['GITHUB_WORKSPACE'] = symlinkPath
 
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -273,10 +279,10 @@ describe('git-auth-helper tests', () => {
       const localConfigContent = (
         await fs.promises.readFile(localGitConfigPath)
       ).toString()
-      const realGitDir = (
+      const realGitDir = convertBackslashes(
         await fs.promises.realpath(path.join(symlinkPath, '.git'))
-      ).replace(/\\/g, '/')
-      const symlinkGitDir = path.join(symlinkPath, '.git').replace(/\\/g, '/')
+      )
+      const symlinkGitDir = convertBackslashes(path.join(symlinkPath, '.git'))
 
       expect(realGitDir).not.toBe(symlinkGitDir) // sanity check: paths differ
       expect(
@@ -295,10 +301,11 @@ describe('git-auth-helper tests', () => {
     // Arrange
     await setup(configureAuth_fallsBackWhenRealpathSyncFails)
 
-    // Use a non-existent path so realpathSync throws ENOENT naturally,
+    // Use a nonexistent path so realpathSync throws ENOENT naturally,
     // exercising the catch fallback in configureToken()
     const nonexistentPath = path.join(runnerTemp, 'does-not-exist')
-    ;(git.getWorkingDirectory as jest.Mock).mockReturnValue(nonexistentPath)
+    const mockGetWorkingDirectory = git.getWorkingDirectory as jest.Mock
+    mockGetWorkingDirectory.mockReturnValue(nonexistentPath)
 
     const authHelper = gitAuthHelper.createAuthHelper(git, settings)
 
@@ -309,9 +316,9 @@ describe('git-auth-helper tests', () => {
     const localConfigContent = (
       await fs.promises.readFile(localGitConfigPath)
     ).toString()
-    const fallbackGitDir = path
-      .join(nonexistentPath, '.git')
-      .replace(/\\/g, '/')
+    const fallbackGitDir = convertBackslashes(
+      path.join(nonexistentPath, '.git')
+    )
     expect(
       localConfigContent.indexOf(`includeIf.gitdir:${fallbackGitDir}.path`)
     ).toBeGreaterThanOrEqual(0)
