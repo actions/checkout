@@ -1,5 +1,10 @@
 export interface IGitSourceSettings {
   /**
+   * The workflow workspace path
+   */
+  githubWorkspacePath?: string
+
+  /**
    * The location on disk where the repository will be placed
    */
   repositoryPath: string

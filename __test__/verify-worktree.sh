@@ -15,9 +15,6 @@ fi
 
 cd "$CHECKOUT_PATH"
 
-# Add safe directory for container environments
-git config --global --add safe.directory "*" 2>/dev/null || true
-
 # Show the includeIf configuration
 echo "Git config includeIf entries:"
 git config --list --show-origin | grep -i include || true
