@@ -1,0 +1,5 @@
+git@github.com:actions/checkout.git
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {}
+}
