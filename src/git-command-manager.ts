@@ -55,7 +55,11 @@ export interface IGitCommandManager {
   shaExists(sha: string): Promise<boolean>
   submoduleForeach(command: string, recursive: boolean): Promise<string>
   submoduleSync(recursive: boolean): Promise<void>
-  submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void>
+  submoduleUpdate(
+    fetchDepth: number,
+    recursive: boolean,
+    submoduleDirectories: string[]
+  ): Promise<void>
   submoduleStatus(): Promise<boolean>
   tagExists(pattern: string): Promise<boolean>
   tryClean(): Promise<boolean>
@@ -446,9 +450,19 @@ class GitCommandManager {
     await this.execGit(args)
   }
 
-  async submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void> {
+  async submoduleUpdate(
+    fetchDepth: number,
+    recursive: boolean,
+    submoduleDirectories: string[]
+  ): Promise<void> {
     const args = ['-c', 'protocol.version=2']
-    args.push('submodule', 'update', '--init', '--force')
+    args.push(
+      'submodule',
+      'update',
+      '--init',
+      '--force',
+      ...submoduleDirectories
+    )
     if (fetchDepth > 0) {
       args.push(`--depth=${fetchDepth}`)
     }
