@@ -57,7 +57,12 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase()
 
   // Source branch, source version
-  result.ref = core.getInput('ref')
+  result.commit = core.getInput('commit')
+  if (result.commit && !result.commit.match(/^[0-9a-fA-F]{40}$/)) {
+    throw new Error(`The commit SHA '${result.commit}' is not a valid SHA.`)
+  }
+
+  result.ref = core.getInput('ref') || result.commit
   if (!result.ref) {
     if (isWorkflowRepository) {
       result.ref = github.context.ref
