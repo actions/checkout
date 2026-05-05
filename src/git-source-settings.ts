@@ -50,6 +50,11 @@ export interface IGitSourceSettings {
   fetchDepth: number
 
   /**
+   * Whether fetch-depth was explicitly set by the user
+   */
+  fetchDepthExplicit: boolean
+
+  /**
    * Fetch tags, even if fetchDepth > 0 (default: false)
    */
   fetchTags: boolean
@@ -58,6 +63,11 @@ export interface IGitSourceSettings {
    * Indicates whether to use the --progress option when fetching
    */
   showProgress: boolean
+
+  /**
+   * The path to a local directory used as a reference cache for Git clones
+   */
+  referenceCache: string
 
   /**
    * Indicates whether to fetch LFS objects

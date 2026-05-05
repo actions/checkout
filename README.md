@@ -160,6 +160,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Path to a local directory used as a reference cache for Git clones. Over time,
+    # this directory will contain bare clones of the checked-out repositories (and
+    # their submodules). Using this significantly reduces network bandwidth and speeds
+    # up clones.
+    reference-cache: ''
 ```
 <!-- end usage -->
 

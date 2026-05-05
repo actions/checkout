@@ -102,7 +102,9 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     'TRUE'
 
   // Fetch depth
-  result.fetchDepth = Math.floor(Number(core.getInput('fetch-depth') || '1'))
+  const fetchDepthInput = core.getInput('fetch-depth')
+  result.fetchDepthExplicit = fetchDepthInput !== ''
+  result.fetchDepth = Math.floor(Number(fetchDepthInput || '1'))
   if (isNaN(result.fetchDepth) || result.fetchDepth < 0) {
     result.fetchDepth = 0
   }
@@ -160,6 +162,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // Determine the GitHub URL that the repository is being hosted from
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
+
+  // Reference Cache
+  result.referenceCache = core.getInput('reference-cache')
+  core.debug(`Reference Cache = ${result.referenceCache}`)
 
   return result
 }
