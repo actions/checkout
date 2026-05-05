@@ -5,6 +5,17 @@ import * as commandManager from '../lib/git-command-manager'
 let git: commandManager.IGitCommandManager
 let mockExec = jest.fn()
 
+function createMockGit(): Promise<commandManager.IGitCommandManager> {
+  mockExec.mockImplementation((path, args, options) => {
+    if (args.includes('version')) {
+      options.listeners.stdout(Buffer.from('2.18'))
+    }
+    return 0
+  })
+  jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+  return commandManager.createCommandManager('test', false, false)
+}
+
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {})
 
@@ -493,4 +504,74 @@ describe('git user-agent with orchestration ID', () => {
       'git/2.18 (github-actions-checkout)'
     )
   })
+})
+
+describe('timeout and retry configuration', () => {
+  beforeEach(async () => {
+    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
+    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('setTimeout accepts valid values', async () => {
+    git = await createMockGit()
+    git.setTimeout(30)
+    git.setTimeout(0)
+  })
+
+  it('setTimeout rejects negative values', async () => {
+    git = await createMockGit()
+    expect(() => git.setTimeout(-1)).toThrow(/non-negative/)
+  })
+
+  it('setRetryConfig accepts valid parameters', async () => {
+    git = await createMockGit()
+    git.setRetryConfig(5, 2, 15)
+  })
+
+  it('setRetryConfig rejects min > max backoff', async () => {
+    git = await createMockGit()
+    expect(() => git.setRetryConfig(3, 20, 5)).toThrow(
+      /min seconds should be less than or equal to max seconds/
+    )
+  })
+
+  it('fetch without timeout uses exec', async () => {
+    git = await createMockGit()
+    // timeout defaults to 0 (disabled)
+
+    mockExec.mockClear()
+    await git.fetch(['refs/heads/main'], {})
+
+    // exec.exec is used (via retryHelper) when no timeout
+    const fetchCalls = mockExec.mock.calls.filter(
+      (call: any[]) => (call[1] as string[]).includes('fetch')
+    )
+    expect(fetchCalls).toHaveLength(1)
+  })
+
+  it('fetch with timeout does not use exec', async () => {
+    git = await createMockGit()
+    // Short timeout and single attempt so the test completes quickly
+    git.setTimeout(1)
+    git.setRetryConfig(1, 0, 0)
+
+    mockExec.mockClear()
+
+    // fetch will use spawn path (which will fail/timeout since there's
+    // no real git repo), but we verify exec.exec was NOT called for fetch
+    try {
+      await git.fetch(['refs/heads/main'], {})
+    } catch {
+      // Expected: spawn will fail/timeout in test environment
+    }
+
+    const fetchCalls = mockExec.mock.calls.filter(
+      (call: any[]) => (call[1] as string[]).includes('fetch')
+    )
+    expect(fetchCalls).toHaveLength(0)
+  }, 10000)
 })

@@ -506,6 +506,8 @@ async function setup(testName: string): Promise<void> {
     tryReset: jest.fn(async () => {
       return true
     }),
-    version: jest.fn()
+    version: jest.fn(),
+    setTimeout: jest.fn(),
+    setRetryConfig: jest.fn()
   }
 }

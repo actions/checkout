@@ -118,4 +118,26 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * Timeout in seconds for each network git operation attempt (e.g. fetch, lfs-fetch, ls-remote).
+   * 0 means no timeout.
+   */
+  timeout: number
+
+  /**
+   * Total number of attempts for each network git operation (including the initial attempt).
+   * For example, 3 means one initial attempt plus up to 2 retries.
+   */
+  retryMaxAttempts: number
+
+  /**
+   * Minimum backoff time in seconds between retry attempts.
+   */
+  retryMinBackoff: number
+
+  /**
+   * Maximum backoff time in seconds between retry attempts.
+   */
+  retryMaxBackoff: number
 }

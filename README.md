@@ -155,6 +155,28 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     set-safe-directory: ''
 
+    # Timeout in seconds for each git network operation attempt (e.g. fetch,
+    # lfs-fetch, ls-remote). If a single attempt exceeds this, the process is
+    # terminated. If retries are configured (see retry-max-attempts), the operation
+    # will be retried. Set to 0 to disable. Default is 300 (5 minutes).
+    # Default: 300
+    timeout: ''
+
+    # Total number of attempts for each git network operation (including the initial
+    # attempt). For example, 3 means one initial attempt plus up to 2 retries.
+    # Default: 3
+    retry-max-attempts: ''
+
+    # Minimum backoff time in seconds between retry attempts. The actual backoff is
+    # randomly chosen between min and max.
+    # Default: 10
+    retry-min-backoff: ''
+
+    # Maximum backoff time in seconds between retry attempts. The actual backoff is
+    # randomly chosen between min and max.
+    # Default: 20
+    retry-max-backoff: ''
+
     # The base URL for the GitHub instance that you are trying to clone from, will use
     # environment defaults to fetch from the same instance that the workflow is
     # running from unless specified. Example URLs are https://github.com or
