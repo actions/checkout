@@ -780,9 +780,17 @@ class GitCommandManager {
             yield fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
         });
     }
-    checkout(ref, startPoint) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const args = ['checkout', '--progress', '--force'];
+    checkout(ref_1, startPoint_1) {
+        return __awaiter(this, arguments, void 0, function* (ref, startPoint, options = []) {
+            const args = ['checkout', '--progress'];
+            // Add custom options (like --merge) if provided
+            if (options.length > 0) {
+                args.push(...options);
+            }
+            else {
+                // Default behavior - use force
+                args.push('--force');
+            }
             if (startPoint) {
                 args.push('-B', ref, startPoint);
             }
@@ -1276,13 +1284,17 @@ const fs = __importStar(__nccwpck_require__(7147));
 const fsHelper = __importStar(__nccwpck_require__(7219));
 const io = __importStar(__nccwpck_require__(7436));
 const path = __importStar(__nccwpck_require__(1017));
-function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref) {
-    return __awaiter(this, void 0, void 0, function* () {
+function prepareExistingDirectory(git_1, repositoryPath_1, repositoryUrl_1, clean_1, ref_1) {
+    return __awaiter(this, arguments, void 0, function* (git, repositoryPath, repositoryUrl, clean, ref, preserveLocalChanges = false) {
         var _a;
         assert.ok(repositoryPath, 'Expected repositoryPath to be defined');
         assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined');
         // Indicates whether to delete the directory contents
         let remove = false;
+        // If preserveLocalChanges is true, log it
+        if (preserveLocalChanges) {
+            core.info(`Preserve local changes is enabled, will attempt to keep local files`);
+        }
         // Check whether using git or REST API
         if (!git) {
             remove = true;
@@ -1363,12 +1375,26 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 remove = true;
             }
         }
-        if (remove) {
+        if (remove && !preserveLocalChanges) {
             // Delete the contents of the directory. Don't delete the directory itself
             // since it might be the current working directory.
             core.info(`Deleting the contents of '${repositoryPath}'`);
             for (const file of yield fs.promises.readdir(repositoryPath)) {
+                // Skip .git directory as we need it to determine if a file is tracked
+                if (file === '.git') {
+                    continue;
+                }
                 yield io.rmRF(path.join(repositoryPath, file));
+            }
+        }
+        else if (remove && preserveLocalChanges) {
+            core.info(`Skipping deletion of directory contents due to preserve-local-changes setting`);
+            // We still need to make sure we have a git repository to work with
+            if (!git) {
+                core.info(`Initializing git repository to prepare for checkout with preserved changes`);
+                yield fs.promises.mkdir(path.join(repositoryPath, '.git'), {
+                    recursive: true
+                });
             }
         }
     });
@@ -1467,7 +1493,7 @@ function getSource(settings) {
             }
             // Prepare existing directory, otherwise recreate
             if (isExisting) {
-                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref);
+                yield gitDirectoryHelper.prepareExistingDirectory(git, settings.repositoryPath, repositoryUrl, settings.clean, settings.ref, settings.preserveLocalChanges);
             }
             if (!git) {
                 // Downloading using REST API
@@ -1593,7 +1619,104 @@ function getSource(settings) {
             }
             // Checkout
             core.startGroup('Checking out the ref');
-            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            if (settings.preserveLocalChanges) {
+                core.info('Attempting to preserve local changes during checkout');
+                // List and store local files before checkout
+                const fs = __nccwpck_require__(7147);
+                const path = __nccwpck_require__(1017);
+                const localFiles = new Map();
+                try {
+                    // Get all files in the workspace that aren't in the .git directory
+                    const workspacePath = process.cwd();
+                    core.info(`Current workspace path: ${workspacePath}`);
+                    // List all files in the current directory using fs
+                    const listFilesRecursively = (dir) => {
+                        let results = [];
+                        const list = fs.readdirSync(dir);
+                        list.forEach((file) => {
+                            const fullPath = path.join(dir, file);
+                            const relativePath = path.relative(workspacePath, fullPath);
+                            // Skip .git directory
+                            if (relativePath.startsWith('.git'))
+                                return;
+                            const stat = fs.statSync(fullPath);
+                            if (stat && stat.isDirectory()) {
+                                // Recursively explore subdirectories
+                                results = results.concat(listFilesRecursively(fullPath));
+                            }
+                            else {
+                                // Store file content in memory
+                                try {
+                                    const content = fs.readFileSync(fullPath);
+                                    localFiles.set(relativePath, content);
+                                    results.push(relativePath);
+                                }
+                                catch (readErr) {
+                                    core.warning(`Failed to read file ${relativePath}: ${readErr}`);
+                                }
+                            }
+                        });
+                        return results;
+                    };
+                    const localFilesList = listFilesRecursively(workspacePath);
+                    core.info(`Found ${localFilesList.length} local files to preserve:`);
+                    localFilesList.forEach(file => core.info(`  - ${file}`));
+                }
+                catch (error) {
+                    core.warning(`Failed to list local files: ${error}`);
+                }
+                // Perform normal checkout
+                yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+                // Restore local files that were not tracked by git
+                core.info('Restoring local files after checkout');
+                try {
+                    let restoredCount = 0;
+                    const execOptions = {
+                        cwd: process.cwd(),
+                        silent: true,
+                        ignoreReturnCode: true
+                    };
+                    for (const [filePath, content] of localFiles.entries()) {
+                        // Check if file exists in git using a child process instead of git.execGit
+                        const { exec } = __nccwpck_require__(1514);
+                        let exitCode = 0;
+                        const output = {
+                            stdout: '',
+                            stderr: ''
+                        };
+                        // Capture output
+                        const options = Object.assign(Object.assign({}, execOptions), { listeners: {
+                                stdout: (data) => {
+                                    output.stdout += data.toString();
+                                },
+                                stderr: (data) => {
+                                    output.stderr += data.toString();
+                                }
+                            } });
+                        exitCode = yield exec('git', ['ls-files', '--error-unmatch', filePath], options);
+                        if (exitCode !== 0) {
+                            // File is not tracked by git, safe to restore
+                            const fullPath = path.join(process.cwd(), filePath);
+                            // Ensure directory exists
+                            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+                            fs.writeFileSync(fullPath, content);
+                            core.info(`Restored local file: ${filePath}`);
+                            restoredCount++;
+                        }
+                        else {
+                            core.info(`Skipping ${filePath} as it's tracked by git`);
+                        }
+                    }
+                    core.info(`Successfully restored ${restoredCount} local files`);
+                }
+                catch (error) {
+                    core.warning(`Failed to restore local files: ${error}`);
+                }
+            }
+            else {
+                // Use the default behavior with --force
+                yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            }
             core.endGroup();
             // Submodules
             if (settings.submodules) {
@@ -2030,6 +2153,11 @@ function getInputs() {
         // Clean
         result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE';
         core.debug(`clean = ${result.clean}`);
+        // Preserve local changes
+        result.preserveLocalChanges =
+            (core.getInput('preserve-local-changes') || 'false').toUpperCase() ===
+                'TRUE';
+        core.debug(`preserveLocalChanges = ${result.preserveLocalChanges}`);
         // Filter
         const filter = core.getInput('filter');
         if (filter) {

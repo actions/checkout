@@ -11,13 +11,21 @@ export async function prepareExistingDirectory(
   repositoryPath: string,
   repositoryUrl: string,
   clean: boolean,
-  ref: string
+  ref: string,
+  preserveLocalChanges: boolean = false
 ): Promise<void> {
   assert.ok(repositoryPath, 'Expected repositoryPath to be defined')
   assert.ok(repositoryUrl, 'Expected repositoryUrl to be defined')
 
   // Indicates whether to delete the directory contents
   let remove = false
+
+  // If preserveLocalChanges is true, log it
+  if (preserveLocalChanges) {
+    core.info(
+      `Preserve local changes is enabled, will attempt to keep local files`
+    )
+  }
 
   // Check whether using git or REST API
   if (!git) {
@@ -114,12 +122,43 @@ export async function prepareExistingDirectory(
     }
   }
 
-  if (remove) {
+  // Check repository conditions
+  let isLocalGitRepo = git && fsHelper.directoryExistsSync(path.join(repositoryPath, '.git'));
+  let repoUrl = isLocalGitRepo ? await git?.tryGetFetchUrl() : '';
+  let isSameRepository = repositoryUrl === repoUrl;
+  let differentRepoUrl = !isSameRepository;
+
+  // Repository URL has changed
+  if (differentRepoUrl) {
+    if (preserveLocalChanges) {
+      core.warning(`Repository URL has changed from '${repoUrl}' to '${repositoryUrl}'. Local changes will be preserved as requested.`);
+    }
+    remove = true; // Mark for removal, but actual removal will respect preserveLocalChanges
+  }
+
+  if (remove && !preserveLocalChanges) {
     // Delete the contents of the directory. Don't delete the directory itself
     // since it might be the current working directory.
     core.info(`Deleting the contents of '${repositoryPath}'`)
     for (const file of await fs.promises.readdir(repositoryPath)) {
+      // Skip .git directory as we need it to determine if a file is tracked
+      if (file === '.git') {
+        continue
+      }
       await io.rmRF(path.join(repositoryPath, file))
+    }
+  } else if (remove && preserveLocalChanges) {
+    core.info(
+      `Skipping deletion of directory contents due to preserve-local-changes setting`
+    )
+    // We still need to make sure we have a git repository to work with
+    if (!git) {
+      core.info(
+        `Initializing git repository to prepare for checkout with preserved changes`
+      )
+      await fs.promises.mkdir(path.join(repositoryPath, '.git'), {
+        recursive: true
+      })
     }
   }
 }
