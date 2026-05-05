@@ -66,6 +66,7 @@ class GitAuthHelper {
     // Instead of SSH URL
     this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf` // "origin" is SCHEME://HOSTNAME[:PORT]
     this.insteadOfValues.push(`git@${serverUrl.hostname}:`)
+    this.insteadOfValues.push(`ssh://git@${serverUrl.hostname}/`)
     if (this.settings.workflowOrganizationId) {
       this.insteadOfValues.push(
         `org-${this.settings.workflowOrganizationId}@github.com:`
