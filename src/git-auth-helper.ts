@@ -13,6 +13,12 @@ import {IGitCommandManager} from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
 
 const IS_WINDOWS = process.platform === 'win32'
+// Use case-insensitive gitdir matching on Windows to handle path casing mismatches
+// between the runner's GITHUB_WORKSPACE and the actual filesystem casing.
+// See: https://github.com/actions/checkout/issues/2345
+const INCLUDE_IF_GITDIR = IS_WINDOWS
+  ? 'includeIf.gitdir/i:'
+  : 'includeIf.gitdir:'
 const SSH_COMMAND_KEY = 'core.sshCommand'
 
 export interface IGitAuthHelper {
@@ -182,7 +188,7 @@ class GitAuthHelper {
 
         // Configure host includeIf
         await this.git.config(
-          `includeIf.gitdir:${submoduleGitDir}.path`,
+          `${INCLUDE_IF_GITDIR}${submoduleGitDir}.path`,
           credentialsConfigPath,
           false, // globalConfig?
           false, // add?
@@ -204,7 +210,7 @@ class GitAuthHelper {
 
         // Configure container includeIf
         await this.git.config(
-          `includeIf.gitdir:${containerSubmoduleGitDir}.path`,
+          `${INCLUDE_IF_GITDIR}${containerSubmoduleGitDir}.path`,
           containerCredentialsPath,
           false, // globalConfig?
           false, // add?
@@ -371,11 +377,11 @@ class GitAuthHelper {
       gitDir = gitDir.replace(/\\/g, '/') // Use forward slashes, even on Windows
 
       // Configure host includeIf
-      const hostIncludeKey = `includeIf.gitdir:${gitDir}.path`
+      const hostIncludeKey = `${INCLUDE_IF_GITDIR}${gitDir}.path`
       await this.git.config(hostIncludeKey, credentialsConfigPath)
 
       // Configure host includeIf for worktrees
-      const hostWorktreeIncludeKey = `includeIf.gitdir:${gitDir}/worktrees/*.path`
+      const hostWorktreeIncludeKey = `${INCLUDE_IF_GITDIR}${gitDir}/worktrees/*.path`
       await this.git.config(hostWorktreeIncludeKey, credentialsConfigPath)
 
       // Container git directory
@@ -397,11 +403,11 @@ class GitAuthHelper {
       )
 
       // Configure container includeIf
-      const containerIncludeKey = `includeIf.gitdir:${containerGitDir}.path`
+      const containerIncludeKey = `${INCLUDE_IF_GITDIR}${containerGitDir}.path`
       await this.git.config(containerIncludeKey, containerCredentialsPath)
 
       // Configure container includeIf for worktrees
-      const containerWorktreeIncludeKey = `includeIf.gitdir:${containerGitDir}/worktrees/*.path`
+      const containerWorktreeIncludeKey = `${INCLUDE_IF_GITDIR}${containerGitDir}/worktrees/*.path`
       await this.git.config(
         containerWorktreeIncludeKey,
         containerCredentialsPath
@@ -554,7 +560,7 @@ class GitAuthHelper {
     try {
       // Get all includeIf.gitdir keys
       const keys = await this.git.tryGetConfigKeys(
-        '^includeIf\\.gitdir:',
+        '^includeIf\\.gitdir(/i)?:',
         false, // globalConfig?
         configPath
       )

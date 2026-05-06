@@ -974,6 +974,46 @@ describe('git-auth-helper tests', () => {
     ).toBe(false)
     expect((authHelper as any).testCredentialsConfigPath('')).toBe(false)
   })
+
+  const includeIfCleanupRegex_matchesBothVariants =
+    'includeIf cleanup regex matches both gitdir: and gitdir/i: keys'
+  it(includeIfCleanupRegex_matchesBothVariants, async () => {
+    // The cleanup regex must match both variants so credential
+    // removal works regardless of which was written
+    const regex = /^includeIf\.gitdir(\/i)?:/
+    expect(regex.test('includeIf.gitdir:D:/workspaces/repo/.git.path')).toBe(
+      true
+    )
+    expect(regex.test('includeIf.gitdir/i:D:/Workspaces/repo/.git.path')).toBe(
+      true
+    )
+    expect(regex.test('includeIf.gitdir/i:/github/workspace/.git.path')).toBe(
+      true
+    )
+    expect(regex.test('includeIf.gitdir:~/projects/foo/.git.path')).toBe(true)
+    expect(regex.test('includeIf.onbranch:main.path')).toBe(false)
+    expect(regex.test('include.path')).toBe(false)
+  })
+
+  const includeIfDirective_usesCorrectVariantForPlatform =
+    'includeIf directive uses gitdir/i on Windows and gitdir on other platforms'
+  it(includeIfDirective_usesCorrectVariantForPlatform, async () => {
+    await setup(includeIfDirective_usesCorrectVariantForPlatform)
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+
+    const localConfigContent = (
+      await fs.promises.readFile(localGitConfigPath)
+    ).toString()
+
+    if (isWindows) {
+      expect(localConfigContent).toContain('includeIf.gitdir/i:')
+      expect(localConfigContent).not.toContain('includeIf.gitdir:')
+    } else {
+      expect(localConfigContent).toContain('includeIf.gitdir:')
+      expect(localConfigContent).not.toContain('includeIf.gitdir/i:')
+    }
+  })
 })
 
 async function setup(testName: string): Promise<void> {

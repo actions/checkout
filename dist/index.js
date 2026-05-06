@@ -151,6 +151,12 @@ const stateHelper = __importStar(__nccwpck_require__(4866));
 const urlHelper = __importStar(__nccwpck_require__(9437));
 const uuid_1 = __nccwpck_require__(5840);
 const IS_WINDOWS = process.platform === 'win32';
+// Use case-insensitive gitdir matching on Windows to handle path casing mismatches
+// between the runner's GITHUB_WORKSPACE and the actual filesystem casing.
+// See: https://github.com/actions/checkout/issues/2345
+const INCLUDE_IF_GITDIR = IS_WINDOWS
+    ? 'includeIf.gitdir/i:'
+    : 'includeIf.gitdir:';
 const SSH_COMMAND_KEY = 'core.sshCommand';
 function createAuthHelper(git, settings) {
     return new GitAuthHelper(git, settings);
@@ -270,7 +276,7 @@ class GitAuthHelper {
                     let submoduleGitDir = path.dirname(configPath); // The config file is at .git/modules/submodule-name/config
                     submoduleGitDir = submoduleGitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                     // Configure host includeIf
-                    yield this.git.config(`includeIf.gitdir:${submoduleGitDir}.path`, credentialsConfigPath, false, // globalConfig?
+                    yield this.git.config(`${INCLUDE_IF_GITDIR}${submoduleGitDir}.path`, credentialsConfigPath, false, // globalConfig?
                     false, // add?
                     configPath);
                     // Container submodule git directory
@@ -280,7 +286,7 @@ class GitAuthHelper {
                     relativeSubmoduleGitDir = relativeSubmoduleGitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                     const containerSubmoduleGitDir = path.posix.join('/github/workspace', relativeSubmoduleGitDir);
                     // Configure container includeIf
-                    yield this.git.config(`includeIf.gitdir:${containerSubmoduleGitDir}.path`, containerCredentialsPath, false, // globalConfig?
+                    yield this.git.config(`${INCLUDE_IF_GITDIR}${containerSubmoduleGitDir}.path`, containerCredentialsPath, false, // globalConfig?
                     false, // add?
                     configPath);
                 }
@@ -410,10 +416,10 @@ class GitAuthHelper {
                 let gitDir = path.join(this.git.getWorkingDirectory(), '.git');
                 gitDir = gitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                 // Configure host includeIf
-                const hostIncludeKey = `includeIf.gitdir:${gitDir}.path`;
+                const hostIncludeKey = `${INCLUDE_IF_GITDIR}${gitDir}.path`;
                 yield this.git.config(hostIncludeKey, credentialsConfigPath);
                 // Configure host includeIf for worktrees
-                const hostWorktreeIncludeKey = `includeIf.gitdir:${gitDir}/worktrees/*.path`;
+                const hostWorktreeIncludeKey = `${INCLUDE_IF_GITDIR}${gitDir}/worktrees/*.path`;
                 yield this.git.config(hostWorktreeIncludeKey, credentialsConfigPath);
                 // Container git directory
                 const workingDirectory = this.git.getWorkingDirectory();
@@ -425,10 +431,10 @@ class GitAuthHelper {
                 // Container credentials config path
                 const containerCredentialsPath = path.posix.join('/github/runner_temp', path.basename(credentialsConfigPath));
                 // Configure container includeIf
-                const containerIncludeKey = `includeIf.gitdir:${containerGitDir}.path`;
+                const containerIncludeKey = `${INCLUDE_IF_GITDIR}${containerGitDir}.path`;
                 yield this.git.config(containerIncludeKey, containerCredentialsPath);
                 // Configure container includeIf for worktrees
-                const containerWorktreeIncludeKey = `includeIf.gitdir:${containerGitDir}/worktrees/*.path`;
+                const containerWorktreeIncludeKey = `${INCLUDE_IF_GITDIR}${containerGitDir}/worktrees/*.path`;
                 yield this.git.config(containerWorktreeIncludeKey, containerCredentialsPath);
             }
         });
@@ -565,7 +571,7 @@ class GitAuthHelper {
             const credentialsPaths = new Set();
             try {
                 // Get all includeIf.gitdir keys
-                const keys = yield this.git.tryGetConfigKeys('^includeIf\\.gitdir:', false, // globalConfig?
+                const keys = yield this.git.tryGetConfigKeys('^includeIf\\.gitdir(/i)?:', false, // globalConfig?
                 configPath);
                 for (const key of keys) {
                     // Get all values for this key
