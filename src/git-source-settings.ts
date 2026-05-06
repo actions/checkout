@@ -55,7 +55,8 @@ export interface IGitSourceSettings {
   fetchTags: boolean
 
   /**
-   * Indicates whether to use the --progress option when fetching
+   * Indicates whether to show progress status output for git operations.
+   * When false, git commands use --quiet to suppress verbose output.
    */
   showProgress: boolean
 

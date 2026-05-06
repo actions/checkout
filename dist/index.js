@@ -780,9 +780,9 @@ class GitCommandManager {
             yield fs.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
         });
     }
-    checkout(ref, startPoint) {
+    checkout(ref, startPoint, showProgress) {
         return __awaiter(this, void 0, void 0, function* () {
-            const args = ['checkout', '--progress', '--force'];
+            const args = ['checkout', showProgress ? '--progress' : '--quiet', '--force'];
             if (startPoint) {
                 args.push('-B', ref, startPoint);
             }
@@ -792,9 +792,9 @@ class GitCommandManager {
             yield this.execGit(args);
         });
     }
-    checkoutDetach() {
+    checkoutDetach(showProgress) {
         return __awaiter(this, void 0, void 0, function* () {
-            const args = ['checkout', '--detach'];
+            const args = ['checkout', '--detach', showProgress ? '--progress' : '--quiet'];
             yield this.execGit(args);
         });
     }
@@ -1310,7 +1310,7 @@ function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clean, ref
                 core.startGroup('Removing previously created refs, to avoid conflicts');
                 // Checkout detached HEAD
                 if (!(yield git.isDetached())) {
-                    yield git.checkoutDetach();
+                    yield git.checkoutDetach(false);
                 }
                 // Remove all refs/heads/*
                 let branches = yield git.branchList(false);
@@ -1523,6 +1523,9 @@ function getSource(settings) {
             // Fetch
             core.startGroup('Fetching the repository');
             const fetchOptions = {};
+            if (settings.showProgress) {
+                fetchOptions.showProgress = true;
+            }
             if (settings.filter) {
                 fetchOptions.filter = settings.filter;
             }
@@ -1593,7 +1596,7 @@ function getSource(settings) {
             }
             // Checkout
             core.startGroup('Checking out the ref');
-            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+            yield git.checkout(checkoutInfo.ref, checkoutInfo.startPoint, settings.showProgress);
             core.endGroup();
             // Submodules
             if (settings.submodules) {
