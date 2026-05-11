@@ -35491,7 +35491,7 @@ class retry_helper_RetryHelper {
                 info(err?.message);
             }
             // Sleep
-            const seconds = this.getSleepAmount();
+            const seconds = this.getSleepAmount(attempt);
             info(`Waiting ${seconds} seconds before trying again`);
             await this.sleep(seconds);
             attempt++;
@@ -35499,9 +35499,11 @@ class retry_helper_RetryHelper {
         // Last attempt
         return await action();
     }
-    getSleepAmount() {
-        return (Math.floor(Math.random() * (this.maxSeconds - this.minSeconds + 1)) +
-            this.minSeconds);
+    getSleepAmount(attempt) {
+        if (this.minSeconds === 0) {
+            return 0;
+        }
+        return Math.min(this.minSeconds * Math.pow(2, attempt - 1), this.maxSeconds);
     }
     async sleep(seconds) {
         return new Promise(resolve => setTimeout(resolve, seconds * 1000));

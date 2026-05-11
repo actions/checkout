@@ -23,11 +23,9 @@ jest.unstable_mockModule('@actions/core', () => ({
 // Dynamic imports after mocking
 const {RetryHelper} = await import('../src/retry-helper.js')
 
-let retryHelper: any
-
 describe('retry-helper tests', () => {
   beforeAll(() => {
-    retryHelper = new RetryHelper(3, 0, 0)
+    // @actions/core is mocked at module load above; nothing to set up here.
   })
 
   beforeEach(() => {
@@ -40,14 +38,22 @@ describe('retry-helper tests', () => {
   })
 
   it('first attempt succeeds', async () => {
+    const retryHelper: any = new RetryHelper(3, 1, 10)
+    const sleep = jest.fn().mockResolvedValue(undefined)
+    retryHelper.sleep = sleep
+
     const actual = await retryHelper.execute(async () => {
       return 'some result'
     })
     expect(actual).toBe('some result')
     expect(info).toHaveLength(0)
+    expect(sleep).not.toHaveBeenCalled()
   })
 
   it('second attempt succeeds', async () => {
+    const retryHelper: any = new RetryHelper(3, 1, 10)
+    const sleep = jest.fn().mockResolvedValue(undefined)
+    retryHelper.sleep = sleep
     let attempts = 0
     const actual = await retryHelper.execute(() => {
       if (++attempts == 1) {
@@ -60,10 +66,15 @@ describe('retry-helper tests', () => {
     expect(actual).toBe('some result')
     expect(info).toHaveLength(2)
     expect(info[0]).toBe('some error')
-    expect(info[1]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[1]).toBe('Waiting 1 seconds before trying again')
+    expect(sleep).toHaveBeenCalledTimes(1)
+    expect(sleep).toHaveBeenCalledWith(1)
   })
 
   it('third attempt succeeds', async () => {
+    const retryHelper: any = new RetryHelper(3, 1, 10)
+    const sleep = jest.fn().mockResolvedValue(undefined)
+    retryHelper.sleep = sleep
     let attempts = 0
     const actual = await retryHelper.execute(() => {
       if (++attempts < 3) {
@@ -76,12 +87,18 @@ describe('retry-helper tests', () => {
     expect(actual).toBe('some result')
     expect(info).toHaveLength(4)
     expect(info[0]).toBe('some error 1')
-    expect(info[1]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[1]).toBe('Waiting 1 seconds before trying again')
     expect(info[2]).toBe('some error 2')
-    expect(info[3]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[3]).toBe('Waiting 2 seconds before trying again')
+    expect(sleep).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenNthCalledWith(1, 1)
+    expect(sleep).toHaveBeenNthCalledWith(2, 2)
   })
 
   it('all attempts fail succeeds', async () => {
+    const retryHelper: any = new RetryHelper(3, 1, 10)
+    const sleep = jest.fn().mockResolvedValue(undefined)
+    retryHelper.sleep = sleep
     let attempts = 0
     let error: Error = null as unknown as Error
     try {
@@ -95,8 +112,42 @@ describe('retry-helper tests', () => {
     expect(attempts).toBe(3)
     expect(info).toHaveLength(4)
     expect(info[0]).toBe('some error 1')
-    expect(info[1]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[1]).toBe('Waiting 1 seconds before trying again')
     expect(info[2]).toBe('some error 2')
-    expect(info[3]).toMatch(/Waiting .+ seconds before trying again/)
+    expect(info[3]).toBe('Waiting 2 seconds before trying again')
+    expect(sleep).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenNthCalledWith(1, 1)
+    expect(sleep).toHaveBeenNthCalledWith(2, 2)
+  })
+
+  it('server-side 500 errors are retried with exponential backoff', async () => {
+    const retryHelper: any = new RetryHelper(4, 2, 10)
+    const sleep = jest.fn().mockResolvedValue(undefined)
+    retryHelper.sleep = sleep
+    let attempts = 0
+
+    const actual = await retryHelper.execute(() => {
+      if (++attempts < 3) {
+        const error: Error & {status?: number} = new Error(
+          `server error ${attempts}`
+        )
+        error.status = 500
+        throw error
+      }
+
+      return Promise.resolve('some result')
+    })
+
+    expect(actual).toBe('some result')
+    expect(attempts).toBe(3)
+    expect(info).toEqual([
+      'server error 1',
+      'Waiting 2 seconds before trying again',
+      'server error 2',
+      'Waiting 4 seconds before trying again'
+    ])
+    expect(sleep).toHaveBeenCalledTimes(2)
+    expect(sleep).toHaveBeenNthCalledWith(1, 2)
+    expect(sleep).toHaveBeenNthCalledWith(2, 4)
   })
 })
