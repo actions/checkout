@@ -2567,7 +2567,7 @@ class RetryHelper {
                     core.info(err === null || err === void 0 ? void 0 : err.message);
                 }
                 // Sleep
-                const seconds = this.getSleepAmount();
+                const seconds = this.getSleepAmount(attempt);
                 core.info(`Waiting ${seconds} seconds before trying again`);
                 yield this.sleep(seconds);
                 attempt++;
@@ -2576,9 +2576,11 @@ class RetryHelper {
             return yield action();
         });
     }
-    getSleepAmount() {
-        return (Math.floor(Math.random() * (this.maxSeconds - this.minSeconds + 1)) +
-            this.minSeconds);
+    getSleepAmount(attempt) {
+        if (this.minSeconds === 0) {
+            return 0;
+        }
+        return Math.min(this.minSeconds * Math.pow(2, attempt - 1), this.maxSeconds);
     }
     sleep(seconds) {
         return __awaiter(this, void 0, void 0, function* () {
