@@ -160,6 +160,13 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Suppress the warning when pull_request_target checks out a non-default branch
+    # from the workflow repository. Only set this to true when you understand the
+    # security risk of running untrusted pull request code in a privileged context.
+    # https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+    # Default: false
+    dangerously-checkout-non-default-branch: ''
 ```
 <!-- end usage -->
 

@@ -57,7 +57,8 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase()
 
   // Source branch, source version
-  result.ref = core.getInput('ref')
+  const inputRef = core.getInput('ref')
+  result.ref = inputRef
   if (!result.ref) {
     if (isWorkflowRepository) {
       result.ref = github.context.ref
@@ -77,6 +78,24 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   }
   core.debug(`ref = '${result.ref}'`)
   core.debug(`commit = '${result.commit}'`)
+
+  // Warn when pull_request_target checks out non-default code from the workflow repository.
+  // This event runs in the base repository context, so checking out PR-controlled code can be risky.
+  const suppressNonDefaultBranchWarning =
+    (
+      core.getInput('dangerously-checkout-non-default-branch') || 'false'
+    ).toUpperCase() === 'TRUE'
+  if (
+    github.context.eventName === 'pull_request_target' &&
+    isWorkflowRepository &&
+    inputRef &&
+    !suppressNonDefaultBranchWarning &&
+    !isDefaultBranchRef(inputRef)
+  ) {
+    core.warning(
+      'Checking out a non-default branch from pull_request_target can put untrusted pull request code in a privileged context. If this is intentional, set dangerously-checkout-non-default-branch: true. Consider using pull_request or pull_request plus workflow_run instead. See https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/'
+    )
+  }
 
   // Clean
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
@@ -162,4 +181,17 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
   return result
+}
+
+function isDefaultBranchRef(ref: string): boolean {
+  const defaultBranch = (github.context.payload.repository as any)
+    ?.default_branch
+  if (
+    defaultBranch &&
+    (ref === defaultBranch || ref === `refs/heads/${defaultBranch}`)
+  ) {
+    return true
+  }
+
+  return ref.toUpperCase() === github.context.sha.toUpperCase()
 }
