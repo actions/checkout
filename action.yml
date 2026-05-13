@@ -98,6 +98,14 @@ inputs:
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false
+  dangerously-checkout-non-default-branch:
+    description: >
+      Suppress the warning when pull_request_target checks out a non-default
+      branch from the workflow repository. Only set this to true when you
+      understand the security risk of running untrusted pull request code in a
+      privileged context.
+      https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
+    default: false
 outputs:
   ref:
     description: 'The branch, tag or SHA that was checked out'

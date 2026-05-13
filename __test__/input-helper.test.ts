@@ -55,6 +55,15 @@ describe('input-helper tests', () => {
   beforeEach(() => {
     // Reset inputs
     inputs = {}
+    github.context.eventName = 'push'
+    github.context.ref = 'refs/heads/some-ref'
+    github.context.sha = '1234567890123456789012345678901234567890'
+    github.context.payload = {
+      repository: {
+        default_branch: 'main'
+      }
+    } as any
+    jest.clearAllMocks()
   })
 
   afterAll(() => {
@@ -65,6 +74,8 @@ describe('input-helper tests', () => {
     }
 
     // Restore @actions/github context
+    github.context.eventName = originalContext.eventName
+    github.context.payload = originalContext.payload
     github.context.ref = originalContext.ref
     github.context.sha = originalContext.sha
 
@@ -148,6 +159,75 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
+  })
+
+  it('warns when pull_request_target checks out a non-default branch', async () => {
+    github.context.eventName = 'pull_request_target'
+    inputs.ref = 'some-other-ref'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Checking out a non-default branch from pull_request_target'
+      )
+    )
+  })
+
+  it('does not warn when pull_request_target checks out the default branch name', async () => {
+    github.context.eventName = 'pull_request_target'
+    inputs.ref = 'main'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).not.toHaveBeenCalled()
+  })
+
+  it('does not warn when pull_request_target checks out the fully qualified default branch', async () => {
+    github.context.eventName = 'pull_request_target'
+    inputs.ref = 'refs/heads/main'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).not.toHaveBeenCalled()
+  })
+
+  it('does not warn when pull_request_target checks out the default branch sha', async () => {
+    github.context.eventName = 'pull_request_target'
+    inputs.ref = '1234567890123456789012345678901234567890'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).not.toHaveBeenCalled()
+  })
+
+  it('does not warn when dangerously-checkout-non-default-branch suppresses the warning', async () => {
+    github.context.eventName = 'pull_request_target'
+    inputs.ref = 'some-other-ref'
+    inputs['dangerously-checkout-non-default-branch'] = 'true'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).not.toHaveBeenCalled()
+  })
+
+  it('does not warn when pull_request checks out a non-default branch', async () => {
+    github.context.eventName = 'pull_request'
+    inputs.ref = 'some-other-ref'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).not.toHaveBeenCalled()
+  })
+
+  it('does not warn when pull_request_target checks out a different repository', async () => {
+    github.context.eventName = 'pull_request_target'
+    inputs.repository = 'some-owner/some-other-repo'
+    inputs.ref = 'some-other-ref'
+
+    await inputHelper.getInputs()
+
+    expect(core.warning).not.toHaveBeenCalled()
   })
 
   it('sets workflow organization ID', async () => {
