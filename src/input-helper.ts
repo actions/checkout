@@ -161,5 +161,8 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
 
+  result.reference = core.getInput('reference')
+  core.debug(`Reference repository = ${result.reference}`)
+
   return result
 }

@@ -113,6 +113,18 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.init()
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
+
+      if (settings.reference !== undefined) {
+        const alternateObjects = path.join(settings.reference, '/objects')
+
+        if (fsHelper.directoryExistsSync(alternateObjects, false)) {
+          core.startGroup('Adding a reference repository')
+          await git.referenceAdd(alternateObjects)
+          core.endGroup()
+        } else {
+          core.warning(`Reference repository was specified, but directory ${alternateObjects} does not exists`);
+        }
+      }
     }
 
     // Disable automatic garbage collection
