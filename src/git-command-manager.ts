@@ -365,6 +365,7 @@ class GitCommandManager {
   }
 
   async init(): Promise<void> {
+    await this.config('init.defaultBranch', 'main', true, true)
     await this.execGit(['init', this.workingDirectory])
   }
 
