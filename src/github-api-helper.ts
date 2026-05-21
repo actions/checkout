@@ -11,6 +11,12 @@ import {getServerApiUrl} from './url-helper'
 
 const IS_WINDOWS = process.platform === 'win32'
 
+export interface RepositoryObjectFormatResult {
+  defaultBranch?: string
+  format: string
+  succeeded: boolean
+}
+
 export async function downloadRepository(
   authToken: string,
   owner: string,
@@ -120,6 +126,53 @@ export async function getDefaultBranch(
 
     return result
   })
+}
+
+export async function tryGetRepositoryObjectFormat(
+  authToken: string,
+  owner: string,
+  repo: string,
+  baseUrl?: string,
+  commit?: string
+): Promise<RepositoryObjectFormatResult> {
+  const commitFormat = getObjectFormat(commit)
+  if (commitFormat) {
+    return {format: commitFormat, succeeded: true}
+  }
+
+  try {
+    const octokit = github.getOctokit(authToken, {
+      baseUrl: getServerApiUrl(baseUrl)
+    })
+    const response = await octokit.request(
+      'GET /repos/{owner}/{repo}/hash-algorithm',
+      {owner, repo}
+    )
+    const hashAlgorithm = response.data.hash_algorithm
+    if (hashAlgorithm === 'sha256' || hashAlgorithm === 'sha1') {
+      return {format: hashAlgorithm, succeeded: true}
+    }
+
+    core.debug(
+      'Unable to determine repository object format from hash-algorithm endpoint'
+    )
+    return {format: '', succeeded: false}
+  } catch (err) {
+    core.debug(
+      `Unable to determine repository object format from hash-algorithm endpoint: ${(err as any)?.message ?? err}`
+    )
+    return {format: '', succeeded: false}
+  }
+}
+
+function getObjectFormat(sha?: string): string {
+  if (/^[0-9a-fA-F]{64}$/.test(sha || '')) {
+    return 'sha256'
+  }
+  if (/^[0-9a-fA-F]{40}$/.test(sha || '')) {
+    return 'sha1'
+  }
+  return ''
 }
 
 async function downloadArchive(
