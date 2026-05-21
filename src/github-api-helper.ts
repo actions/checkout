@@ -11,6 +11,11 @@ import {getServerApiUrl} from './url-helper'
 
 const IS_WINDOWS = process.platform === 'win32'
 
+export interface RepositoryObjectFormatResult {
+  format: string
+  succeeded: boolean
+}
+
 export async function downloadRepository(
   authToken: string,
   owner: string,
@@ -120,6 +125,46 @@ export async function getDefaultBranch(
 
     return result
   })
+}
+
+export async function tryGetRepositoryObjectFormat(
+  authToken: string,
+  owner: string,
+  repo: string,
+  baseUrl?: string
+): Promise<RepositoryObjectFormatResult> {
+  try {
+    const octokit = github.getOctokit(authToken, {
+      baseUrl: getServerApiUrl(baseUrl)
+    })
+    const repository = await octokit.rest.repos.get({owner, repo})
+    const defaultBranch = repository.data.default_branch
+    assert.ok(defaultBranch, 'default_branch cannot be empty')
+
+    const branch = await octokit.rest.repos.getBranch({
+      owner,
+      repo,
+      branch: defaultBranch
+    })
+    const commitSha = branch.data.commit.sha
+
+    if (/^[0-9a-fA-F]{64}$/.test(commitSha)) {
+      return {format: 'sha256', succeeded: true}
+    }
+    if (/^[0-9a-fA-F]{40}$/.test(commitSha)) {
+      return {format: 'sha1', succeeded: true}
+    }
+
+    core.debug(
+      'Unable to determine repository object format from default branch'
+    )
+    return {format: '', succeeded: false}
+  } catch (err) {
+    core.debug(
+      `Unable to determine repository object format: ${(err as any)?.message ?? err}`
+    )
+    return {format: '', succeeded: false}
+  }
 }
 
 async function downloadArchive(

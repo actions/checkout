@@ -501,6 +501,7 @@ async function setup(testName: string): Promise<void> {
       await fs.promises.stat(path.join(repositoryPath, '.git'))
       return repositoryUrl
     }),
+    tryGetObjectFormat: jest.fn(async () => ({format: '', succeeded: true})),
     tryGetConfigValues: jest.fn(),
     tryGetConfigKeys: jest.fn(),
     tryReset: jest.fn(async () => {

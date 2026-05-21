@@ -15,6 +15,11 @@ import {GitVersion} from './git-version'
 export const MinimumGitVersion = new GitVersion('2.18')
 export const MinimumGitSparseCheckoutVersion = new GitVersion('2.28')
 
+export interface GitObjectFormatResult {
+  format: string
+  succeeded: boolean
+}
+
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
@@ -43,7 +48,7 @@ export interface IGitCommandManager {
   getDefaultBranch(repositoryUrl: string): Promise<string>
   getSubmoduleConfigPaths(recursive: boolean): Promise<string[]>
   getWorkingDirectory(): string
-  init(): Promise<void>
+  init(objectFormat?: string): Promise<void>
   isDetached(): Promise<boolean>
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
@@ -68,6 +73,7 @@ export interface IGitCommandManager {
   ): Promise<boolean>
   tryDisableAutomaticGarbageCollection(): Promise<boolean>
   tryGetFetchUrl(): Promise<string>
+  tryGetObjectFormat(repositoryUrl: string): Promise<GitObjectFormatResult>
   tryGetConfigValues(
     configKey: string,
     globalConfig?: boolean,
@@ -364,8 +370,14 @@ class GitCommandManager {
     return this.workingDirectory
   }
 
-  async init(): Promise<void> {
-    await this.execGit(['init', this.workingDirectory])
+  async init(objectFormat?: string): Promise<void> {
+    const args = ['init']
+    if (objectFormat === 'sha256') {
+      args.push('--object-format=sha256')
+    }
+    args.push(this.workingDirectory)
+
+    await this.execGit(args)
   }
 
   async isDetached(): Promise<boolean> {
@@ -534,6 +546,55 @@ class GitCommandManager {
     }
 
     return stdout
+  }
+
+  async tryGetObjectFormat(
+    repositoryUrl: string
+  ): Promise<GitObjectFormatResult> {
+    try {
+      const output = await this.execGit(
+        [
+          '-c',
+          'protocol.version=2',
+          'ls-remote',
+          '--quiet',
+          '--exit-code',
+          '--symref',
+          repositoryUrl,
+          'HEAD'
+        ],
+        true,
+        true
+      )
+
+      if (output.exitCode !== 0) {
+        core.debug(
+          `Unable to determine repository object format: git ls-remote exited with ${output.exitCode}`
+        )
+        return {format: '', succeeded: false}
+      }
+
+      for (const line of output.stdout.trim().split('\n')) {
+        const [oid, ref] = line.split('\t')
+        if (ref !== 'HEAD') {
+          continue
+        }
+        if (/^[0-9a-fA-F]{64}$/.test(oid)) {
+          return {format: 'sha256', succeeded: true}
+        }
+        if (/^[0-9a-fA-F]{40}$/.test(oid)) {
+          return {format: 'sha1', succeeded: true}
+        }
+      }
+
+      core.debug('Unable to determine repository object format from HEAD')
+      return {format: '', succeeded: false}
+    } catch (err) {
+      core.debug(
+        `Unable to determine repository object format: ${(err as any)?.message ?? err}`
+      )
+      return {format: '', succeeded: false}
+    }
   }
 
   async tryGetConfigValues(

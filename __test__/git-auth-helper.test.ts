@@ -1103,6 +1103,7 @@ async function setup(testName: string): Promise<void> {
     ),
     tryDisableAutomaticGarbageCollection: jest.fn(),
     tryGetFetchUrl: jest.fn(),
+    tryGetObjectFormat: jest.fn(async () => ({format: '', succeeded: true})),
     tryGetConfigValues: jest.fn(
       async (
         key: string,
