@@ -457,7 +457,10 @@ class GitCommandManager {
       args.push('--recursive')
     }
 
-    await this.execGit(args)
+    const that = this
+    await retryHelper.execute(async () => {
+      await that.execGit(args)
+    })
   }
 
   async submoduleStatus(): Promise<boolean> {
