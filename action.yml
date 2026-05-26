@@ -54,6 +54,10 @@ inputs:
     default: true
   path:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+  allow-path-outside-workspace:
+    description: Allow the checked-out repository to be placed outside of the workspace.
+    default: false
+    required: false
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
