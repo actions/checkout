@@ -12,7 +12,6 @@ import {getServerApiUrl} from './url-helper'
 const IS_WINDOWS = process.platform === 'win32'
 
 export interface RepositoryObjectFormatResult {
-  defaultBranch?: string
   format: string
   succeeded: boolean
 }
