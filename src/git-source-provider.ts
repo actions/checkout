@@ -109,8 +109,25 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     if (
       !fsHelper.directoryExistsSync(path.join(settings.repositoryPath, '.git'))
     ) {
+      core.startGroup('Determining repository object format')
+      const objectFormatResult =
+        await githubApiHelper.tryGetRepositoryObjectFormat(
+          settings.authToken,
+          settings.repositoryOwner,
+          settings.repositoryName,
+          settings.githubServerUrl,
+          settings.commit
+        )
+      const objectFormat = objectFormatResult.succeeded
+        ? objectFormatResult.format
+        : ''
+      if (objectFormat === 'sha256') {
+        core.info('Detected SHA-256 repository object format')
+      }
+      core.endGroup()
+
       core.startGroup('Initializing the repository')
-      await git.init()
+      await git.init(objectFormat)
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
     }

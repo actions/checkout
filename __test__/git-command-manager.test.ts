@@ -378,6 +378,59 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 })
 
+describe('repository initialization object format', () => {
+  beforeEach(async () => {
+    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
+    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('initializes SHA-256 repositories with the matching object format', async () => {
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('git version 2.50.1'))
+      }
+
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    git = await commandManager.createCommandManager('test', false, false)
+
+    await git.init('sha256')
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['init', '--object-format=sha256', 'test'],
+      expect.any(Object)
+    )
+  })
+
+  it('initializes SHA-1 repositories with existing default arguments', async () => {
+    mockExec.mockImplementation((path, args, options) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('git version 2.50.1'))
+      }
+
+      return 0
+    })
+    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+
+    git = await commandManager.createCommandManager('test', false, false)
+
+    await git.init('sha1')
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['init', 'test'],
+      expect.any(Object)
+    )
+  })
+})
+
 describe('git user-agent with orchestration ID', () => {
   beforeEach(async () => {
     jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
