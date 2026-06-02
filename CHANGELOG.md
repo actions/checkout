@@ -1,5 +1,9 @@
 # Changelog
 
+## v6.0.3
+* Fix checkout init for SHA-256 repositories by @yaananth in https://github.com/actions/checkout/pull/2439
+* fix: expand merge commit SHA regex and add SHA-256 test cases by @yaananth in https://github.com/actions/checkout/pull/2414
+
 ## v6.0.2
 * Fix tag handling: preserve annotations and explicit fetch-tags by @ericsciple in https://github.com/actions/checkout/pull/2356
 
