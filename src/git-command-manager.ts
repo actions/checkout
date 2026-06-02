@@ -228,7 +228,14 @@ class GitCommandManager {
       args.push(ref)
     }
 
-    await this.execGit(args)
+    // Retry checkout because it can trigger network I/O when using partial
+    // clones (filter=blob:none).  In that mode git lazily fetches missing
+    // blobs from the promisor remote during checkout, so a transient network
+    // failure would otherwise surface as a hard error here.
+    const that = this
+    await retryHelper.execute(async () => {
+      await that.execGit(args)
+    })
   }
 
   async checkoutDetach(): Promise<void> {
@@ -463,7 +470,10 @@ class GitCommandManager {
       args.push('--recursive')
     }
 
-    await this.execGit(args)
+    const that = this
+    await retryHelper.execute(async () => {
+      await that.execGit(args)
+    })
   }
 
   async submoduleStatus(): Promise<boolean> {
