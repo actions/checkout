@@ -15,6 +15,11 @@ import {GitVersion} from './git-version'
 export const MinimumGitVersion = new GitVersion('2.18')
 export const MinimumGitSparseCheckoutVersion = new GitVersion('2.28')
 
+export class GitOutput {
+  stdout = ''
+  exitCode = 0
+}
+
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
   branchExists(remote: boolean, pattern: string): Promise<boolean>
@@ -48,6 +53,7 @@ export interface IGitCommandManager {
   lfsFetch(ref: string): Promise<void>
   lfsInstall(): Promise<void>
   log1(format?: string): Promise<string>
+  referenceAdd(referenceObjects: string): Promise<void>
   remoteAdd(remoteName: string, remoteUrl: string): Promise<void>
   removeEnvironmentVariable(name: string): void
   revParse(ref: string): Promise<string>
@@ -80,6 +86,12 @@ export interface IGitCommandManager {
   ): Promise<string[]>
   tryReset(): Promise<boolean>
   version(): Promise<GitVersion>
+  execGit(
+    args: string[],
+    allowAllExitCodes?: boolean,
+    silent?: boolean,
+    customListeners?: any
+  ): Promise<GitOutput>
 }
 
 export async function createCommandManager(
@@ -407,6 +419,32 @@ class GitCommandManager {
     await this.execGit(['remote', 'add', remoteName, remoteUrl])
   }
 
+  async referenceAdd(referenceObjects: string): Promise<void> {
+    const alternatesPath = path.join(
+      this.workingDirectory,
+      '.git',
+      'objects',
+      'info',
+      'alternates'
+    )
+    core.info(`Configuring git alternate to reference objects at ${referenceObjects}`)
+    const infoDir = path.dirname(alternatesPath)
+    if (!fs.existsSync(infoDir)) {
+      await fs.promises.mkdir(infoDir, { recursive: true })
+    }
+    
+    let existing = ''
+    if (fs.existsSync(alternatesPath)) {
+      existing = (await fs.promises.readFile(alternatesPath, 'utf8')).trim()
+    }
+    
+    const lines = existing ? existing.split('\n') : []
+    if (!lines.includes(referenceObjects)) {
+      lines.push(referenceObjects)
+      await fs.promises.writeFile(alternatesPath, lines.join('\n') + '\n')
+    }
+  }
+
   removeEnvironmentVariable(name: string): void {
     delete this.gitEnv[name]
   }
@@ -615,7 +653,7 @@ class GitCommandManager {
     return result
   }
 
-  private async execGit(
+  async execGit(
     args: string[],
     allowAllExitCodes = false,
     silent = false,
@@ -752,7 +790,3 @@ class GitCommandManager {
   }
 }
 
-class GitOutput {
-  stdout = ''
-  exitCode = 0
-}
