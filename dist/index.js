@@ -267,7 +267,7 @@ class GitAuthHelper {
                 // Configure both host and container paths to support Docker container actions.
                 for (const configPath of configPaths) {
                     // Submodule Git directory
-                    let submoduleGitDir = path.dirname(configPath); // The config file is at .git/modules/submodule-name/config
+                    let submoduleGitDir = yield fs.promises.realpath(path.dirname(configPath)); // The config file is at .git/modules/submodule-name/config
                     submoduleGitDir = submoduleGitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                     // Configure host includeIf
                     yield this.git.config(`includeIf.gitdir:${submoduleGitDir}.path`, credentialsConfigPath, false, // globalConfig?
@@ -407,7 +407,7 @@ class GitAuthHelper {
             }
             else {
                 // Host git directory
-                let gitDir = path.join(this.git.getWorkingDirectory(), '.git');
+                let gitDir = yield fs.promises.realpath(path.join(this.git.getWorkingDirectory(), '.git'));
                 gitDir = gitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                 // Configure host includeIf
                 const hostIncludeKey = `includeIf.gitdir:${gitDir}.path`;

@@ -192,6 +192,25 @@ jobs:
         with:
           args: bash __test__/verify-worktree.sh worktree-test container-worktree-branch
 
+      # Credentials when checkout out into symlink
+      - name: Setup for symlink test
+        run: mkdir symlink-test-real && ln -s symlink-test-real symlink-test-link
+      - name: Checkout for worktree test
+        uses: ./
+        with:
+          path: symlink-test-link
+      - name: Verify symlink credentials
+        run: |
+          cd symlink-test-real
+          if git config --list --show-origin | grep -q "extraheader"; then
+            echo "Credentials are configured"
+          else
+            echo "ERROR: Credentials are NOT configured"
+            echo "Full git config:"
+            git config --list --show-origin
+            exit 1
+          fi
+
       # Basic checkout using REST API
       - name: Remove basic
         if: runner.os != 'windows'
