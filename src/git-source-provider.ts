@@ -39,6 +39,15 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   const git = await getGitCommandManager(settings)
   core.endGroup()
 
+  if (git) {
+    git.setTimeout(settings.timeout)
+    git.setRetryConfig(
+      settings.retryMaxAttempts,
+      settings.retryMinBackoff,
+      settings.retryMaxBackoff
+    )
+  }
+
   let authHelper: gitAuthHelper.IGitAuthHelper | null = null
   try {
     if (git) {

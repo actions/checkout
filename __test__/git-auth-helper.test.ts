@@ -1146,7 +1146,9 @@ async function setup(testName: string): Promise<void> {
       }
     ),
     tryReset: jest.fn(),
-    version: jest.fn()
+    version: jest.fn(),
+    setTimeout: jest.fn(),
+    setRetryConfig: jest.fn()
   }
 
   settings = {
@@ -1173,7 +1175,11 @@ async function setup(testName: string): Promise<void> {
     sshUser: '',
     workflowOrganizationId: 123456,
     setSafeDirectory: true,
-    githubServerUrl: githubServerUrl
+    githubServerUrl: githubServerUrl,
+    timeout: 300,
+    retryMaxAttempts: 3,
+    retryMinBackoff: 10,
+    retryMaxBackoff: 20
   }
 }
 

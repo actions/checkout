@@ -7,6 +7,7 @@ import * as path from 'path'
 import * as refHelper from './ref-helper'
 import * as regexpHelper from './regexp-helper'
 import * as retryHelper from './retry-helper'
+import {spawn} from 'child_process'
 import {GitVersion} from './git-version'
 
 // Auth header not supported before 2.9
@@ -80,6 +81,12 @@ export interface IGitCommandManager {
   ): Promise<string[]>
   tryReset(): Promise<boolean>
   version(): Promise<GitVersion>
+  setTimeout(timeoutSeconds: number): void
+  setRetryConfig(
+    maxAttempts: number,
+    minBackoffSeconds: number,
+    maxBackoffSeconds: number
+  ): void
 }
 
 export async function createCommandManager(
@@ -104,6 +111,8 @@ class GitCommandManager {
   private doSparseCheckout = false
   private workingDirectory = ''
   private gitVersion: GitVersion = new GitVersion()
+  private timeoutMs = 0
+  private networkRetryHelper = new retryHelper.RetryHelper()
 
   // Private constructor; use createCommandManager()
   private constructor() {}
@@ -168,7 +177,7 @@ class GitCommandManager {
     }
 
     // Suppress the output in order to avoid flooding annotations with innocuous errors.
-    await this.execGit(args, false, true, listeners)
+    await this.execGit(args, {silent: true, customListeners: listeners})
 
     core.debug(`stderr callback is: ${stderr}`)
     core.debug(`errline callback is: ${errline}`)
@@ -269,7 +278,7 @@ class GitCommandManager {
         '--get-regexp',
         pattern
       ],
-      true
+      {allowAllExitCodes: true}
     )
     return output.exitCode === 0
   }
@@ -312,22 +321,25 @@ class GitCommandManager {
     }
 
     const that = this
-    await retryHelper.execute(async () => {
-      await that.execGit(args)
+    await this.networkRetryHelper.execute(async () => {
+      await that.execGit(args, {timeoutMs: that.timeoutMs})
     })
   }
 
   async getDefaultBranch(repositoryUrl: string): Promise<string> {
     let output: GitOutput | undefined
-    await retryHelper.execute(async () => {
-      output = await this.execGit([
-        'ls-remote',
-        '--quiet',
-        '--exit-code',
-        '--symref',
-        repositoryUrl,
-        'HEAD'
-      ])
+    await this.networkRetryHelper.execute(async () => {
+      output = await this.execGit(
+        [
+          'ls-remote',
+          '--quiet',
+          '--exit-code',
+          '--symref',
+          repositoryUrl,
+          'HEAD'
+        ],
+        {timeoutMs: this.timeoutMs}
+      )
     })
 
     if (output) {
@@ -378,7 +390,7 @@ class GitCommandManager {
     // Note, "branch --show-current" would be simpler but isn't available until Git 2.22
     const output = await this.execGit(
       ['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'],
-      true
+      {allowAllExitCodes: true}
     )
     return !output.stdout.trim().startsWith('refs/heads/')
   }
@@ -387,8 +399,8 @@ class GitCommandManager {
     const args = ['lfs', 'fetch', 'origin', ref]
 
     const that = this
-    await retryHelper.execute(async () => {
-      await that.execGit(args)
+    await this.networkRetryHelper.execute(async () => {
+      await that.execGit(args, {timeoutMs: that.timeoutMs})
     })
   }
 
@@ -398,8 +410,8 @@ class GitCommandManager {
 
   async log1(format?: string): Promise<string> {
     const args = format ? ['log', '-1', format] : ['log', '-1']
-    const silent = format ? false : true
-    const output = await this.execGit(args, false, silent)
+    const silent = !format
+    const output = await this.execGit(args, {silent})
     return output.stdout
   }
 
@@ -428,7 +440,7 @@ class GitCommandManager {
 
   async shaExists(sha: string): Promise<boolean> {
     const args = ['rev-parse', '--verify', '--quiet', `${sha}^{object}`]
-    const output = await this.execGit(args, true)
+    const output = await this.execGit(args, {allowAllExitCodes: true})
     return output.exitCode === 0
   }
 
@@ -449,7 +461,10 @@ class GitCommandManager {
       args.push('--recursive')
     }
 
-    await this.execGit(args)
+    const that = this
+    await this.networkRetryHelper.execute(async () => {
+      await that.execGit(args, {timeoutMs: that.timeoutMs})
+    })
   }
 
   async submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void> {
@@ -463,11 +478,14 @@ class GitCommandManager {
       args.push('--recursive')
     }
 
-    await this.execGit(args)
+    const that = this
+    await this.networkRetryHelper.execute(async () => {
+      await that.execGit(args, {timeoutMs: that.timeoutMs})
+    })
   }
 
   async submoduleStatus(): Promise<boolean> {
-    const output = await this.execGit(['submodule', 'status'], true)
+    const output = await this.execGit(['submodule', 'status'], {allowAllExitCodes: true})
     core.debug(output.stdout)
     return output.exitCode === 0
   }
@@ -478,7 +496,7 @@ class GitCommandManager {
   }
 
   async tryClean(): Promise<boolean> {
-    const output = await this.execGit(['clean', '-ffdx'], true)
+    const output = await this.execGit(['clean', '-ffdx'], {allowAllExitCodes: true})
     return output.exitCode === 0
   }
 
@@ -493,7 +511,7 @@ class GitCommandManager {
         '--unset-all',
         configKey
       ],
-      true
+      {allowAllExitCodes: true}
     )
     return output.exitCode === 0
   }
@@ -512,14 +530,14 @@ class GitCommandManager {
     }
     args.push('--unset', configKey, configValue)
 
-    const output = await this.execGit(args, true)
+    const output = await this.execGit(args, {allowAllExitCodes: true})
     return output.exitCode === 0
   }
 
   async tryDisableAutomaticGarbageCollection(): Promise<boolean> {
     const output = await this.execGit(
       ['config', '--local', 'gc.auto', '0'],
-      true
+      {allowAllExitCodes: true}
     )
     return output.exitCode === 0
   }
@@ -527,7 +545,7 @@ class GitCommandManager {
   async tryGetFetchUrl(): Promise<string> {
     const output = await this.execGit(
       ['config', '--local', '--get', 'remote.origin.url'],
-      true
+      {allowAllExitCodes: true}
     )
 
     if (output.exitCode !== 0) {
@@ -555,7 +573,7 @@ class GitCommandManager {
     }
     args.push('--get-all', configKey)
 
-    const output = await this.execGit(args, true)
+    const output = await this.execGit(args, {allowAllExitCodes: true})
 
     if (output.exitCode !== 0) {
       return []
@@ -580,7 +598,7 @@ class GitCommandManager {
     }
     args.push('--name-only', '--get-regexp', pattern)
 
-    const output = await this.execGit(args, true)
+    const output = await this.execGit(args, {allowAllExitCodes: true})
 
     if (output.exitCode !== 0) {
       return []
@@ -593,12 +611,41 @@ class GitCommandManager {
   }
 
   async tryReset(): Promise<boolean> {
-    const output = await this.execGit(['reset', '--hard', 'HEAD'], true)
+    const output = await this.execGit(['reset', '--hard', 'HEAD'], {allowAllExitCodes: true})
     return output.exitCode === 0
   }
 
   async version(): Promise<GitVersion> {
     return this.gitVersion
+  }
+
+  /**
+   * Sets the timeout for network git operations.
+   * @param timeoutSeconds Timeout in seconds. 0 disables the timeout.
+   */
+  setTimeout(timeoutSeconds: number): void {
+    if (timeoutSeconds < 0) {
+      throw new Error(`Timeout must be non-negative, got ${timeoutSeconds}`)
+    }
+    this.timeoutMs = timeoutSeconds * 1000
+  }
+
+  /**
+   * Configures retry behavior for network git operations.
+   * @param maxAttempts Total attempts including the initial one. Must be >= 1.
+   * @param minBackoffSeconds Minimum backoff between retries. Must be <= maxBackoffSeconds.
+   * @param maxBackoffSeconds Maximum backoff between retries.
+   */
+  setRetryConfig(
+    maxAttempts: number,
+    minBackoffSeconds: number,
+    maxBackoffSeconds: number
+  ): void {
+    this.networkRetryHelper = new retryHelper.RetryHelper(
+      maxAttempts,
+      minBackoffSeconds,
+      maxBackoffSeconds
+    )
   }
 
   static async createCommandManager(
@@ -617,11 +664,41 @@ class GitCommandManager {
 
   private async execGit(
     args: string[],
-    allowAllExitCodes = false,
-    silent = false,
-    customListeners = {}
+    options: {
+      allowAllExitCodes?: boolean
+      silent?: boolean
+      customListeners?: {}
+      timeoutMs?: number
+    } = {}
   ): Promise<GitOutput> {
+    const {
+      allowAllExitCodes = false,
+      silent = false,
+      customListeners = {},
+      timeoutMs = 0
+    } = options
+
     fshelper.directoryExistsSync(this.workingDirectory, true)
+
+    // Use child_process.spawn directly when timeout is set,
+    // so we can kill the process on timeout and avoid orphaned git processes.
+    // Note: customListeners are not supported in the timeout path.
+    if (timeoutMs > 0) {
+      if (
+        customListeners &&
+        Object.keys(customListeners).length > 0
+      ) {
+        core.debug(
+          'customListeners are not supported with timeoutMs and will be ignored'
+        )
+      }
+      return await this.execGitWithTimeout(
+        args,
+        timeoutMs,
+        silent,
+        allowAllExitCodes
+      )
+    }
 
     const result = new GitOutput()
 
@@ -642,7 +719,7 @@ class GitCommandManager {
     const mergedListeners = {...defaultListener, ...customListeners}
 
     const stdout: string[] = []
-    const options = {
+    const execOptions = {
       cwd: this.workingDirectory,
       env,
       silent,
@@ -650,13 +727,145 @@ class GitCommandManager {
       listeners: mergedListeners
     }
 
-    result.exitCode = await exec.exec(`"${this.gitPath}"`, args, options)
+    result.exitCode = await exec.exec(`"${this.gitPath}"`, args, execOptions)
+
     result.stdout = stdout.join('')
 
     core.debug(result.exitCode.toString())
     core.debug(result.stdout)
 
     return result
+  }
+
+  /**
+   * Executes a git command with a timeout. Uses child_process.spawn directly
+   * (instead of @actions/exec) so we can kill the process on timeout and
+   * terminate it cleanly. Does not support customListeners.
+   */
+  private async execGitWithTimeout(
+    args: string[],
+    timeoutMs: number,
+    silent: boolean,
+    allowAllExitCodes: boolean
+  ): Promise<GitOutput> {
+    const result = new GitOutput()
+
+    const env: {[key: string]: string} = {}
+    for (const key of Object.keys(process.env)) {
+      env[key] = process.env[key] as string
+    }
+    for (const key of Object.keys(this.gitEnv)) {
+      env[key] = this.gitEnv[key]
+    }
+
+    const stdout: string[] = []
+    const stderr: string[] = []
+
+    return new Promise<GitOutput>((resolve, reject) => {
+      const child = spawn(this.gitPath, args, {
+        cwd: this.workingDirectory,
+        env,
+        stdio: ['ignore', 'pipe', 'pipe']
+      })
+
+      child.stdout?.on('data', (data: Buffer) => {
+        stdout.push(data.toString())
+      })
+
+      if (child.stderr) {
+        child.stderr.on('data', (data: Buffer) => {
+          stderr.push(data.toString())
+          if (!silent) {
+            process.stderr.write(data)
+          }
+        })
+      }
+
+      let settled = false
+      let timedOut = false
+      let forceKillTimer: ReturnType<typeof setTimeout> | undefined
+
+      const cleanup = (): void => {
+        clearTimeout(timer)
+        if (forceKillTimer) {
+          clearTimeout(forceKillTimer)
+        }
+      }
+
+      const timer = global.setTimeout(() => {
+        timedOut = true
+        // SIGTERM first, then force SIGKILL after 5 seconds.
+        // On Windows, SIGTERM is equivalent to a forced kill, so
+        // the SIGKILL fallback is effectively a no-op there.
+        child.kill('SIGTERM')
+        forceKillTimer = global.setTimeout(() => {
+          try {
+            child.kill('SIGKILL')
+          } catch (killErr) {
+            core.debug(
+              `Failed to SIGKILL git process: ${killErr}`
+            )
+          }
+        }, 5000)
+        if (forceKillTimer.unref) {
+          forceKillTimer.unref()
+        }
+      }, timeoutMs)
+      if (timer.unref) {
+        timer.unref()
+      }
+
+      child.on('close', (code: number | null) => {
+        if (settled) return
+        settled = true
+        cleanup()
+
+        if (timedOut) {
+          reject(
+            new Error(
+              `Git operation timed out after ${timeoutMs / 1000} seconds: git ${args.slice(0, 5).join(' ')}...`
+            )
+          )
+          return
+        }
+
+        // null code means killed by signal (e.g. OOM killer, external SIGTERM)
+        if (code === null) {
+          const stderrText = stderr.join('').trim()
+          reject(
+            new Error(
+              `The process 'git' was killed by a signal` +
+                (stderrText ? `\n${stderrText}` : '')
+            )
+          )
+          return
+        }
+
+        if (code !== 0 && !allowAllExitCodes) {
+          const stderrText = stderr.join('').trim()
+          reject(
+            new Error(
+              `The process 'git' failed with exit code ${code}` +
+                (stderrText ? `\n${stderrText}` : '')
+            )
+          )
+          return
+        }
+
+        result.exitCode = code
+        result.stdout = stdout.join('')
+        core.debug(result.exitCode.toString())
+        core.debug(result.stdout)
+        resolve(result)
+      })
+
+      child.on('error', (err: Error) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        reject(err)
+      })
+    })
   }
 
   private async initializeCommandManager(
