@@ -2780,7 +2780,8 @@ function getFetchUrl(settings) {
         return `${user}@${serviceUrl.hostname}:${encodedOwner}/${encodedName}.git`;
     }
     // "origin" is SCHEME://HOSTNAME[:PORT]
-    return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`;
+    const rootUrl = serviceUrl.origin + serviceUrl.pathname.replace(/\/$/, '');
+    return `${rootUrl}/${encodedOwner}/${encodedName}`;
 }
 function getServerUrl(url) {
     let resolvedUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com';
