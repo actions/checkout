@@ -366,9 +366,18 @@ class GitAuthHelper {
         true // globalConfig?
       )
     } else {
-      // Host git directory
-      let gitDir = path.join(this.git.getWorkingDirectory(), '.git')
-      gitDir = gitDir.replace(/\\/g, '/') // Use forward slashes, even on Windows
+      // Host git directory - resolve symlinks so includeIf gitdir matching works
+      // on self-hosted runners where _work is a symlink to an external volume.
+      let gitDir: string
+      try {
+        const constructed = path.join(this.git.getWorkingDirectory(), '.git')
+        const resolved = await fs.promises.realpath(constructed)
+        gitDir = resolved.replace(/\\/g, '/')
+      } catch {
+        // Fall back to constructed path if realpath fails
+        gitDir = path.join(this.git.getWorkingDirectory(), '.git')
+        gitDir = gitDir.replace(/\\/g, '/')
+      }
 
       // Configure host includeIf
       const hostIncludeKey = `includeIf.gitdir:${gitDir}.path`
