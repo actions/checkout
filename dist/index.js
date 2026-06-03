@@ -174,7 +174,10 @@ class GitAuthHelper {
         this.tokenConfigValue = `AUTHORIZATION: basic ${basicCredential}`;
         // Instead of SSH URL
         this.insteadOfKey = `url.${serverUrl.origin}/.insteadOf`; // "origin" is SCHEME://HOSTNAME[:PORT]
-        this.insteadOfValues.push(`git@${serverUrl.hostname}:`);
+        const sshUser = this.settings.sshUser && this.settings.sshUser.length > 0
+            ? this.settings.sshUser
+            : 'git';
+        this.insteadOfValues.push(`${sshUser}@${serverUrl.hostname}:`);
         if (this.settings.workflowOrganizationId) {
             this.insteadOfValues.push(`org-${this.settings.workflowOrganizationId}@github.com:`);
         }
