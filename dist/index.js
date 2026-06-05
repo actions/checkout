@@ -2206,6 +2206,7 @@ function run() {
                 // Get sources
                 yield gitSourceProvider.getSource(sourceSettings);
                 core.setOutput('ref', sourceSettings.ref);
+                core.setOutput('path', sourceSettings.repositoryPath);
             }
             finally {
                 // Unregister problem matcher
