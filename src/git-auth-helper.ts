@@ -122,6 +122,11 @@ class GitAuthHelper {
     )
     this.git.setEnvironmentVariable('HOME', this.temporaryHomePath)
 
+    // GIT_CONFIG_GLOBAL takes precedence over HOME when locating the global
+    // config file. Pin it to the temporary config so an inherited
+    // GIT_CONFIG_GLOBAL cannot redirect our global git config writes elsewhere.
+    this.git.setEnvironmentVariable('GIT_CONFIG_GLOBAL', newGitConfigPath)
+
     return newGitConfigPath
   }
 
@@ -237,8 +242,9 @@ class GitAuthHelper {
 
   async removeGlobalConfig(): Promise<void> {
     if (this.temporaryHomePath?.length > 0) {
-      core.debug(`Unsetting HOME override`)
+      core.debug(`Unsetting HOME and GIT_CONFIG_GLOBAL overrides`)
       this.git.removeEnvironmentVariable('HOME')
+      this.git.removeEnvironmentVariable('GIT_CONFIG_GLOBAL')
       await io.rmRF(this.temporaryHomePath)
     }
   }

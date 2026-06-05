@@ -923,6 +923,25 @@ describe('git-auth-helper tests', () => {
     }
   })
 
+  const configureGlobalAuth_overridesGitConfigGlobal =
+    'configureGlobalAuth overrides GIT_CONFIG_GLOBAL'
+  it(configureGlobalAuth_overridesGitConfigGlobal, async () => {
+    // Arrange
+    await setup(configureGlobalAuth_overridesGitConfigGlobal)
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+    await authHelper.configureGlobalAuth()
+
+    // Assert GIT_CONFIG_GLOBAL is pinned to the temporary global config, so an
+    // inherited GIT_CONFIG_GLOBAL cannot redirect --global writes
+    expect(git.env['HOME']).toBeTruthy()
+    expect(git.env['GIT_CONFIG_GLOBAL']).toBe(
+      path.join(git.env['HOME'], '.gitconfig')
+    )
+  })
+
   const removeGlobalConfig_removesOverride =
     'removeGlobalConfig removes override'
   it(removeGlobalConfig_removesOverride, async () => {
@@ -933,6 +952,7 @@ describe('git-auth-helper tests', () => {
     await authHelper.configureGlobalAuth()
     const homeOverride = git.env['HOME'] // Sanity check
     expect(homeOverride).toBeTruthy()
+    expect(git.env['GIT_CONFIG_GLOBAL']).toBeTruthy()
     await fs.promises.stat(path.join(git.env['HOME'], '.gitconfig'))
 
     // Act
@@ -940,6 +960,7 @@ describe('git-auth-helper tests', () => {
 
     // Assert
     expect(git.env['HOME']).toBeUndefined()
+    expect(git.env['GIT_CONFIG_GLOBAL']).toBeUndefined()
     try {
       await fs.promises.stat(homeOverride)
       throw new Error(`Should have been deleted '${homeOverride}'`)
