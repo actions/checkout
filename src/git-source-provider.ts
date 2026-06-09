@@ -11,6 +11,7 @@ import * as stateHelper from './state-helper'
 import * as urlHelper from './url-helper'
 import {
   MinimumGitSparseCheckoutVersion,
+  MinimumGitSparseIndexVersion,
   IGitCommandManager
 } from './git-command-manager'
 import {IGitSourceSettings} from './git-source-settings'
@@ -249,9 +250,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       core.endGroup()
     }
 
+    let gitVersion = await git.version()
     // Sparse checkout
     if (!settings.sparseCheckout) {
-      let gitVersion = await git.version()
       // no need to disable sparse-checkout if the installed git runtime doesn't even support it.
       if (gitVersion.checkMinimum(MinimumGitSparseCheckoutVersion)) {
         await git.disableSparseCheckout()
@@ -262,6 +263,10 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         await git.sparseCheckout(settings.sparseCheckout)
       } else {
         await git.sparseCheckoutNonConeMode(settings.sparseCheckout)
+      }
+
+      if (gitVersion.checkMinimum(MinimumGitSparseIndexVersion)) {
+        await git.config('index.sparse', 'true', false)
       }
       core.endGroup()
     }
