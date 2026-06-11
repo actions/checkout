@@ -68,13 +68,13 @@ describe('retry-helper tests', () => {
 
   it('all attempts fail succeeds', async () => {
     let attempts = 0
-    let error: Error = (null as unknown) as Error
+    let error: Error = null as unknown as Error
     try {
       await retryHelper.execute(() => {
         throw new Error(`some error ${++attempts}`)
       })
     } catch (err) {
-      error = err
+      error = err as Error
     }
     expect(error.message).toBe('some error 3')
     expect(attempts).toBe(3)

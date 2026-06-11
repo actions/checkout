@@ -10,7 +10,8 @@
     "declaration": true,
     "strict": true,
     "noImplicitAny": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
   "exclude": ["__test__", "lib", "node_modules"]
 }

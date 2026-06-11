@@ -6,10 +6,15 @@ import * as io from '@actions/io'
 import * as path from 'path'
 import * as retryHelper from './retry-helper'
 import * as toolCache from '@actions/tool-cache'
-import {default as uuid} from 'uuid/v4'
-import {Octokit} from '@octokit/rest'
+import {v4 as uuid} from 'uuid'
+import {getServerApiUrl} from './url-helper'
 
 const IS_WINDOWS = process.platform === 'win32'
+
+export interface RepositoryObjectFormatResult {
+  format: string
+  succeeded: boolean
+}
 
 export async function downloadRepository(
   authToken: string,
@@ -17,24 +22,27 @@ export async function downloadRepository(
   repo: string,
   ref: string,
   commit: string,
-  repositoryPath: string
+  repositoryPath: string,
+  baseUrl?: string
 ): Promise<void> {
   // Determine the default branch
   if (!ref && !commit) {
     core.info('Determining the default branch')
-    ref = await getDefaultBranch(authToken, owner, repo)
+    ref = await getDefaultBranch(authToken, owner, repo, baseUrl)
   }
 
   // Download the archive
   let archiveData = await retryHelper.execute(async () => {
     core.info('Downloading the archive')
-    return await downloadArchive(authToken, owner, repo, ref, commit)
+    return await downloadArchive(authToken, owner, repo, ref, commit, baseUrl)
   })
 
   // Write archive to disk
   core.info('Writing archive to disk')
   const uniqueId = uuid()
-  const archivePath = path.join(repositoryPath, `${uniqueId}.tar.gz`)
+  const archivePath = IS_WINDOWS
+    ? path.join(repositoryPath, `${uniqueId}.zip`)
+    : path.join(repositoryPath, `${uniqueId}.tar.gz`)
   await fs.promises.writeFile(archivePath, archiveData)
   archiveData = Buffer.from('') // Free memory
 
@@ -47,7 +55,7 @@ export async function downloadRepository(
   } else {
     await toolCache.extractTar(archivePath, extractPath)
   }
-  io.rmRF(archivePath)
+  await io.rmRF(archivePath)
 
   // Determine the path of the repository content. The archive contains
   // a top-level folder and the repository content is inside.
@@ -70,7 +78,7 @@ export async function downloadRepository(
       await io.mv(sourcePath, targetPath)
     }
   }
-  io.rmRF(extractPath)
+  await io.rmRF(extractPath)
 }
 
 /**
@@ -79,20 +87,26 @@ export async function downloadRepository(
 export async function getDefaultBranch(
   authToken: string,
   owner: string,
-  repo: string
+  repo: string,
+  baseUrl?: string
 ): Promise<string> {
   return await retryHelper.execute(async () => {
     core.info('Retrieving the default branch name')
-    const octokit = new github.GitHub(authToken)
+    const octokit = github.getOctokit(authToken, {
+      baseUrl: getServerApiUrl(baseUrl)
+    })
     let result: string
     try {
       // Get the default branch from the repo info
-      const response = await octokit.repos.get({owner, repo})
+      const response = await octokit.rest.repos.get({owner, repo})
       result = response.data.default_branch
       assert.ok(result, 'default_branch cannot be empty')
     } catch (err) {
       // Handle .wiki repo
-      if (err['status'] === 404 && repo.toUpperCase().endsWith('.WIKI')) {
+      if (
+        (err as any)?.status === 404 &&
+        repo.toUpperCase().endsWith('.WIKI')
+      ) {
         result = 'master'
       }
       // Otherwise error
@@ -113,26 +127,71 @@ export async function getDefaultBranch(
   })
 }
 
+export async function tryGetRepositoryObjectFormat(
+  authToken: string,
+  owner: string,
+  repo: string,
+  baseUrl?: string,
+  commit?: string
+): Promise<RepositoryObjectFormatResult> {
+  const commitFormat = getObjectFormat(commit)
+  if (commitFormat) {
+    return {format: commitFormat, succeeded: true}
+  }
+
+  try {
+    const octokit = github.getOctokit(authToken, {
+      baseUrl: getServerApiUrl(baseUrl)
+    })
+    const response = await octokit.request(
+      'GET /repos/{owner}/{repo}/hash-algorithm',
+      {owner, repo}
+    )
+    const hashAlgorithm = response.data.hash_algorithm
+    if (hashAlgorithm === 'sha256' || hashAlgorithm === 'sha1') {
+      return {format: hashAlgorithm, succeeded: true}
+    }
+
+    core.debug(
+      'Unable to determine repository object format from hash-algorithm endpoint'
+    )
+    return {format: '', succeeded: false}
+  } catch (err) {
+    core.debug(
+      `Unable to determine repository object format from hash-algorithm endpoint: ${(err as any)?.message ?? err}`
+    )
+    return {format: '', succeeded: false}
+  }
+}
+
+function getObjectFormat(sha?: string): string {
+  if (/^[0-9a-fA-F]{64}$/.test(sha || '')) {
+    return 'sha256'
+  }
+  if (/^[0-9a-fA-F]{40}$/.test(sha || '')) {
+    return 'sha1'
+  }
+  return ''
+}
+
 async function downloadArchive(
   authToken: string,
   owner: string,
   repo: string,
   ref: string,
-  commit: string
+  commit: string,
+  baseUrl?: string
 ): Promise<Buffer> {
-  const octokit = new github.GitHub(authToken)
-  const params: Octokit.ReposGetArchiveLinkParams = {
+  const octokit = github.getOctokit(authToken, {
+    baseUrl: getServerApiUrl(baseUrl)
+  })
+  const download = IS_WINDOWS
+    ? octokit.rest.repos.downloadZipballArchive
+    : octokit.rest.repos.downloadTarballArchive
+  const response = await download({
     owner: owner,
     repo: repo,
-    archive_format: IS_WINDOWS ? 'zipball' : 'tarball',
     ref: commit || ref
-  }
-  const response = await octokit.repos.getArchiveLink(params)
-  if (response.status != 200) {
-    throw new Error(
-      `Unexpected response from GitHub API. Status: ${response.status}, Data: ${response.data}`
-    )
-  }
-
-  return Buffer.from(response.data) // response.data is ArrayBuffer
+  })
+  return Buffer.from(response.data as ArrayBuffer) // response.data is ArrayBuffer
 }
