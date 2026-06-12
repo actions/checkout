@@ -98,6 +98,12 @@ inputs:
   github-server-url:
     description: The base URL for the GitHub instance that you are trying to clone from, will use environment defaults to fetch from the same instance that the workflow is running from unless specified. Example URLs are https://github.com or https://my-ghes-server.example.com
     required: false
+  allow-unsafe-pr-checkout:
+    description: >
+      Required to check out fork pull request code from a workflow triggered by
+      `pull_request_target` or `workflow_run`. See [Pwn Requests](todo:need-link)
+      for the risks. Set to `true` only after reviewing the risks.
+    default: false
 outputs:
   ref:
     description: 'The branch, tag or SHA that was checked out'

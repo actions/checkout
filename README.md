@@ -160,6 +160,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Required to check out fork pull request code from a workflow triggered by
+    # `pull_request_target` or `workflow_run`. See [Pwn Requests](todo:need-link) for
+    # the risks. Set to `true` only after reviewing the risks.
+    # Default: false
+    allow-unsafe-pr-checkout: ''
 ```
 <!-- end usage -->
 
