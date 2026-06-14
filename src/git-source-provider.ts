@@ -179,6 +179,10 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       showProgress?: boolean
     } = {}
 
+    if (settings.showProgress) {
+      fetchOptions.showProgress = true
+    }
+
     if (settings.filter) {
       fetchOptions.filter = settings.filter
     } else if (settings.sparseCheckout) {
@@ -268,7 +272,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
 
     // Checkout
     core.startGroup('Checking out the ref')
-    await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
+    await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint, settings.showProgress)
     core.endGroup()
 
     // Submodules

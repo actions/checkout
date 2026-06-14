@@ -133,7 +133,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: false
     fetch-tags: ''
 
-    # Whether to show progress status output when fetching.
+    # Whether to show progress status output for git operations.
     # Default: true
     show-progress: ''
 
