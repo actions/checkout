@@ -2822,8 +2822,7 @@ function assertSafePrCheckout(input) {
     // (B) We cannot check for all fork PR refs so check to see
     // if the resolved input points to the fork PR sha we have in the payload
     const repositoryMatchesPrHead = typeof prHeadRepoFullName === 'string' &&
-        input.qualifiedRepository.toLowerCase() ===
-            prHeadRepoFullName.toLowerCase();
+        input.qualifiedRepository.toLowerCase() === prHeadRepoFullName.toLowerCase();
     const refMatchesPullPattern = PR_REF_PATTERN.test(input.ref);
     const commitMatchesPrHeadSha = !!input.commit && prShas.includes(input.commit.toLowerCase());
     if (!repositoryMatchesPrHead &&
