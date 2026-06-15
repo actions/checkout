@@ -166,7 +166,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # repository's GITHUB_TOKEN, secrets, default-branch cache scope, and runner
     # access; fetching and executing a fork's code in that trusted context commonly
     # leads to "pwn request" vulnerabilities. Set to `true` only after reviewing the
-    # risks at https://gh.io/securely-using-pull-request-checkout.
+    # risks at https://gh.io/securely-using-pull_request_target.
     # Default: false
     allow-unsafe-pr-checkout: ''
 ```
