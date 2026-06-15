@@ -13,6 +13,7 @@ const PR_MERGE_SHA = '2222222222222222222222222222222222222222'
 const SAFE_BASE_SHA = '3333333333333333333333333333333333333333'
 const WORKFLOW_RUN_HEAD_COMMIT_SHA = '4444444444444444444444444444444444444444'
 const BASE_QUALIFIED_REPO = 'some-owner/some-repo'
+const FORK_QUALIFIED_REPO = 'another-repo/fork'
 
 function setContext(eventName: string, payload: object): void {
   ;(github.context as {eventName: string}).eventName = eventName
@@ -25,7 +26,7 @@ function forkPullRequestTargetPayload(): object {
     pull_request: {
       head: {
         sha: PR_HEAD_SHA,
-        repo: {id: FORK_REPO_ID}
+        repo: {id: FORK_REPO_ID, full_name: FORK_QUALIFIED_REPO}
       },
       merge_commit_sha: PR_MERGE_SHA
     }
@@ -38,7 +39,7 @@ function sameRepoPullRequestTargetPayload(): object {
     pull_request: {
       head: {
         sha: PR_HEAD_SHA,
-        repo: {id: BASE_REPO_ID}
+        repo: {id: BASE_REPO_ID, full_name: BASE_QUALIFIED_REPO}
       },
       merge_commit_sha: PR_MERGE_SHA
     }
@@ -51,7 +52,7 @@ function forkWorkflowRunPayload(): object {
     workflow_run: {
       event: 'pull_request',
       head_commit: {id: WORKFLOW_RUN_HEAD_COMMIT_SHA},
-      head_repository: {id: FORK_REPO_ID}
+      head_repository: {id: FORK_REPO_ID, full_name: FORK_QUALIFIED_REPO}
     }
   }
 }
@@ -164,7 +165,7 @@ describe('unsafe-pr-checkout-helper', () => {
     setContext('pull_request_target', forkPullRequestTargetPayload())
     expect(() =>
       assertSafePrCheckout({
-        qualifiedRepository: 'attacker/fork',
+        qualifiedRepository: FORK_QUALIFIED_REPO,
         ref: 'refs/heads/main',
         commit: '',
         allowUnsafePrCheckout: false
@@ -172,13 +173,25 @@ describe('unsafe-pr-checkout-helper', () => {
     ).toThrow()
   })
 
+  it('allows pull_request_target checkout of an unrelated third-party repo', () => {
+    setContext('pull_request_target', forkPullRequestTargetPayload())
+    expect(() =>
+      assertSafePrCheckout({
+        qualifiedRepository: 'some-other/unrelated',
+        ref: 'refs/heads/main',
+        commit: '',
+        allowUnsafePrCheckout: false
+      })
+    ).not.toThrow()
+  })
+
   it('refuses pull_request_target ignoring repository case differences', () => {
     setContext('pull_request_target', forkPullRequestTargetPayload())
     expect(() =>
       assertSafePrCheckout({
-        qualifiedRepository: 'SOME-OWNER/SOME-REPO',
+        qualifiedRepository: FORK_QUALIFIED_REPO.toUpperCase(),
         ref: '',
-        commit: PR_HEAD_SHA,
+        commit: '',
         allowUnsafePrCheckout: false
       })
     ).toThrow()

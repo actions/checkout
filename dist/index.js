@@ -2793,9 +2793,11 @@ function assertSafePrCheckout(input) {
         return;
     }
     let prHeadRepoId;
+    let prHeadRepoFullName;
     const prShas = [];
     if (eventName === 'pull_request_target') {
         prHeadRepoId = (0, ref_helper_1.fromPayload)('pull_request.head.repo.id');
+        prHeadRepoFullName = (0, ref_helper_1.fromPayload)('pull_request.head.repo.full_name');
         pushIfSha(prShas, (0, ref_helper_1.fromPayload)('pull_request.head.sha'));
         pushIfSha(prShas, (0, ref_helper_1.fromPayload)('pull_request.merge_commit_sha'));
     }
@@ -2805,7 +2807,13 @@ function assertSafePrCheckout(input) {
             return;
         }
         prHeadRepoId = (0, ref_helper_1.fromPayload)('workflow_run.head_repository.id');
+        prHeadRepoFullName = (0, ref_helper_1.fromPayload)('workflow_run.head_repository.full_name');
         pushIfSha(prShas, (0, ref_helper_1.fromPayload)('workflow_run.head_commit.id'));
+        // For `pull_request_target`-triggered workflow_run, `head_sha` is the base
+        // default branch SHA (not the PR head)
+        if (wrEvent !== 'pull_request_target') {
+            pushIfSha(prShas, (0, ref_helper_1.fromPayload)('workflow_run.head_sha'));
+        }
     }
     // (A) Fork PR?
     if (typeof prHeadRepoId !== 'number' || prHeadRepoId === baseRepoId) {
@@ -2813,12 +2821,12 @@ function assertSafePrCheckout(input) {
     }
     // (B) We cannot check for all fork PR refs so check to see
     // if the resolved input points to the fork PR sha we have in the payload
-    const baseQualifiedRepository = `${github.context.repo.owner}/${github.context.repo.repo}`;
-    const repositoryDiffersFromBase = input.qualifiedRepository.toLowerCase() !==
-        baseQualifiedRepository.toLowerCase();
+    const repositoryMatchesPrHead = typeof prHeadRepoFullName === 'string' &&
+        input.qualifiedRepository.toLowerCase() ===
+            prHeadRepoFullName.toLowerCase();
     const refMatchesPullPattern = PR_REF_PATTERN.test(input.ref);
     const commitMatchesPrHeadSha = !!input.commit && prShas.includes(input.commit.toLowerCase());
-    if (!repositoryDiffersFromBase &&
+    if (!repositoryMatchesPrHead &&
         !refMatchesPullPattern &&
         !commitMatchesPrHeadSha) {
         return;
