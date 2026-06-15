@@ -2833,8 +2833,9 @@ function assertSafePrCheckout(input) {
     throw new Error(`Refusing to check out fork pull request code from a '${eventName}' workflow. ` +
         `This workflow runs with the base repository's GITHUB_TOKEN, secrets, default-branch ` +
         `cache scope, and runner access. Fetching fork's code in that trusted context is a ` +
-        `"pwn request" supply-chain attack pattern. To opt in after reviewing the risk, set ` +
-        `'allow-unsafe-pr-checkout: true' on the actions/checkout step.`);
+        `"pwn request" supply-chain attack pattern. To opt in after reviewing the risks at ` +
+        `https://gh.io/allow-unsafe-pr-checkout, set 'allow-unsafe-pr-checkout: true' on the ` +
+        `actions/checkout step.`);
 }
 function pushIfSha(target, value) {
     if (typeof value === 'string' && value.length > 0) {
