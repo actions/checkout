@@ -164,7 +164,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Required to check out fork pull request code from a workflow triggered by
     # `pull_request_target` or `workflow_run`. These workflows run with the base
     # repository's GITHUB_TOKEN, secrets, default-branch cache scope, and runner
-    # access; fetching a fork's code in that trusted context is the "pwn request"
+    # access; fetching a fork's code in that trusted context is a "pwn request"
     # supply-chain attack pattern. Set to `true` only after reviewing the risks at
     # https://gh.io/allow-unsafe-pr-checkout.
     # Default: false
