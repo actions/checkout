@@ -33,6 +33,7 @@
     "@actions/github": "^6.0.0",
     "@actions/io": "^1.1.3",
     "@actions/tool-cache": "^2.0.1",
+    "flatted": "^3.4.2",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
