@@ -1,7 +1,7 @@
 # Changelog
 
 ## v7.0.0
-* block checking out fork pr for pull_request_target and workflow_run by @aiqiaoy in https://github.com/actions/checkout/pull/2454
+* Block checking out fork PR for pull_request_target and workflow_run by @aiqiaoy in https://github.com/actions/checkout/pull/2454
 * Bump actions/publish-immutable-action from 0.0.3 to 0.0.4 in the minor-actions-dependencies group across 1 directory by @dependabot[bot] in https://github.com/actions/checkout/pull/2458
 * Bump flatted from 3.3.1 to 3.4.2 by @dependabot[bot] in https://github.com/actions/checkout/pull/2460
 * Bump js-yaml from 4.1.0 to 4.2.0 by @dependabot[bot] in https://github.com/actions/checkout/pull/2461
