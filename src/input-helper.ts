@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
+import * as unsafePrCheckoutHelper from './unsafe-pr-checkout-helper'
 import * as workflowContextHelper from './workflow-context-helper'
 import {IGitSourceSettings} from './git-source-settings'
 
@@ -145,6 +146,19 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // Determine the GitHub URL that the repository is being hosted from
   result.githubServerUrl = core.getInput('github-server-url')
   core.debug(`GitHub Host URL = ${result.githubServerUrl}`)
+
+  // Allow unsafe PR checkout (opt-in for pull_request_target / workflow_run fork PRs)
+  result.allowUnsafePrCheckout =
+    (core.getInput('allow-unsafe-pr-checkout') || 'false').toUpperCase() ===
+    'TRUE'
+  core.debug(`allow unsafe PR checkout = ${result.allowUnsafePrCheckout}`)
+
+  unsafePrCheckoutHelper.assertSafePrCheckout({
+    qualifiedRepository,
+    ref: result.ref,
+    commit: result.commit,
+    allowUnsafePrCheckout: result.allowUnsafePrCheckout
+  })
 
   return result
 }

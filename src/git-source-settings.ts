@@ -103,4 +103,10 @@ export interface IGitSourceSettings {
    * User override on the GitHub Server/Host URL that hosts the repository to be cloned
    */
   githubServerUrl: string | undefined
+
+  /**
+   * Opt-in to allow checking out fork pull request code from a workflow
+   * triggered by pull_request_target or workflow_run.
+   */
+  allowUnsafePrCheckout: boolean
 }

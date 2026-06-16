@@ -264,7 +264,7 @@ export async function checkCommitInfo(
   }
 }
 
-function fromPayload(path: string): any {
+export function fromPayload(path: string): any {
   return select(github.context.payload, path)
 }
 
