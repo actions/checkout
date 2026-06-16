@@ -2,6 +2,9 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import * as yaml from 'js-yaml'
+import {fileURLToPath} from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 //
 // SUMMARY

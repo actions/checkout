@@ -1,11 +1,25 @@
-import * as core from '@actions/core'
-import * as github from '@actions/github'
-import * as githubApiHelper from '../lib/github-api-helper'
+import {jest, describe, it, expect, beforeEach, afterEach} from '@jest/globals'
+
+// Mock @actions/core
+const mockDebug = jest.fn()
+jest.unstable_mockModule('@actions/core', () => ({
+  debug: mockDebug,
+  info: jest.fn(),
+  warning: jest.fn(),
+  error: jest.fn()
+}))
+
+// Mock @actions/github
+const mockGetOctokit = jest.fn()
+jest.unstable_mockModule('@actions/github', () => ({
+  getOctokit: mockGetOctokit
+}))
+
+// Dynamic imports after mocking
+const githubApiHelper = await import('../src/github-api-helper.js')
 
 describe('github-api-helper object format', () => {
-  let getOctokitSpy: jest.SpyInstance
-  let debugSpy: jest.SpyInstance
-  let request: jest.Mock
+  let request: jest.Mock<any>
 
   function mockHashAlgorithmApi(hashAlgorithm: string): void {
     request = jest.fn(async () => ({
@@ -13,17 +27,18 @@ describe('github-api-helper object format', () => {
         hash_algorithm: hashAlgorithm
       }
     }))
-    getOctokitSpy = jest.spyOn(github, 'getOctokit').mockReturnValue({
+    mockGetOctokit.mockReturnValue({
       request
     } as any)
   }
 
   beforeEach(() => {
-    debugSpy = jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+    mockDebug.mockClear()
+    mockGetOctokit.mockClear()
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
   })
 
   it('detects SHA-256 from the repository hash algorithm endpoint', async () => {
@@ -33,7 +48,7 @@ describe('github-api-helper object format', () => {
       githubApiHelper.tryGetRepositoryObjectFormat('token', 'owner', 'repo')
     ).resolves.toEqual({format: 'sha256', succeeded: true})
 
-    expect(getOctokitSpy).toHaveBeenCalledWith(
+    expect(mockGetOctokit).toHaveBeenCalledWith(
       'token',
       expect.objectContaining({baseUrl: 'https://api.github.com'})
     )
@@ -54,7 +69,6 @@ describe('github-api-helper object format', () => {
   it('detects object format from an existing commit without API calls', async () => {
     const commitSha =
       '9422233ca7ee1b17f1e905d0e141faf0c401556c41cdc6acd71c6bd685da2e92'
-    getOctokitSpy = jest.spyOn(github, 'getOctokit')
 
     await expect(
       githubApiHelper.tryGetRepositoryObjectFormat(
@@ -66,7 +80,7 @@ describe('github-api-helper object format', () => {
       )
     ).resolves.toEqual({format: 'sha256', succeeded: true})
 
-    expect(getOctokitSpy).not.toHaveBeenCalled()
+    expect(mockGetOctokit).not.toHaveBeenCalled()
   })
 
   it('returns unsuccessful when the hash algorithm endpoint value is not recognized', async () => {
@@ -75,7 +89,7 @@ describe('github-api-helper object format', () => {
     await expect(
       githubApiHelper.tryGetRepositoryObjectFormat('token', 'owner', 'repo')
     ).resolves.toEqual({format: '', succeeded: false})
-    expect(debugSpy).toHaveBeenCalledWith(
+    expect(mockDebug).toHaveBeenCalledWith(
       'Unable to determine repository object format from hash-algorithm endpoint'
     )
   })
@@ -84,14 +98,14 @@ describe('github-api-helper object format', () => {
     request = jest.fn(async () => {
       throw new Error('not found')
     })
-    jest.spyOn(github, 'getOctokit').mockReturnValue({
+    mockGetOctokit.mockReturnValue({
       request
     } as any)
 
     await expect(
       githubApiHelper.tryGetRepositoryObjectFormat('token', 'owner', 'repo')
     ).resolves.toEqual({format: '', succeeded: false})
-    expect(debugSpy).toHaveBeenCalledWith(
+    expect(mockDebug).toHaveBeenCalledWith(
       'Unable to determine repository object format from hash-algorithm endpoint: not found'
     )
   })
