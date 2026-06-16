@@ -1,6 +1,6 @@
 ---
 name: "@actions/tool-cache"
-version: 2.0.1
+version: 2.0.2
 type: npm
 summary: Actions tool-cache lib
 homepage: https://github.com/actions/toolkit/tree/main/packages/tool-cache
