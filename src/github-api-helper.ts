@@ -4,10 +4,10 @@ import * as fs from 'fs'
 import * as github from '@actions/github'
 import * as io from '@actions/io'
 import * as path from 'path'
-import * as retryHelper from './retry-helper'
+import * as retryHelper from './retry-helper.js'
 import * as toolCache from '@actions/tool-cache'
 import {randomUUID} from 'crypto'
-import {getServerApiUrl} from './url-helper'
+import {getServerApiUrl} from './url-helper.js'
 
 const IS_WINDOWS = process.platform === 'win32'
 

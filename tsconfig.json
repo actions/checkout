@@ -1,17 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
-    "lib": [
-      "es6"
-    ],
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "./lib",
     "rootDir": "./src",
-    "declaration": true,
     "strict": true,
     "noImplicitAny": false,
-    "esModuleInterop": true,
-    "skipLibCheck": true
+    "esModuleInterop": true
   },
-  "exclude": ["__test__", "lib", "node_modules"]
+  "exclude": ["__test__", "lib", "node_modules", "jest.config.ts"]
 }

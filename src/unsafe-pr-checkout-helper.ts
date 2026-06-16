@@ -1,5 +1,5 @@
 import * as github from '@actions/github'
-import {fromPayload} from './ref-helper'
+import {fromPayload} from './ref-helper.js'
 
 const PR_REF_PATTERN = /^refs\/pull\/[0-9]+\/(?:head|merge)$/
 

@@ -1,7 +1,7 @@
-import {IGitCommandManager} from './git-command-manager'
+import {IGitCommandManager} from './git-command-manager.js'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {getServerApiUrl, isGhes} from './url-helper'
+import {getServerApiUrl, isGhes} from './url-helper.js'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'
 

@@ -1,26 +1,51 @@
-import * as exec from '@actions/exec'
-import * as fshelper from '../lib/fs-helper'
-import * as commandManager from '../lib/git-command-manager'
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll
+} from '@jest/globals'
 
-let git: commandManager.IGitCommandManager
-let mockExec = jest.fn()
+// Mock @actions/exec
+const mockExec = jest.fn()
+jest.unstable_mockModule('@actions/exec', () => ({
+  exec: mockExec
+}))
+
+// Mock fs-helper
+const mockFileExistsSync = jest.fn()
+const mockDirectoryExistsSync = jest.fn()
+jest.unstable_mockModule('../src/fs-helper.js', () => ({
+  fileExistsSync: mockFileExistsSync,
+  directoryExistsSync: mockDirectoryExistsSync
+}))
+
+// Dynamic imports after mocking
+const commandManager = await import('../src/git-command-manager.js')
+type IGitCommandManager =
+  import('../src/git-command-manager.js').IGitCommandManager
+
+let git: IGitCommandManager
 
 describe('git-auth-helper tests', () => {
   beforeAll(async () => {})
 
   beforeEach(async () => {
-    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
-    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
   })
 
   afterAll(() => {})
 
   it('branch list matches', async () => {
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       console.log(args, options.listeners.stdout)
 
       if (args.includes('version')) {
@@ -36,7 +61,7 @@ describe('git-auth-helper tests', () => {
 
       return 1
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
     const workingDirectory = 'test'
     const lfs = false
     const doSparseCheckout = false
@@ -53,7 +78,7 @@ describe('git-auth-helper tests', () => {
   })
 
   it('ambiguous ref name output is captured', async () => {
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       console.log(args, options.listeners.stdout)
 
       if (args.includes('version')) {
@@ -72,7 +97,7 @@ describe('git-auth-helper tests', () => {
 
       return 1
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
     const workingDirectory = 'test'
     const lfs = false
     const doSparseCheckout = false
@@ -91,9 +116,9 @@ describe('git-auth-helper tests', () => {
 
 describe('Test fetchDepth and fetchTags options', () => {
   beforeEach(async () => {
-    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
-    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
-    mockExec.mockImplementation((path, args, options) => {
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       console.log(args, options.listeners.stdout)
 
       if (args.includes('version')) {
@@ -105,11 +130,11 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
   })
 
   it('should call execGit with the correct arguments when fetchDepth is 0', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
     const workingDirectory = 'test'
     const lfs = false
     const doSparseCheckout = false
@@ -146,7 +171,7 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   it('should call execGit with the correct arguments when fetchDepth is 0 and refSpec includes tags', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -184,7 +209,7 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   it('should call execGit with the correct arguments when fetchDepth is 1', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -222,7 +247,7 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   it('should call execGit with the correct arguments when fetchDepth is 1 and refSpec includes tags', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -261,7 +286,7 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   it('should call execGit with the correct arguments when showProgress is true', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -299,7 +324,7 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   it('should call execGit with the correct arguments when fetchDepth is 42 and showProgress is true', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -339,7 +364,7 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 
   it('should call execGit with the correct arguments when showProgress is true and refSpec includes tags', async () => {
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -380,23 +405,23 @@ describe('Test fetchDepth and fetchTags options', () => {
 
 describe('repository initialization object format', () => {
   beforeEach(async () => {
-    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
-    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
   })
 
   it('initializes SHA-256 repositories with the matching object format', async () => {
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       if (args.includes('version')) {
         options.listeners.stdout(Buffer.from('git version 2.50.1'))
       }
 
       return 0
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     git = await commandManager.createCommandManager('test', false, false)
 
@@ -410,14 +435,14 @@ describe('repository initialization object format', () => {
   })
 
   it('initializes SHA-1 repositories with existing default arguments', async () => {
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       if (args.includes('version')) {
         options.listeners.stdout(Buffer.from('git version 2.50.1'))
       }
 
       return 0
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     git = await commandManager.createCommandManager('test', false, false)
 
@@ -433,12 +458,12 @@ describe('repository initialization object format', () => {
 
 describe('git user-agent with orchestration ID', () => {
   beforeEach(async () => {
-    jest.spyOn(fshelper, 'fileExistsSync').mockImplementation(jest.fn())
-    jest.spyOn(fshelper, 'directoryExistsSync').mockImplementation(jest.fn())
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
     // Clean up environment variable to prevent test pollution
     delete process.env['ACTIONS_ORCHESTRATION_ID']
   })
@@ -448,7 +473,7 @@ describe('git user-agent with orchestration ID', () => {
     process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
 
     let capturedEnv: any = null
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       if (args.includes('version')) {
         options.listeners.stdout(Buffer.from('2.18'))
       }
@@ -456,7 +481,7 @@ describe('git user-agent with orchestration ID', () => {
       capturedEnv = options.env
       return 0
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -483,7 +508,7 @@ describe('git user-agent with orchestration ID', () => {
     process.env['ACTIONS_ORCHESTRATION_ID'] = orchId
 
     let capturedEnv: any = null
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       if (args.includes('version')) {
         options.listeners.stdout(Buffer.from('2.18'))
       }
@@ -491,7 +516,7 @@ describe('git user-agent with orchestration ID', () => {
       capturedEnv = options.env
       return 0
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false
@@ -517,7 +542,7 @@ describe('git user-agent with orchestration ID', () => {
     delete process.env['ACTIONS_ORCHESTRATION_ID']
 
     let capturedEnv: any = null
-    mockExec.mockImplementation((path, args, options) => {
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
       if (args.includes('version')) {
         options.listeners.stdout(Buffer.from('2.18'))
       }
@@ -525,7 +550,7 @@ describe('git user-agent with orchestration ID', () => {
       capturedEnv = options.env
       return 0
     })
-    jest.spyOn(exec, 'exec').mockImplementation(mockExec)
+    // exec.exec is already mockExec
 
     const workingDirectory = 'test'
     const lfs = false

@@ -1,12 +1,46 @@
-import * as core from '@actions/core'
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  afterAll
+} from '@jest/globals'
 import * as fs from 'fs'
-import * as gitAuthHelper from '../lib/git-auth-helper'
 import * as io from '@actions/io'
 import * as os from 'os'
 import * as path from 'path'
-import * as stateHelper from '../lib/state-helper'
-import {IGitCommandManager} from '../lib/git-command-manager'
-import {IGitSourceSettings} from '../lib/git-source-settings'
+import {fileURLToPath} from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Mock @actions/core before loading git-auth-helper
+jest.unstable_mockModule('@actions/core', () => ({
+  setSecret: jest.fn(),
+  error: jest.fn(),
+  warning: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  setFailed: jest.fn()
+}))
+
+// Mock state-helper
+jest.unstable_mockModule('../src/state-helper.js', () => ({
+  setSshKeyPath: jest.fn(),
+  setSshKnownHostsPath: jest.fn(),
+  IsPost: false,
+  RepositoryPath: ''
+}))
+
+// Dynamic imports after mocking
+const core = await import('@actions/core')
+const gitAuthHelper = await import('../src/git-auth-helper.js')
+type IGitCommandManager =
+  import('../src/git-command-manager.js').IGitCommandManager
+type IGitSourceSettings =
+  import('../src/git-source-settings.js').IGitSourceSettings
 
 const isWindows = process.platform === 'win32'
 const testWorkspace = path.join(__dirname, '_temp', 'git-auth-helper')
@@ -32,25 +66,12 @@ describe('git-auth-helper tests', () => {
   })
 
   beforeEach(() => {
-    // Mock setSecret
-    jest.spyOn(core, 'setSecret').mockImplementation((secret: string) => {})
-
-    // Mock error/warning/info/debug
-    jest.spyOn(core, 'error').mockImplementation(jest.fn())
-    jest.spyOn(core, 'warning').mockImplementation(jest.fn())
-    jest.spyOn(core, 'info').mockImplementation(jest.fn())
-    jest.spyOn(core, 'debug').mockImplementation(jest.fn())
-
-    // Mock state helper
-    jest.spyOn(stateHelper, 'setSshKeyPath').mockImplementation(jest.fn())
-    jest
-      .spyOn(stateHelper, 'setSshKnownHostsPath')
-      .mockImplementation(jest.fn())
+    jest.clearAllMocks()
   })
 
   afterEach(() => {
     // Unregister mocks
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
 
     // Restore HOME
     if (originalHome) {
@@ -229,7 +250,7 @@ describe('git-auth-helper tests', () => {
     await authHelper.configureAuth()
 
     // Assert secret
-    const setSecretSpy = core.setSecret as jest.Mock<any, any>
+    const setSecretSpy = core.setSecret as jest.Mock<any>
     expect(setSecretSpy).toHaveBeenCalledTimes(1)
     const expectedSecret = Buffer.from(
       `x-access-token:${settings.authToken}`,
@@ -529,7 +550,7 @@ describe('git-auth-helper tests', () => {
       settings.sshKey = ''
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
       mockSubmoduleForeach.mockClear() // reset calls
 
       // Act
@@ -562,7 +583,7 @@ describe('git-auth-helper tests', () => {
       settings.persistCredentials = false
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
       mockSubmoduleForeach.mockClear() // reset calls
 
       // Act
@@ -588,7 +609,7 @@ describe('git-auth-helper tests', () => {
       settings.sshKey = ''
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
       mockSubmoduleForeach.mockClear() // reset calls
 
       // Act
@@ -627,7 +648,7 @@ describe('git-auth-helper tests', () => {
       )
       const authHelper = gitAuthHelper.createAuthHelper(git, settings)
       await authHelper.configureAuth()
-      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any, any>
+      const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
       mockSubmoduleForeach.mockClear() // reset calls
 
       // Act
@@ -809,7 +830,7 @@ describe('git-auth-helper tests', () => {
 
     // Mock getSubmoduleConfigPaths to return our fake submodules (for both configure and remove)
     const mockGetSubmoduleConfigPaths =
-      git.getSubmoduleConfigPaths as jest.Mock<any, any>
+      git.getSubmoduleConfigPaths as jest.Mock<any>
     mockGetSubmoduleConfigPaths.mockResolvedValue([
       submodule1ConfigPath,
       submodule2ConfigPath
@@ -1147,7 +1168,7 @@ async function setup(testName: string): Promise<void> {
     ),
     tryReset: jest.fn(),
     version: jest.fn()
-  }
+  } as unknown as IGitCommandManager & {env: {[key: string]: string}}
 
   settings = {
     authToken: 'some auth token',

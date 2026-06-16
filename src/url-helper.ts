@@ -1,6 +1,6 @@
 import * as assert from 'assert'
 import {URL} from 'url'
-import {IGitSourceSettings} from './git-source-settings'
+import {IGitSourceSettings} from './git-source-settings.js'
 
 export function getFetchUrl(settings: IGitSourceSettings): string {
   assert.ok(

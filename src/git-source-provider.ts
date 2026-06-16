@@ -1,19 +1,19 @@
 import * as core from '@actions/core'
-import * as fsHelper from './fs-helper'
-import * as gitAuthHelper from './git-auth-helper'
-import * as gitCommandManager from './git-command-manager'
-import * as gitDirectoryHelper from './git-directory-helper'
-import * as githubApiHelper from './github-api-helper'
+import * as fsHelper from './fs-helper.js'
+import * as gitAuthHelper from './git-auth-helper.js'
+import * as gitCommandManager from './git-command-manager.js'
+import * as gitDirectoryHelper from './git-directory-helper.js'
+import * as githubApiHelper from './github-api-helper.js'
 import * as io from '@actions/io'
 import * as path from 'path'
-import * as refHelper from './ref-helper'
-import * as stateHelper from './state-helper'
-import * as urlHelper from './url-helper'
+import * as refHelper from './ref-helper.js'
+import * as stateHelper from './state-helper.js'
+import * as urlHelper from './url-helper.js'
 import {
   MinimumGitSparseCheckoutVersion,
   IGitCommandManager
-} from './git-command-manager'
-import {IGitSourceSettings} from './git-source-settings'
+} from './git-command-manager.js'
+import {IGitSourceSettings} from './git-source-settings.js'
 
 export async function getSource(settings: IGitSourceSettings): Promise<void> {
   // Repository URL

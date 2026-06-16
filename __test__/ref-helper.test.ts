@@ -1,8 +1,36 @@
+import {jest, describe, it, expect, beforeEach, afterEach} from '@jest/globals'
 import * as assert from 'assert'
-import * as core from '@actions/core'
-import * as github from '@actions/github'
-import * as refHelper from '../lib/ref-helper'
-import {IGitCommandManager} from '../lib/git-command-manager'
+
+// Mutable mock github context
+const mockGithubContext: any = {
+  eventName: '',
+  payload: {},
+  repo: {owner: 'some-owner', repo: 'some-repo'},
+  ref: '',
+  sha: ''
+}
+
+// Mock @actions/core
+const mockDebug = jest.fn()
+jest.unstable_mockModule('@actions/core', () => ({
+  debug: mockDebug,
+  info: jest.fn(),
+  warning: jest.fn(),
+  error: jest.fn(),
+  setFailed: jest.fn()
+}))
+
+// Mock @actions/github
+const mockGetOctokit = jest.fn()
+jest.unstable_mockModule('@actions/github', () => ({
+  context: mockGithubContext,
+  getOctokit: mockGetOctokit
+}))
+
+// Dynamic imports after mocking
+const refHelper = await import('../src/ref-helper.js')
+type IGitCommandManager =
+  import('../src/git-command-manager.js').IGitCommandManager
 
 const commit = '1234567890123456789012345678901234567890'
 const sha256Commit =
@@ -12,6 +40,7 @@ let git: IGitCommandManager
 describe('ref-helper tests', () => {
   beforeEach(() => {
     git = {} as unknown as IGitCommandManager
+    jest.clearAllMocks()
   })
 
   it('getCheckoutInfo requires git', async () => {
@@ -166,14 +195,12 @@ describe('ref-helper tests', () => {
   })
 
   it('getRefSpec sha + refs/tags/ with fetchTags', async () => {
-    // When fetchTags is true, only include tags wildcard (specific tag is redundant)
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit, true)
     expect(refSpec.length).toBe(1)
     expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
   })
 
   it('getRefSpec sha + refs/heads/ with fetchTags', async () => {
-    // When fetchTags is true, include both the branch refspec and tags wildcard
     const refSpec = refHelper.getRefSpec('refs/heads/my/branch', commit, true)
     expect(refSpec.length).toBe(2)
     expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
@@ -194,7 +221,6 @@ describe('ref-helper tests', () => {
   })
 
   it('getRefSpec unqualified ref only with fetchTags', async () => {
-    // When fetchTags is true, skip specific tag pattern since wildcard covers all
     const refSpec = refHelper.getRefSpec('my-ref', '', true)
     expect(refSpec.length).toBe(2)
     expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
@@ -222,14 +248,12 @@ describe('ref-helper tests', () => {
   })
 
   it('getRefSpec refs/tags/ only with fetchTags', async () => {
-    // When fetchTags is true, only include tags wildcard (specific tag is redundant)
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '', true)
     expect(refSpec.length).toBe(1)
     expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
   })
 
   it('getRefSpec refs/heads/ only with fetchTags', async () => {
-    // When fetchTags is true, include both the branch refspec and tags wildcard
     const refSpec = refHelper.getRefSpec('refs/heads/my/branch', '', true)
     expect(refSpec.length).toBe(2)
     expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
@@ -248,9 +272,7 @@ describe('ref-helper tests', () => {
       '1111111111222222222233333333334444444444555555555566666666667777'
     const sha256Base =
       'aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffff0000'
-    let debugSpy: jest.SpyInstance
-    let getOctokitSpy: jest.SpyInstance
-    let repoGetSpy: jest.Mock
+    let repoGetSpy: jest.Mock<any>
     let originalEventName: string
     let originalPayload: unknown
     let originalRef: string
@@ -261,10 +283,10 @@ describe('ref-helper tests', () => {
       expectedBaseSha: string,
       mergeCommit: string
     ): void {
-      ;(github.context as any).eventName = 'pull_request'
-      github.context.ref = ref
-      github.context.sha = mergeCommit
-      ;(github.context as any).payload = {
+      mockGithubContext.eventName = 'pull_request'
+      mockGithubContext.ref = ref
+      mockGithubContext.sha = mergeCommit
+      mockGithubContext.payload = {
         action: 'synchronize',
         after: expectedHeadSha,
         number: 123,
@@ -280,18 +302,18 @@ describe('ref-helper tests', () => {
     }
 
     beforeEach(() => {
-      originalEventName = github.context.eventName
-      originalPayload = github.context.payload
-      originalRef = github.context.ref
-      originalSha = github.context.sha
+      originalEventName = mockGithubContext.eventName
+      originalPayload = mockGithubContext.payload
+      originalRef = mockGithubContext.ref
+      originalSha = mockGithubContext.sha
 
-      jest.spyOn(github.context, 'repo', 'get').mockReturnValue({
+      mockGithubContext.repo = {
         owner: repositoryOwner,
         repo: repositoryName
-      })
-      debugSpy = jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+      }
+
       repoGetSpy = jest.fn(async () => ({}))
-      getOctokitSpy = jest.spyOn(github, 'getOctokit').mockReturnValue({
+      mockGetOctokit.mockReturnValue({
         rest: {
           repos: {
             get: repoGetSpy
@@ -301,11 +323,11 @@ describe('ref-helper tests', () => {
     })
 
     afterEach(() => {
-      ;(github.context as any).eventName = originalEventName
-      ;(github.context as any).payload = originalPayload
-      github.context.ref = originalRef
-      github.context.sha = originalSha
-      jest.restoreAllMocks()
+      mockGithubContext.eventName = originalEventName
+      mockGithubContext.payload = originalPayload
+      mockGithubContext.ref = originalRef
+      mockGithubContext.sha = originalSha
+      jest.clearAllMocks()
     })
 
     it('returns early for SHA-1 merge commit', async () => {
@@ -320,7 +342,7 @@ describe('ref-helper tests', () => {
         commit
       )
 
-      expect(getOctokitSpy).not.toHaveBeenCalled()
+      expect(mockGetOctokit).not.toHaveBeenCalled()
       expect(repoGetSpy).not.toHaveBeenCalled()
     })
 
@@ -338,7 +360,7 @@ describe('ref-helper tests', () => {
         sha256Commit
       )
 
-      expect(getOctokitSpy).toHaveBeenCalledWith(
+      expect(mockGetOctokit).toHaveBeenCalledWith(
         'token',
         expect.objectContaining({
           userAgent: expect.stringContaining(
@@ -350,10 +372,10 @@ describe('ref-helper tests', () => {
         owner: repositoryOwner,
         repo: repositoryName
       })
-      expect(debugSpy).toHaveBeenCalledWith(
+      expect(mockDebug).toHaveBeenCalledWith(
         `Expected head sha ${sha256Head}; actual head sha ${actualHeadSha}`
       )
-      expect(debugSpy).not.toHaveBeenCalledWith('Unexpected message format')
+      expect(mockDebug).not.toHaveBeenCalledWith('Unexpected message format')
     })
 
     it('does not match 50-char hex as a valid merge', async () => {
@@ -370,9 +392,9 @@ describe('ref-helper tests', () => {
         commit
       )
 
-      expect(getOctokitSpy).not.toHaveBeenCalled()
+      expect(mockGetOctokit).not.toHaveBeenCalled()
       expect(repoGetSpy).not.toHaveBeenCalled()
-      expect(debugSpy).toHaveBeenCalledWith('Unexpected message format')
+      expect(mockDebug).toHaveBeenCalledWith('Unexpected message format')
     })
   })
 })
