@@ -31,9 +31,8 @@ jest.unstable_mockModule('@actions/github', () => ({
 }))
 
 // Dynamic imports after mocking
-const {assertSafePrCheckout} = await import(
-  '../src/unsafe-pr-checkout-helper.js'
-)
+const {assertSafePrCheckout} =
+  await import('../src/unsafe-pr-checkout-helper.js')
 
 const originalEventName = mockContext.eventName
 const originalPayload = mockContext.payload
