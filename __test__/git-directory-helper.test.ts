@@ -28,6 +28,14 @@ jest.unstable_mockModule('@actions/core', () => ({
 // Dynamic imports after mocking
 const core = await import('@actions/core')
 const gitDirectoryHelper = await import('../src/git-directory-helper.js')
+
+type IGitCommandManager =
+  import('../src/git-command-manager.js').IGitCommandManager
+
+const testWorkspace = path.join(__dirname, '_temp', 'git-directory-helper')
+let repositoryPath: string
+let repositoryUrl: string
+let clean: boolean
 let ref: string
 let git: IGitCommandManager
 
