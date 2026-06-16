@@ -17,7 +17,11 @@ export function getFetchUrl(settings: IGitSourceSettings): string {
   }
 
   // "origin" is SCHEME://HOSTNAME[:PORT]
-  return `${serviceUrl.origin}/${encodedOwner}/${encodedName}`
+  const serviceUrlBase = pruneSuffix(
+    `${serviceUrl.origin}${serviceUrl.pathname}`,
+    '/'
+  )
+  return `${serviceUrlBase}/${encodedOwner}/${encodedName}`
 }
 
 export function getServerUrl(url?: string): URL {
