@@ -4702,7 +4702,7 @@ module.exports = require("punycode");
 /***/ 215:
 /***/ (function(module) {
 
-module.exports = {"name":"@octokit/rest","version":"16.43.1","publishConfig":{"access":"public"},"description":"GitHub REST API client for Node.js","keywords":["octokit","github","rest","api-client"],"author":"Gregor Martynus (https://github.com/gr2m)","contributors":[{"name":"Mike de Boer","email":"info@mikedeboer.nl"},{"name":"Fabian Jakobs","email":"fabian@c9.io"},{"name":"Joe Gallo","email":"joe@brassafrax.com"},{"name":"Gregor Martynus","url":"https://github.com/gr2m"}],"repository":"https://github.com/octokit/rest.js","dependencies":{"@octokit/auth-token":"^2.4.0","@octokit/plugin-paginate-rest":"^1.1.1","@octokit/plugin-request-log":"^1.0.0","@octokit/plugin-rest-endpoint-methods":"2.4.0","@octokit/request":"^5.2.0","@octokit/request-error":"^1.0.2","atob-lite":"^2.0.0","before-after-hook":"^2.0.0","btoa-lite":"^1.0.0","deprecation":"^2.0.0","lodash.get":"^4.4.2","lodash.set":"^4.3.2","lodash.uniq":"^4.5.0","octokit-pagination-methods":"^1.1.0","once":"^1.4.0","universal-user-agent":"^4.0.0"},"devDependencies":{"@gimenete/type-writer":"^0.1.3","@octokit/auth":"^1.1.1","@octokit/fixtures-server":"^5.0.6","@octokit/graphql":"^4.2.0","@types/node":"^13.1.0","bundlesize":"^0.18.0","chai":"^4.1.2","compression-webpack-plugin":"^3.1.0","cypress":"^3.0.0","glob":"^7.1.2","http-proxy-agent":"^4.0.0","lodash.camelcase":"^4.3.0","lodash.merge":"^4.6.1","lodash.upperfirst":"^4.3.1","lolex":"^5.1.2","mkdirp":"^1.0.0","mocha":"^7.0.1","mustache":"^4.0.0","nock":"^11.3.3","npm-run-all":"^4.1.2","nyc":"^15.0.0","prettier":"^1.14.2","proxy":"^1.0.0","semantic-release":"^17.0.0","sinon":"^8.0.0","sinon-chai":"^3.0.0","sort-keys":"^4.0.0","string-to-arraybuffer":"^1.0.0","string-to-jsdoc-comment":"^1.0.0","typescript":"^3.3.1","webpack":"^4.0.0","webpack-bundle-analyzer":"^3.0.0","webpack-cli":"^3.0.0"},"types":"index.d.ts","scripts":{"coverage":"nyc report --reporter=html && open coverage/index.html","lint":"prettier --check '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","lint:fix":"prettier --write '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","pretest":"npm run -s lint","test":"nyc mocha test/mocha-node-setup.js \"test/*/**/*-test.js\"","test:browser":"cypress run --browser chrome","build":"npm-run-all build:*","build:ts":"npm run -s update-endpoints:typescript","prebuild:browser":"mkdirp dist/","build:browser":"npm-run-all build:browser:*","build:browser:development":"webpack --mode development --entry . --output-library=Octokit --output=./dist/octokit-rest.js --profile --json > dist/bundle-stats.json","build:browser:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=Octokit --output-path=./dist --output-filename=octokit-rest.min.js --devtool source-map","generate-bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","update-endpoints":"npm-run-all update-endpoints:*","update-endpoints:fetch-json":"node scripts/update-endpoints/fetch-json","update-endpoints:typescript":"node scripts/update-endpoints/typescript","prevalidate:ts":"npm run -s build:ts","validate:ts":"tsc --target es6 --noImplicitAny index.d.ts","postvalidate:ts":"tsc --noEmit --target es6 test/typescript-validate.ts","start-fixtures-server":"octokit-fixtures-server"},"license":"MIT","files":["index.js","index.d.ts","lib","plugins"],"nyc":{"ignore":["test"]},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"bundlesize":[{"path":"./dist/octokit-rest.min.js.gz","maxSize":"33 kB"}],"_resolved":"https://registry.npmjs.org/@octokit/rest/-/rest-16.43.1.tgz","_integrity":"sha512-gfFKwRT/wFxq5qlNjnW2dh+qh74XgTQ2B179UX5K1HYCluioWj8Ndbgqw2PVqa1NnVJkGHp2ovMpVn/DImlmkw==","_from":"@octokit/rest@16.43.1"};
+module.exports = {"name":"@octokit/rest","version":"16.43.1","publishConfig":{"access":"public"},"description":"GitHub REST API client for Node.js","keywords":["octokit","github","rest","api-client"],"author":"Gregor Martynus (https://github.com/gr2m)","contributors":[{"name":"Mike de Boer","email":"info@mikedeboer.nl"},{"name":"Fabian Jakobs","email":"fabian@c9.io"},{"name":"Joe Gallo","email":"joe@brassafrax.com"},{"name":"Gregor Martynus","url":"https://github.com/gr2m"}],"repository":"https://github.com/octokit/rest.js","dependencies":{"@octokit/auth-token":"^2.4.0","@octokit/plugin-paginate-rest":"^1.1.1","@octokit/plugin-request-log":"^1.0.0","@octokit/plugin-rest-endpoint-methods":"2.4.0","@octokit/request":"^5.2.0","@octokit/request-error":"^1.0.2","atob-lite":"^2.0.0","before-after-hook":"^2.0.0","btoa-lite":"^1.0.0","deprecation":"^2.0.0","lodash.get":"^4.4.2","lodash.set":"^4.3.2","lodash.uniq":"^4.5.0","octokit-pagination-methods":"^1.1.0","once":"^1.4.0","universal-user-agent":"^4.0.0"},"devDependencies":{"@gimenete/type-writer":"^0.1.3","@octokit/auth":"^1.1.1","@octokit/fixtures-server":"^5.0.6","@octokit/graphql":"^4.2.0","@types/node":"^13.1.0","bundlesize":"^0.18.0","chai":"^4.1.2","compression-webpack-plugin":"^3.1.0","cypress":"^3.0.0","glob":"^7.1.2","http-proxy-agent":"^4.0.0","lodash.camelcase":"^4.3.0","lodash.merge":"^4.6.1","lodash.upperfirst":"^4.3.1","lolex":"^5.1.2","mkdirp":"^1.0.0","mocha":"^7.0.1","mustache":"^4.0.0","nock":"^11.3.3","npm-run-all":"^4.1.2","nyc":"^15.0.0","prettier":"^1.14.2","proxy":"^1.0.0","semantic-release":"^17.0.0","sinon":"^8.0.0","sinon-chai":"^3.0.0","sort-keys":"^4.0.0","string-to-arraybuffer":"^1.0.0","string-to-jsdoc-comment":"^1.0.0","typescript":"^3.3.1","webpack":"^4.0.0","webpack-bundle-analyzer":"^3.0.0","webpack-cli":"^3.0.0"},"types":"index.d.ts","scripts":{"coverage":"nyc report --reporter=html && open coverage/index.html","lint":"prettier --check '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","lint:fix":"prettier --write '{lib,plugins,scripts,test}/**/*.{js,json,ts}' 'docs/*.{js,json}' 'docs/src/**/*' index.js README.md package.json","pretest":"npm run -s lint","test":"nyc mocha test/mocha-node-setup.js \"test/*/**/*-test.js\"","test:browser":"cypress run --browser chrome","build":"npm-run-all build:*","build:ts":"npm run -s update-endpoints:typescript","prebuild:browser":"mkdirp dist/","build:browser":"npm-run-all build:browser:*","build:browser:development":"webpack --mode development --entry . --output-library=Octokit --output=./dist/octokit-rest.js --profile --json > dist/bundle-stats.json","build:browser:production":"webpack --mode production --entry . --plugin=compression-webpack-plugin --output-library=Octokit --output-path=./dist --output-filename=octokit-rest.min.js --devtool source-map","generate-bundle-report":"webpack-bundle-analyzer dist/bundle-stats.json --mode=static --no-open --report dist/bundle-report.html","update-endpoints":"npm-run-all update-endpoints:*","update-endpoints:fetch-json":"node scripts/update-endpoints/fetch-json","update-endpoints:typescript":"node scripts/update-endpoints/typescript","prevalidate:ts":"npm run -s build:ts","validate:ts":"tsc --target es6 --noImplicitAny index.d.ts","postvalidate:ts":"tsc --noEmit --target es6 test/typescript-validate.ts","start-fixtures-server":"octokit-fixtures-server"},"license":"MIT","files":["index.js","index.d.ts","lib","plugins"],"nyc":{"ignore":["test"]},"release":{"publish":["@semantic-release/npm",{"path":"@semantic-release/github","assets":["dist/*","!dist/*.map.gz"]}]},"bundlesize":[{"path":"./dist/octokit-rest.min.js.gz","maxSize":"33 kB"}]};
 
 /***/ }),
 
@@ -4740,7 +4740,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkCommitInfo = exports.testRef = exports.getRefSpec = exports.getRefSpecForAllHistory = exports.getCheckoutInfo = exports.tagsRefSpec = void 0;
+exports.fromPayload = exports.checkCommitInfo = exports.testRef = exports.getRefSpec = exports.getRefSpecForAllHistory = exports.getCheckoutInfo = exports.tagsRefSpec = void 0;
 const url_1 = __webpack_require__(835);
 const core = __importStar(__webpack_require__(470));
 const github = __importStar(__webpack_require__(469));
@@ -4958,6 +4958,7 @@ exports.checkCommitInfo = checkCommitInfo;
 function fromPayload(path) {
     return select(github.context.payload, path);
 }
+exports.fromPayload = fromPayload;
 function select(obj, path) {
     if (!obj) {
         return undefined;
@@ -13324,6 +13325,102 @@ function getNextPage (octokit, link, headers) {
 
 /***/ }),
 
+/***/ 554:
+/***/ (function(__unusedmodule, exports, __webpack_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.assertSafePrCheckout = void 0;
+const github = __importStar(__webpack_require__(469));
+const ref_helper_1 = __webpack_require__(227);
+const PR_REF_PATTERN = /^refs\/pull\/[0-9]+\/(?:head|merge)$/;
+function assertSafePrCheckout(input) {
+    if (input.allowUnsafePrCheckout) {
+        return;
+    }
+    const eventName = github.context.eventName;
+    if (eventName !== 'pull_request_target' && eventName !== 'workflow_run') {
+        return;
+    }
+    const baseRepoId = (0, ref_helper_1.fromPayload)('repository.id');
+    if (typeof baseRepoId !== 'number') {
+        return;
+    }
+    let prHeadRepoId;
+    let prHeadRepoFullName;
+    const prShas = [];
+    if (eventName === 'pull_request_target') {
+        prHeadRepoId = (0, ref_helper_1.fromPayload)('pull_request.head.repo.id');
+        prHeadRepoFullName = (0, ref_helper_1.fromPayload)('pull_request.head.repo.full_name');
+        pushIfSha(prShas, (0, ref_helper_1.fromPayload)('pull_request.head.sha'));
+        pushIfSha(prShas, (0, ref_helper_1.fromPayload)('pull_request.merge_commit_sha'));
+    }
+    else {
+        const wrEvent = (0, ref_helper_1.fromPayload)('workflow_run.event');
+        if (typeof wrEvent !== 'string' || !wrEvent.startsWith('pull_request')) {
+            return;
+        }
+        prHeadRepoId = (0, ref_helper_1.fromPayload)('workflow_run.head_repository.id');
+        prHeadRepoFullName = (0, ref_helper_1.fromPayload)('workflow_run.head_repository.full_name');
+        pushIfSha(prShas, (0, ref_helper_1.fromPayload)('workflow_run.head_commit.id'));
+        // For `pull_request_target`-triggered workflow_run, `head_sha` is the base
+        // default branch SHA (not the PR head)
+        if (wrEvent !== 'pull_request_target') {
+            pushIfSha(prShas, (0, ref_helper_1.fromPayload)('workflow_run.head_sha'));
+        }
+    }
+    // (A) Fork PR?
+    if (typeof prHeadRepoId !== 'number' || prHeadRepoId === baseRepoId) {
+        return;
+    }
+    // (B) We cannot check for all fork PR refs so check to see
+    // if the resolved input points to the fork PR sha we have in the payload
+    const repositoryMatchesPrHead = typeof prHeadRepoFullName === 'string' &&
+        input.qualifiedRepository.toLowerCase() === prHeadRepoFullName.toLowerCase();
+    const refMatchesPullPattern = PR_REF_PATTERN.test(input.ref);
+    const commitMatchesPrHeadSha = !!input.commit && prShas.includes(input.commit.toLowerCase());
+    if (!repositoryMatchesPrHead &&
+        !refMatchesPullPattern &&
+        !commitMatchesPrHeadSha) {
+        return;
+    }
+    throw new Error(`Refusing to check out fork pull request code from a '${eventName}' workflow. ` +
+        `This workflow runs with the base repository's GITHUB_TOKEN, secrets, default-branch ` +
+        `cache scope, and runner access. Fetching and executing a fork's code in that trusted ` +
+        `context commonly leads to "pwn request" vulnerabilities. To opt in after reviewing ` +
+        `the risks at https://gh.io/securely-using-pull_request_target, set ` +
+        `'allow-unsafe-pr-checkout: true' on the actions/checkout step.`);
+}
+exports.assertSafePrCheckout = assertSafePrCheckout;
+function pushIfSha(target, value) {
+    if (typeof value === 'string' && value.length > 0) {
+        target.push(value.toLowerCase());
+    }
+}
+
+
+/***/ }),
+
 /***/ 558:
 /***/ (function(module, __unusedexports, __webpack_require__) {
 
@@ -18372,6 +18469,7 @@ const core = __importStar(__webpack_require__(470));
 const fsHelper = __importStar(__webpack_require__(618));
 const github = __importStar(__webpack_require__(469));
 const path = __importStar(__webpack_require__(622));
+const unsafePrCheckoutHelper = __importStar(__webpack_require__(554));
 const workflowContextHelper = __importStar(__webpack_require__(642));
 function getInputs() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -18465,6 +18563,17 @@ function getInputs() {
         // Set safe.directory in git global config.
         result.setSafeDirectory =
             (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE';
+        // Allow unsafe PR checkout (opt-in for pull_request_target / workflow_run fork PRs)
+        result.allowUnsafePrCheckout =
+            (core.getInput('allow-unsafe-pr-checkout') || 'false').toUpperCase() ===
+                'TRUE';
+        core.debug(`allow unsafe PR checkout = ${result.allowUnsafePrCheckout}`);
+        unsafePrCheckoutHelper.assertSafePrCheckout({
+            qualifiedRepository,
+            ref: result.ref,
+            commit: result.commit,
+            allowUnsafePrCheckout: result.allowUnsafePrCheckout
+        });
         return result;
     });
 }
