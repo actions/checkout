@@ -75,9 +75,9 @@ export function assertSafePrCheckout(input: IUnsafePrCheckoutInput): void {
     `Refusing to check out fork pull request code from a '${eventName}' workflow. ` +
       `This workflow runs with the base repository's GITHUB_TOKEN, secrets, default-branch ` +
       `cache scope, and runner access. Fetching and executing a fork's code in that trusted ` +
-      `context commonly leads to "pwn request" vulnerabilities. To opt in after reviewing ` +
-      `the risks at https://gh.io/securely-using-pull_request_target, set ` +
-      `'allow-unsafe-pr-checkout: true' on the actions/checkout step.`
+      `context commonly leads to "pwn request" vulnerabilities. To opt in, review the risks ` +
+      `at https://gh.io/securely-using-pull_request_target and set 'allow-unsafe-pr-checkout: true' ` +
+      `on the actions/checkout step.`
   )
 }
 
