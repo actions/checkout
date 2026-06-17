@@ -4,10 +4,10 @@ import * as fs from 'fs'
 import * as github from '@actions/github'
 import * as io from '@actions/io'
 import * as path from 'path'
-import * as retryHelper from './retry-helper'
+import * as retryHelper from './retry-helper.js'
 import * as toolCache from '@actions/tool-cache'
-import {v4 as uuid} from 'uuid'
-import {getServerApiUrl} from './url-helper'
+import {randomUUID} from 'crypto'
+import {getServerApiUrl} from './url-helper.js'
 
 const IS_WINDOWS = process.platform === 'win32'
 
@@ -39,7 +39,7 @@ export async function downloadRepository(
 
   // Write archive to disk
   core.info('Writing archive to disk')
-  const uniqueId = uuid()
+  const uniqueId = randomUUID()
   const archivePath = IS_WINDOWS
     ? path.join(repositoryPath, `${uniqueId}.zip`)
     : path.join(repositoryPath, `${uniqueId}.tar.gz`)

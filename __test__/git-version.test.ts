@@ -1,5 +1,6 @@
-import {GitVersion} from '../src/git-version'
-import {MinimumGitSparseCheckoutVersion} from '../src/git-command-manager'
+import {describe, it, expect} from '@jest/globals'
+import {GitVersion} from '../src/git-version.js'
+import {MinimumGitSparseCheckoutVersion} from '../src/git-command-manager.js'
 
 describe('git-version tests', () => {
   it('basics', async () => {

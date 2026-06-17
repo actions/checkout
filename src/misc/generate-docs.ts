@@ -2,6 +2,9 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import * as yaml from 'js-yaml'
+import {fileURLToPath} from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 //
 // SUMMARY
@@ -120,7 +123,7 @@ function updateUsage(
 }
 
 updateUsage(
-  'actions/checkout@v6',
+  'actions/checkout@v7',
   path.join(__dirname, '..', '..', 'action.yml'),
   path.join(__dirname, '..', '..', 'README.md')
 )

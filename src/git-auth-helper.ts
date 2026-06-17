@@ -5,12 +5,12 @@ import * as fs from 'fs'
 import * as io from '@actions/io'
 import * as os from 'os'
 import * as path from 'path'
-import * as regexpHelper from './regexp-helper'
-import * as stateHelper from './state-helper'
-import * as urlHelper from './url-helper'
-import {v4 as uuid} from 'uuid'
-import {IGitCommandManager} from './git-command-manager'
-import {IGitSourceSettings} from './git-source-settings'
+import * as regexpHelper from './regexp-helper.js'
+import * as stateHelper from './state-helper.js'
+import * as urlHelper from './url-helper.js'
+import {randomUUID} from 'crypto'
+import {IGitCommandManager} from './git-command-manager.js'
+import {IGitSourceSettings} from './git-source-settings.js'
 
 const IS_WINDOWS = process.platform === 'win32'
 const SSH_COMMAND_KEY = 'core.sshCommand'
@@ -90,7 +90,7 @@ class GitAuthHelper {
     // Create a temp home directory
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
-    const uniqueId = uuid()
+    const uniqueId = randomUUID()
     this.temporaryHomePath = path.join(runnerTemp, uniqueId)
     await fs.promises.mkdir(this.temporaryHomePath, {recursive: true})
 
@@ -255,7 +255,7 @@ class GitAuthHelper {
     // Write key
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
-    const uniqueId = uuid()
+    const uniqueId = randomUUID()
     this.sshKeyPath = path.join(runnerTemp, uniqueId)
     stateHelper.setSshKeyPath(this.sshKeyPath)
     await fs.promises.mkdir(runnerTemp, {recursive: true})
@@ -422,7 +422,7 @@ class GitAuthHelper {
     assert.ok(runnerTemp, 'RUNNER_TEMP is not defined')
 
     // Create a unique filename for this checkout instance
-    const configFileName = `git-credentials-${uuid()}.config`
+    const configFileName = `git-credentials-${randomUUID()}.config`
     this.credentialsConfigPath = path.join(runnerTemp, configFileName)
 
     core.debug(`Credentials config path: ${this.credentialsConfigPath}`)

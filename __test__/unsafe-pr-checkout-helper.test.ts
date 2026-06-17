@@ -1,10 +1,12 @@
-import * as github from '@actions/github'
-import {assertSafePrCheckout} from '../lib/unsafe-pr-checkout-helper'
-
-// Shallow clone original @actions/github context
-const originalContext = {...github.context}
-const originalEventName = github.context.eventName
-const originalPayload = github.context.payload
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterEach,
+  afterAll
+} from '@jest/globals'
 
 const BASE_REPO_ID = 100
 const FORK_REPO_ID = 200
@@ -15,9 +17,29 @@ const WORKFLOW_RUN_HEAD_COMMIT_SHA = '4444444444444444444444444444444444444444'
 const BASE_QUALIFIED_REPO = 'some-owner/some-repo'
 const FORK_QUALIFIED_REPO = 'another-repo/fork'
 
+// Mutable mock context
+const mockContext: any = {
+  eventName: '',
+  payload: {},
+  repo: {owner: 'some-owner', repo: 'some-repo'},
+  ref: '',
+  sha: ''
+}
+
+jest.unstable_mockModule('@actions/github', () => ({
+  context: mockContext
+}))
+
+// Dynamic imports after mocking
+const {assertSafePrCheckout} =
+  await import('../src/unsafe-pr-checkout-helper.js')
+
+const originalEventName = mockContext.eventName
+const originalPayload = mockContext.payload
+
 function setContext(eventName: string, payload: object): void {
-  ;(github.context as {eventName: string}).eventName = eventName
-  ;(github.context as {payload: object}).payload = payload
+  mockContext.eventName = eventName
+  mockContext.payload = payload
 }
 
 function forkPullRequestTargetPayload(): object {
@@ -59,22 +81,17 @@ function forkWorkflowRunPayload(): object {
 
 describe('unsafe-pr-checkout-helper', () => {
   beforeAll(() => {
-    jest.spyOn(github.context, 'repo', 'get').mockReturnValue({
-      owner: 'some-owner',
-      repo: 'some-repo'
-    })
+    mockContext.repo = {owner: 'some-owner', repo: 'some-repo'}
   })
 
   afterEach(() => {
-    ;(github.context as {eventName: string}).eventName = originalEventName
-    ;(github.context as {payload: object}).payload = originalPayload
+    mockContext.eventName = originalEventName
+    mockContext.payload = originalPayload
   })
 
   afterAll(() => {
-    ;(github.context as {eventName: string}).eventName =
-      originalContext.eventName
-    ;(github.context as {payload: object}).payload = originalContext.payload
-    jest.restoreAllMocks()
+    mockContext.eventName = originalEventName
+    mockContext.payload = originalPayload
   })
 
   it('allows pull_request events untouched', () => {

@@ -1,10 +1,10 @@
 import * as core from '@actions/core'
-import * as fsHelper from './fs-helper'
+import * as fsHelper from './fs-helper.js'
 import * as github from '@actions/github'
 import * as path from 'path'
-import * as unsafePrCheckoutHelper from './unsafe-pr-checkout-helper'
-import * as workflowContextHelper from './workflow-context-helper'
-import {IGitSourceSettings} from './git-source-settings'
+import * as unsafePrCheckoutHelper from './unsafe-pr-checkout-helper.js'
+import * as workflowContextHelper from './workflow-context-helper.js'
+import {IGitSourceSettings} from './git-source-settings.js'
 
 export async function getInputs(): Promise<IGitSourceSettings> {
   const result = {} as unknown as IGitSourceSettings
