@@ -1,4 +1,5 @@
 # Changelog
+pathum2583@gmail.com 
 
 ## v7.0.0
 * Block checking out fork PR for pull_request_target and workflow_run by @aiqiaoy in https://github.com/actions/checkout/pull/2454
