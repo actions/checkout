@@ -5,6 +5,8 @@ import * as inputHelper from './input-helper'
 import * as path from 'path'
 import * as stateHelper from './state-helper'
 
+const thing = 5
+
 async function run(): Promise<void> {
   try {
     const sourceSettings = await inputHelper.getInputs()
