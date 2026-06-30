@@ -33,7 +33,7 @@ export class RetryHelper {
       }
 
       // Sleep
-      const seconds = this.getSleepAmount()
+      const seconds = this.getSleepAmount(attempt)
       core.info(`Waiting ${seconds} seconds before trying again`)
       await this.sleep(seconds)
       attempt++
@@ -43,11 +43,12 @@ export class RetryHelper {
     return await action()
   }
 
-  private getSleepAmount(): number {
-    return (
-      Math.floor(Math.random() * (this.maxSeconds - this.minSeconds + 1)) +
-      this.minSeconds
-    )
+  private getSleepAmount(attempt: number): number {
+    if (this.minSeconds === 0) {
+      return 0
+    }
+
+    return Math.min(this.minSeconds * Math.pow(2, attempt - 1), this.maxSeconds)
   }
 
   private async sleep(seconds: number): Promise<void> {
