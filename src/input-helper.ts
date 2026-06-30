@@ -15,6 +15,7 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     throw new Error('GITHUB_WORKSPACE not defined')
   }
   githubWorkspacePath = path.resolve(githubWorkspacePath)
+  result.githubWorkspacePath = githubWorkspacePath
   core.debug(`GITHUB_WORKSPACE = '${githubWorkspacePath}'`)
   fsHelper.directoryExistsSync(githubWorkspacePath, true)
 

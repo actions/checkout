@@ -314,7 +314,6 @@ jobs:
           fi
 
           # Verify auth token
-          git config --global --add safe.directory "*"
           git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
 
       # needed to make checkout post cleanup succeed
