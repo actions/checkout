@@ -35109,6 +35109,10 @@ class GitAuthHelper {
         // Override HOME
         info(`Temporarily overriding HOME='${this.temporaryHomePath}' before making global git config changes`);
         this.git.setEnvironmentVariable('HOME', this.temporaryHomePath);
+        // GIT_CONFIG_GLOBAL takes precedence over HOME when locating the global
+        // config file. Pin it to the temporary config so an inherited
+        // GIT_CONFIG_GLOBAL cannot redirect our global git config writes elsewhere.
+        this.git.setEnvironmentVariable('GIT_CONFIG_GLOBAL', newGitConfigPath);
         return newGitConfigPath;
     }
     async configureGlobalAuth() {
@@ -35183,8 +35187,9 @@ class GitAuthHelper {
     }
     async removeGlobalConfig() {
         if (this.temporaryHomePath?.length > 0) {
-            core_debug(`Unsetting HOME override`);
+            core_debug(`Unsetting HOME and GIT_CONFIG_GLOBAL overrides`);
             this.git.removeEnvironmentVariable('HOME');
+            this.git.removeEnvironmentVariable('GIT_CONFIG_GLOBAL');
             await rmRF(this.temporaryHomePath);
         }
     }
