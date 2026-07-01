@@ -9,6 +9,7 @@ inputs:
       The branch, tag or SHA to checkout. When checking out the repository that
       triggered a workflow, this defaults to the reference or SHA for that
       event.  Otherwise, uses the default branch.
+    required: false
   token:
     description: >
       Personal access token (PAT) used to fetch the repository. The PAT is configured
@@ -34,11 +35,13 @@ inputs:
 
       [Learn more about creating and using
       encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    required: false
   ssh-known-hosts:
     description: >
       Known hosts in addition to the user and global host key database. The public
       SSH keys for a host may be obtained using the utility `ssh-keyscan`. For example,
       `ssh-keyscan github.com`. The public key for github.com is always implicitly added.
+    required: false
   ssh-strict:
     description: >
       Whether to perform strict host key checking. When true, adds the options `StrictHostKeyChecking=yes`
@@ -50,23 +53,30 @@ inputs:
       The user to use when connecting to the remote SSH host. By default 'git' is used.
     default: git
   persist-credentials:
-    description: 'Whether to configure the token or SSH key with the local git config'
+    description: >
+      Whether to persist the token or SSH key credentials for use by subsequent
+      steps. When true, credentials are stored in a file under `$RUNNER_TEMP`
+      and referenced from the local git config. The post-job step removes the
+      credential file.
     default: true
   path:
     description: 'Relative path under $GITHUB_WORKSPACE to place the repository'
+    default: '.'
+    required: false
   clean:
     description: 'Whether to execute `git clean -ffdx && git reset --hard HEAD` before fetching'
     default: true
   filter:
     description: >
-      Partially clone against a given filter.
-      Overrides sparse-checkout if set.
-    default: null
+      Partially clone against a given filter. When `sparse-checkout` is also
+      set, overrides the default `blob:none` filter that would otherwise be
+      used for fetching.
+    required: false
   sparse-checkout:
     description: >
       Do a sparse checkout on given patterns.
       Each pattern should be separated with new lines.
-    default: null
+    required: false
   sparse-checkout-cone-mode:
     description: >
       Specifies whether to use cone-mode when doing a sparse checkout.
@@ -109,9 +119,13 @@ inputs:
     default: false
 outputs:
   ref:
-    description: 'The branch, tag or SHA that was checked out'
+    description: >
+      The branch or tag ref that was checked out. Empty when the checkout was
+      performed by a full commit SHA.
   commit:
-    description: 'The commit SHA that was checked out'
+    description: >
+      The commit SHA that was checked out. Only set when Git is available (not
+      set when the repository was downloaded via the GitHub REST API fallback).
 runs:
   using: node24
   main: dist/index.js
