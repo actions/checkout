@@ -83,4 +83,10 @@ export interface IGitSourceSettings {
    * Indicates whether to add repositoryPath as safe.directory in git global config
    */
   setSafeDirectory: boolean
+
+  /**
+   * Opt-in to allow checking out fork pull request code from a workflow
+   * triggered by pull_request_target or workflow_run.
+   */
+  allowUnsafePrCheckout: boolean
 }

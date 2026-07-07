@@ -2,6 +2,7 @@ import * as core from '@actions/core'
 import * as fsHelper from './fs-helper'
 import * as github from '@actions/github'
 import * as path from 'path'
+import * as unsafePrCheckoutHelper from './unsafe-pr-checkout-helper'
 import * as workflowContextHelper from './workflow-context-helper'
 import {IGitSourceSettings} from './git-source-settings'
 
@@ -125,5 +126,19 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   // Set safe.directory in git global config.
   result.setSafeDirectory =
     (core.getInput('set-safe-directory') || 'true').toUpperCase() === 'TRUE'
+
+  // Allow unsafe PR checkout (opt-in for pull_request_target / workflow_run fork PRs)
+  result.allowUnsafePrCheckout =
+    (core.getInput('allow-unsafe-pr-checkout') || 'false').toUpperCase() ===
+    'TRUE'
+  core.debug(`allow unsafe PR checkout = ${result.allowUnsafePrCheckout}`)
+
+  unsafePrCheckoutHelper.assertSafePrCheckout({
+    qualifiedRepository,
+    ref: result.ref,
+    commit: result.commit,
+    allowUnsafePrCheckout: result.allowUnsafePrCheckout
+  })
+
   return result
 }
