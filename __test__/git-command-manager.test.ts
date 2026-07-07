@@ -403,6 +403,72 @@ describe('Test fetchDepth and fetchTags options', () => {
   })
 })
 
+describe('Test submoduleUpdate filter option', () => {
+  beforeEach(async () => {
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('should call execGit with --filter when a filter option is provided', async () => {
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    await git.submoduleUpdate(1, true, 'blob:none')
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'submodule',
+        'update',
+        '--init',
+        '--force',
+        '--depth=1',
+        '--recursive',
+        '--filter=blob:none'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should call execGit without --filter when no filter option is provided', async () => {
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    await git.submoduleUpdate(0, false, undefined)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['-c', 'protocol.version=2', 'submodule', 'update', '--init', '--force'],
+      expect.any(Object)
+    )
+  })
+})
+
 describe('repository initialization object format', () => {
   beforeEach(async () => {
     mockFileExistsSync.mockReset()
