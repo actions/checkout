@@ -44,7 +44,7 @@ jobs:
           fi
 
       # If dist/ was different than expected, upload the expected version as an artifact
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         if: ${{ failure() && steps.diff.conclusion == 'failure' }}
         with:
           name: dist
