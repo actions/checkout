@@ -9,6 +9,7 @@ import * as path from 'path'
 import * as refHelper from './ref-helper.js'
 import * as stateHelper from './state-helper.js'
 import * as urlHelper from './url-helper.js'
+import * as warpbuildMirror from './warpbuild/mirror-cache.js'
 import {
   MinimumGitSparseCheckoutVersion,
   IGitCommandManager
@@ -130,6 +131,10 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.init(objectFormat)
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
+
+      // WarpBuild git-mirror cache: restore (or hydrate) a bare mirror inside .git and
+      // point alternates at it so the fetch below downloads only the delta from GitHub.
+      await warpbuildMirror.setup(settings, repositoryUrl)
     }
 
     // Disable automatic garbage collection

@@ -41692,7 +41692,349 @@ function ref_helper_select(obj, path) {
     return ref_helper_select(obj[key], path.substr(i + 1));
 }
 
+;// CONCATENATED MODULE: external "stream/promises"
+const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream/promises");
+;// CONCATENATED MODULE: ./src/warpbuild/backend-api.ts
+/* eslint-disable i18n-text/no-en -- log/error strings are English by upstream convention */
+
+// Thin client for backend-core's /api/v1/git-mirrors endpoints.
+//
+// Auth is the runner verification token every WarpBuild job carries in its env
+// (WARPBUILD_RUNNER_VERIFICATION_TOKEN); the backend resolves instance → org from the
+// token alone.
+//
+// HTTP contract (mirrors internal/runners/internal/git_mirror_service.go):
+//   200 -> use the presigned URL
+//   404 -> cache miss: create the mirror (download from GitHub + tar + upload)
+//   403 -> feature disabled for this org (backend-driven kill switch): skip mirror
+//          creation and upload entirely, behave exactly like stock actions/checkout
+//   else -> transient trouble: fall back WITHOUT the mirror download
+const API_TIMEOUT_MS = 10_000;
+function backend_api_baseUrl() {
+    return (process.env['WARPBUILD_HOST_URL'] || '').replace(/\/+$/, '');
+}
+function authHeader() {
+    return `Bearer ${process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN'] || ''}`;
+}
+async function lookupMirror(repoKey) {
+    try {
+        const res = await fetch(`${backend_api_baseUrl()}/api/v1/git-mirrors/download-url?repo_key=${encodeURIComponent(repoKey)}`, {
+            headers: { authorization: authHeader() },
+            signal: AbortSignal.timeout(API_TIMEOUT_MS)
+        });
+        if (res.status === 200) {
+            return { kind: 'hit', info: (await res.json()) };
+        }
+        if (res.status === 404) {
+            return { kind: 'miss' };
+        }
+        if (res.status === 403) {
+            core_debug(`[wb-mirror] download-url answered 403 (disabled)`);
+            return { kind: 'disabled' };
+        }
+        core_debug(`[wb-mirror] download-url answered ${res.status}`);
+        return { kind: 'error' };
+    }
+    catch (error) {
+        core_debug(`[wb-mirror] download-url failed: ${error}`);
+        return { kind: 'error' };
+    }
+}
+async function requestUploadURL(repoKey) {
+    try {
+        const res = await fetch(`${backend_api_baseUrl()}/api/v1/git-mirrors/upload-url`, {
+            method: 'POST',
+            headers: {
+                authorization: authHeader(),
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({ repo_key: repoKey }),
+            signal: AbortSignal.timeout(API_TIMEOUT_MS)
+        });
+        if (res.status === 200) {
+            const body = (await res.json());
+            if (body.url) {
+                return { kind: 'ok', url: body.url };
+            }
+            return { kind: 'error' };
+        }
+        if (res.status === 403) {
+            core_debug(`[wb-mirror] upload-url answered 403 (disabled)`);
+            return { kind: 'disabled' };
+        }
+        core_debug(`[wb-mirror] upload-url answered ${res.status}`);
+        return { kind: 'error' };
+    }
+    catch (error) {
+        core_debug(`[wb-mirror] upload-url failed: ${error}`);
+        return { kind: 'error' };
+    }
+}
+
+;// CONCATENATED MODULE: ./src/warpbuild/mirror-cache.ts
+/* eslint-disable i18n-text/no-en, import/no-unresolved -- English log strings and
+   .js-suffixed ESM imports both follow upstream's own conventions; the import plugin
+   has no TS resolver configured in this repo. */
+
+
+
+
+
+
+
+
+// WarpBuild git-mirror cache.
+//
+// A tar of the repo's bare mirror lives in a WarpBuild-owned S3 bucket. At checkout we
+// restore it to <workspace>/.git/wb-mirror.git and point .git/objects/info/alternates at
+// it, so the (unmodified) upstream fetch advertises the mirror's ref tips as "haves" and
+// GitHub only sends objects the mirror doesn't already hold. On a miss (backend answers
+// 404), THIS run creates the mirror: one full download of all branches + tags from
+// GitHub, then tar + presigned PUT. When the backend answers 403 the feature is
+// disabled for this org (backend-driven kill switch) and we skip everything — no
+// mirror creation, no upload.
+//
+// The mirror lives INSIDE .git (same precedent as .git/modules) and the alternates path
+// is relative, so it survives every container mount scheme: `container:` jobs (/__w),
+// Docker container actions (/github/workspace), and `docker build COPY .`.
+//
+// Everything here is fail-open: any error or timeout degrades to stock actions/checkout
+// behavior with a warning, never a failed checkout.
+const MIRROR_DIR = 'wb-mirror.git';
+const ALTERNATES_CONTENT = `../${MIRROR_DIR}/objects\n`;
+const DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
+const UPLOAD_TIMEOUT_MS = 15 * 60_000;
+// Skip reason for "not a WarpBuild runner" — logged at debug (it is the normal state
+// everywhere outside WarpBuild); every other reason is logged at info.
+const SKIP_NOT_WARPBUILD = 'not running on a WarpBuild runner (WARPBUILD_* env not present)';
+function mirrorPath(repositoryPath) {
+    return external_path_namespaceObject.join(repositoryPath, '.git', MIRROR_DIR);
+}
+// getMirrorCacheSkipReason gates the whole feature. Returns null when the mirror cache
+// should be attempted, otherwise a human-readable reason to log. Cheap, pure, and
+// deliberately strict: anything unexpected means "behave exactly like upstream".
+function getMirrorCacheSkipReason(settings) {
+    // Only on WarpBuild runners (these are injected into every job's env there).
+    if (!process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN'] ||
+        !process.env['WARPBUILD_HOST_URL']) {
+        return SKIP_NOT_WARPBUILD;
+    }
+    // Linux + macOS in v1.
+    if (process.platform === 'win32') {
+        return 'Windows is not supported by the mirror cache yet';
+    }
+    // The cache key is GITHUB_REPOSITORY_ID, which belongs to the WORKFLOW repo — so only
+    // cache when that is what is being checked out (`repository:` inputs fall back).
+    const repoKey = process.env['GITHUB_REPOSITORY_ID'] || '';
+    if (!repoKey) {
+        return 'GITHUB_REPOSITORY_ID is not set';
+    }
+    const checkoutRepo = `${settings.repositoryOwner}/${settings.repositoryName}`;
+    if (checkoutRepo !== process.env['GITHUB_REPOSITORY']) {
+        return `repository '${checkoutRepo}' is not the workflow repository '${process.env['GITHUB_REPOSITORY']}'`;
+    }
+    // github.com only (repo ids and mirror keys assume it).
+    const server = (settings.githubServerUrl || 'https://github.com').replace(/\/+$/, '');
+    if (server !== 'https://github.com') {
+        return `server '${server}' is not github.com`;
+    }
+    return null;
+}
+// setup is the single upstream splice point, called right after `git init` +
+// `git remote add` for a fresh repository. It never throws.
+async function setup(settings, repositoryUrl) {
+    const skipReason = getMirrorCacheSkipReason(settings);
+    if (skipReason) {
+        if (skipReason === SKIP_NOT_WARPBUILD) {
+            core_debug(`WarpBuild mirror cache skipped: ${skipReason}`);
+        }
+        else {
+            info(`WarpBuild mirror cache skipped: ${skipReason}`);
+        }
+        return;
+    }
+    startGroup('WarpBuild: setting up git mirror cache');
+    try {
+        await setupInner(settings, repositoryUrl);
+    }
+    catch (error) {
+        warning(`WarpBuild mirror cache unavailable, using standard checkout: ${error}`);
+    }
+    finally {
+        endGroup();
+    }
+}
+async function setupInner(settings, repositoryUrl) {
+    const repoKey = process.env['GITHUB_REPOSITORY_ID'];
+    const mirror = mirrorPath(settings.repositoryPath);
+    // A second checkout of the same repo in one job finds the mirror already in place.
+    if (external_fs_namespaceObject.existsSync(external_path_namespaceObject.join(mirror, 'objects'))) {
+        info('Mirror already present, reusing it');
+        await writeAlternates(settings.repositoryPath);
+        return;
+    }
+    const lookup = await lookupMirror(repoKey);
+    if (lookup.kind === 'disabled') {
+        info('Mirror cache is disabled by the backend for this organization; using standard checkout');
+        return;
+    }
+    if (lookup.kind === 'error') {
+        info('Mirror cache backend unavailable; using standard checkout');
+        return;
+    }
+    if (lookup.kind === 'hit') {
+        info(`Cache hit: restoring mirror (${lookup.info.size_bytes} bytes, created ${lookup.info.created_at})`);
+        if (await restoreMirror(lookup.info.url, mirror)) {
+            await writeAlternates(settings.repositoryPath);
+            info('Mirror restored; the fetch below downloads only the delta');
+        }
+        // Restore failure: fall through to plain checkout. The object exists, so the
+        // failure was transfer-shaped — re-downloading would just repeat the pain.
+        return;
+    }
+    // Miss. Probe upload authorization BEFORE the expensive clone so a disabled or
+    // unreachable backend never costs a wasted full mirror clone.
+    const probe = await requestUploadURL(repoKey);
+    if (probe.kind !== 'ok') {
+        info(probe.kind === 'disabled'
+            ? 'Mirror cache is disabled by the backend for this organization; using standard checkout'
+            : 'Mirror cache backend unavailable; skipping mirror creation');
+        return;
+    }
+    info('Cache miss: downloading all branches and tags from GitHub into a fresh mirror (one-time; later runs download only the delta)');
+    await createMirrorFromGitHub(settings, repositoryUrl, mirror);
+    await writeAlternates(settings.repositoryPath);
+    // Upload failures only warn: the local mirror still accelerates THIS run.
+    await uploadMirror(repoKey, mirror);
+}
+// writeAlternates points the workspace repo's object lookups at the mirror. The path is
+// RELATIVE (resolved against .git/objects), which is what makes container remaps safe.
+async function writeAlternates(repositoryPath) {
+    const infoDir = external_path_namespaceObject.join(repositoryPath, '.git', 'objects', 'info');
+    await external_fs_namespaceObject.promises.mkdir(infoDir, { recursive: true });
+    await external_fs_namespaceObject.promises.writeFile(external_path_namespaceObject.join(infoDir, 'alternates'), ALTERNATES_CONTENT);
+    info(`Wrote .git/objects/info/alternates -> ${ALTERNATES_CONTENT.trim()}`);
+}
+async function restoreMirror(url, mirror) {
+    const tmpTar = external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-mirror-restore-${process.pid}.tar`);
+    try {
+        const res = await fetch(url, {
+            signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)
+        });
+        if (!res.ok || !res.body) {
+            throw new Error(`mirror download answered ${res.status}`);
+        }
+        await (0,promises_namespaceObject.pipeline)(external_stream_namespaceObject.Readable.fromWeb(res.body), external_fs_namespaceObject.createWriteStream(tmpTar));
+        await external_fs_namespaceObject.promises.mkdir(mirror, { recursive: true });
+        await exec_exec('tar', ['-xf', tmpTar, '-C', mirror]);
+        return true;
+    }
+    catch (error) {
+        warning(`Mirror restore failed: ${error}`);
+        // Never leave a partial mirror behind an alternates file — that is corruption.
+        await external_fs_namespaceObject.promises.rm(mirror, { recursive: true, force: true });
+        return false;
+    }
+    finally {
+        await external_fs_namespaceObject.promises.rm(tmpTar, { force: true });
+    }
+}
+// createMirrorFromGitHub builds the bare mirror by downloading the repository from
+// GitHub — the one heavy operation in the whole design, paid once per repo per TTL.
+// Scope is deliberately branches + tags only (NOT `clone --mirror`, which would also
+// copy refs/pull/* — every PR head ever opened, unbounded growth and often a large
+// share of the download on PR-heavy repos). PR-triggered checkouts still work: their
+// head SHA simply arrives as a small delta in the workspace fetch.
+//
+// The full history download itself cannot be safely avoided: a shallow or partial
+// mirror behind an alternates file is an incomplete object store that git assumes is
+// complete — the exact corruption Blacksmith hit and reverted. A mirror must be
+// complete with respect to the refs it advertises.
+async function createMirrorFromGitHub(settings, repositoryUrl, mirror) {
+    // Same header shape as upstream auth, but passed via GIT_CONFIG_* env vars
+    // (git >= 2.31) so the credential never appears in any process's argv.
+    const basicCredential = Buffer.from(`x-access-token:${settings.authToken}`, 'utf8').toString('base64');
+    core_setSecret(basicCredential);
+    const env = {};
+    for (const [key, value] of Object.entries(process.env)) {
+        if (value !== undefined) {
+            env[key] = value;
+        }
+    }
+    env['GIT_CONFIG_COUNT'] = '1';
+    env['GIT_CONFIG_KEY_0'] = 'http.https://github.com/.extraheader';
+    env['GIT_CONFIG_VALUE_0'] = `AUTHORIZATION: basic ${basicCredential}`;
+    await exec_exec('git', ['init', '--bare', '--quiet', mirror], { env });
+    await exec_exec('git', ['-C', mirror, 'remote', 'add', 'origin', repositoryUrl], {
+        env
+    });
+    // gc.auto=0: never let the fetch spawn a detached gc that outlives the step.
+    await exec_exec('git', [
+        '-c',
+        'gc.auto=0',
+        '-C',
+        mirror,
+        'fetch',
+        '--prune',
+        '--progress',
+        'origin',
+        '+refs/heads/*:refs/heads/*',
+        '+refs/tags/*:refs/tags/*'
+    ], { env });
+}
+async function uploadMirror(repoKey, mirror) {
+    const tmpTar = external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-mirror-upload-${process.pid}.tar`);
+    try {
+        // Plain tar, no gzip (pack data is already zlib-compressed). Excludes are cosmetic
+        // trims; the tar stays a valid bare repo either way.
+        await exec_exec('tar', [
+            '-cf',
+            tmpTar,
+            '-C',
+            mirror,
+            '--exclude',
+            './hooks',
+            '--exclude',
+            './description',
+            '--exclude',
+            './FETCH_HEAD',
+            '.'
+        ]);
+        const size = (await external_fs_namespaceObject.promises.stat(tmpTar)).size;
+        // Fresh URL after the potentially long clone+tar (presigned PUTs expire). If the
+        // backend flipped to disabled meanwhile, this answers 403 and the upload is skipped.
+        const fresh = await requestUploadURL(repoKey);
+        if (fresh.kind !== 'ok') {
+            throw new Error(fresh.kind === 'disabled'
+                ? 'mirror cache was disabled by the backend'
+                : 'upload-url unavailable');
+        }
+        const init = {
+            method: 'PUT',
+            headers: {
+                'content-length': String(size),
+                'content-type': 'application/x-tar'
+            },
+            body: external_stream_namespaceObject.Readable.toWeb(external_fs_namespaceObject.createReadStream(tmpTar)),
+            duplex: 'half',
+            signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS)
+        };
+        const res = await fetch(fresh.url, init);
+        if (!res.ok) {
+            throw new Error(`mirror upload answered ${res.status}`);
+        }
+        info(`Mirror uploaded (${size} bytes); future runs will restore it`);
+    }
+    catch (error) {
+        warning(`Mirror upload skipped: ${error}`);
+    }
+    finally {
+        await external_fs_namespaceObject.promises.rm(tmpTar, { force: true });
+    }
+}
+
 ;// CONCATENATED MODULE: ./src/git-source-provider.ts
+
 
 
 
@@ -41774,6 +42116,9 @@ async function getSource(settings) {
             await git.init(objectFormat);
             await git.remoteAdd('origin', repositoryUrl);
             endGroup();
+            // WarpBuild git-mirror cache: restore (or hydrate) a bare mirror inside .git and
+            // point alternates at it so the fetch below downloads only the delta from GitHub.
+            await setup(settings, repositoryUrl);
         }
         // Disable automatic garbage collection
         startGroup('Disabling automatic garbage collection');
