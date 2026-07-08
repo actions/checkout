@@ -253,9 +253,11 @@ async function uploadSnapshot(settings: IGitSourceSettings): Promise<void> {
     const upload = await api.requestUploadURL(repoKey, sha)
     if (upload.kind !== 'ok') {
       core.info(
-        upload.kind === 'disabled'
-          ? 'Snapshot cache is disabled by the backend; not uploading'
-          : 'Snapshot cache backend unavailable; not uploading'
+        upload.kind === 'locked'
+          ? 'Another job is already uploading this snapshot; skipping'
+          : upload.kind === 'disabled'
+            ? 'Snapshot cache is disabled by the backend; not uploading'
+            : 'Snapshot cache backend unavailable; not uploading'
       )
       return
     }

@@ -41699,7 +41699,8 @@ const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.ur
 
 // Client for backend-core's /api/v1/git-mirrors endpoints, authed by the runner
 // verification token. Contract: 200 = presigned URL; 404 = miss (upload after the
-// stock fetch); 403 = unservable org (skip cache + upload); else = fall back.
+// stock fetch); 403 = unservable org (skip cache + upload); 409 = another job is
+// uploading this snapshot (skip upload); else = fall back.
 const API_TIMEOUT_MS = 10_000;
 function backend_api_baseUrl() {
     return (process.env['WARPBUILD_HOST_URL'] || '').replace(/\/+$/, '');
@@ -41752,6 +41753,10 @@ async function requestUploadURL(repoKey, sha) {
         if (res.status === 403) {
             core_debug(`[wb-cache] upload-url answered 403 (disabled)`);
             return { kind: 'disabled' };
+        }
+        if (res.status === 409) {
+            core_debug(`[wb-cache] upload-url answered 409 (locked)`);
+            return { kind: 'locked' };
         }
         core_debug(`[wb-cache] upload-url answered ${res.status}`);
         return { kind: 'error' };
@@ -41974,9 +41979,11 @@ async function uploadSnapshot(settings) {
         const size = (await external_fs_namespaceObject.promises.stat(tmpTar)).size;
         const upload = await requestUploadURL(repoKey, sha);
         if (upload.kind !== 'ok') {
-            info(upload.kind === 'disabled'
-                ? 'Snapshot cache is disabled by the backend; not uploading'
-                : 'Snapshot cache backend unavailable; not uploading');
+            info(upload.kind === 'locked'
+                ? 'Another job is already uploading this snapshot; skipping'
+                : upload.kind === 'disabled'
+                    ? 'Snapshot cache is disabled by the backend; not uploading'
+                    : 'Snapshot cache backend unavailable; not uploading');
             return;
         }
         const init = {

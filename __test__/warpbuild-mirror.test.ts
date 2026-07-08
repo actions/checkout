@@ -172,6 +172,11 @@ describe('warpbuild snapshot cache', () => {
       expect((await lookupSnapshot('123', SHA)).kind).toBe('miss')
     })
 
+    it('maps 409 upload responses to locked (another job is uploading)', async () => {
+      stubFetch(409, {sub_code: 'FVE_GITMIRROR_LOCKED'})
+      expect((await requestUploadURL('123', SHA)).kind).toBe('locked')
+    })
+
     it('maps 403 to disabled (backend kill switch)', async () => {
       stubFetch(403, {sub_code: 'PDE_GITMIRROR_DISABLED'})
       expect((await lookupSnapshot('123', SHA)).kind).toBe('disabled')
