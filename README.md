@@ -1,12 +1,14 @@
 # WarpBuild Checkout
 
 This is [WarpBuild's](https://warpbuild.com) fork of `actions/checkout`, a drop-in
-replacement that adds a **git mirror cache**: on WarpBuild runners, a tar of the repo's
-bare mirror is restored from S3 into `.git/wb-mirror.git` and wired up via git
-alternates, so the fetch from GitHub downloads only the delta instead of the whole
-repository. On a cache miss, the run hydrates the mirror once (full clone + upload);
-mirrors expire on a server-configured TTL and re-hydrate.
+replacement that adds a **checkout snapshot cache**: on WarpBuild runners, the `.git`
+objects a checkout produces are tarred and stored in S3, keyed by the exact commit SHA.
+A later job checking out the same commit restores that snapshot and skips the fetch from
+GitHub entirely — cutting request load (the main source of GitHub rate-limiting on
+matrix builds and busy repos). SHA keys are immutable, so there is no TTL or refresh.
 
+- Only the default checkout shape is cached (`fetch-depth: 1`, no tags/filter/sparse/LFS);
+  everything else runs exactly like upstream.
 - Zero new inputs — behavior is identical to upstream everywhere except WarpBuild runners.
 - Fail-open — any cache error degrades to stock `actions/checkout` behavior.
 - All fork code lives in `src/warpbuild/`

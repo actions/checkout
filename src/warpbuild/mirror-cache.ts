@@ -171,6 +171,31 @@ export async function contribute(settings: IGitSourceSettings): Promise<void> {
   }
 }
 
+// Refuse any tar member outside objects/ or shallow, absolute, or with a `..`
+// component — the tar is remote and extracted into .git, so a crafted member could
+// escape (e.g. hooks/, ../) and run code during checkout.
+export async function assertSafeTarMembers(tar: string): Promise<void> {
+  let listing = ''
+  await exec.exec('tar', ['-tf', tar], {
+    silent: true,
+    listeners: {stdout: (d: Buffer) => (listing += d.toString())}
+  })
+  for (const raw of listing.split('\n')) {
+    const member = raw.trim()
+    if (!member) {
+      continue
+    }
+    const top = member.replace(/^\.\//, '').split('/')[0]
+    if (
+      member.startsWith('/') ||
+      member.split('/').includes('..') ||
+      (top !== 'objects' && top !== 'shallow')
+    ) {
+      throw new Error(`unexpected snapshot tar member: ${member}`)
+    }
+  }
+}
+
 async function restoreSnapshot(
   settings: IGitSourceSettings,
   url: string,
@@ -189,6 +214,7 @@ async function restoreSnapshot(
       Readable.fromWeb(res.body as import('stream/web').ReadableStream),
       fs.createWriteStream(tmpTar)
     )
+    await assertSafeTarMembers(tmpTar)
     await exec.exec('tar', ['-xf', tmpTar, '-C', gitDir])
 
     const check = await exec.exec(

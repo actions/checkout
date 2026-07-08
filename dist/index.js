@@ -41915,6 +41915,28 @@ async function contribute(settings) {
         endGroup();
     }
 }
+// Refuse any tar member outside objects/ or shallow, absolute, or with a `..`
+// component — the tar is remote and extracted into .git, so a crafted member could
+// escape (e.g. hooks/, ../) and run code during checkout.
+async function assertSafeTarMembers(tar) {
+    let listing = '';
+    await exec_exec('tar', ['-tf', tar], {
+        silent: true,
+        listeners: { stdout: (d) => (listing += d.toString()) }
+    });
+    for (const raw of listing.split('\n')) {
+        const member = raw.trim();
+        if (!member) {
+            continue;
+        }
+        const top = member.replace(/^\.\//, '').split('/')[0];
+        if (member.startsWith('/') ||
+            member.split('/').includes('..') ||
+            (top !== 'objects' && top !== 'shallow')) {
+            throw new Error(`unexpected snapshot tar member: ${member}`);
+        }
+    }
+}
 async function restoreSnapshot(settings, url, sha) {
     const gitDir = external_path_namespaceObject.join(settings.repositoryPath, '.git');
     const tmpTar = external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-snapshot-${process.pid}.tar`);
@@ -41926,6 +41948,7 @@ async function restoreSnapshot(settings, url, sha) {
             throw new Error(`snapshot download answered ${res.status}`);
         }
         await (0,promises_namespaceObject.pipeline)(external_stream_namespaceObject.Readable.fromWeb(res.body), external_fs_namespaceObject.createWriteStream(tmpTar));
+        await assertSafeTarMembers(tmpTar);
         await exec_exec('tar', ['-xf', tmpTar, '-C', gitDir]);
         const check = await exec_exec('git', ['-C', settings.repositoryPath, 'cat-file', '-e', `${sha}^{commit}`], { ignoreReturnCode: true });
         if (check !== 0) {
