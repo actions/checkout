@@ -41,6 +41,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   core.endGroup()
 
   let authHelper: gitAuthHelper.IGitAuthHelper | null = null
+  let warpbuildRestored = false
   try {
     if (git) {
       authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -132,9 +133,8 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
 
-      // WarpBuild git-mirror cache: restore (or hydrate) a bare mirror inside .git and
-      // point alternates at it so the fetch below downloads only the delta from GitHub.
-      await warpbuildMirror.setup(settings, repositoryUrl)
+      // WarpBuild snapshot cache: hit = objects restored, fetch below is skipped
+      warpbuildRestored = await warpbuildMirror.setup(settings)
     }
 
     // Disable automatic garbage collection
@@ -190,7 +190,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       fetchOptions.filter = 'blob:none'
     }
 
-    if (settings.fetchDepth <= 0) {
+    if (warpbuildRestored) {
+      core.info('Skipping fetch: checkout was restored from the snapshot cache')
+    } else if (settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
@@ -275,6 +277,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     core.startGroup('Checking out the ref')
     await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
     core.endGroup()
+
+    // WarpBuild snapshot cache: upload the fetch result on a miss
+    await warpbuildMirror.contribute(settings)
 
     // Submodules
     if (settings.submodules) {

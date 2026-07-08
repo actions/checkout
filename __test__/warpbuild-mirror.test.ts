@@ -6,17 +6,12 @@ import {
   afterEach,
   afterAll
 } from '@jest/globals'
-import * as fs from 'fs'
-import * as os from 'os'
-import * as path from 'path'
 import {
-  ALTERNATES_CONTENT,
   SKIP_NOT_WARPBUILD,
-  mirrorPath,
-  getMirrorCacheSkipReason,
-  writeAlternates
+  computeDestinationRef,
+  getMirrorCacheSkipReason
 } from '../src/warpbuild/mirror-cache.js'
-import {lookupMirror, requestUploadURL} from '../src/warpbuild/backend-api.js'
+import {lookupSnapshot, requestUploadURL} from '../src/warpbuild/backend-api.js'
 import {IGitSourceSettings} from '../src/git-source-settings.js'
 
 const WB_ENV = [
@@ -30,16 +25,23 @@ for (const key of WB_ENV) {
   savedEnv[key] = process.env[key]
 }
 
+const SHA = 'cd5255d20e23e050238affc045ba9beee35eaaf7'
+
 function settingsFor(
-  owner: string,
-  repo: string,
-  serverUrl?: string
+  overrides: Partial<IGitSourceSettings> = {}
 ): IGitSourceSettings {
   return {
-    repositoryOwner: owner,
-    repositoryName: repo,
+    repositoryOwner: 'octocat',
+    repositoryName: 'hello-world',
     repositoryPath: '/tmp/does-not-matter',
-    githubServerUrl: serverUrl
+    ref: 'refs/heads/main',
+    commit: SHA,
+    fetchDepth: 1,
+    fetchTags: false,
+    filter: undefined,
+    sparseCheckout: undefined,
+    lfs: false,
+    ...overrides
   } as unknown as IGitSourceSettings
 }
 
@@ -50,7 +52,7 @@ function setWarpBuildEnv(): void {
   process.env['GITHUB_REPOSITORY'] = 'octocat/hello-world'
 }
 
-describe('warpbuild mirror cache', () => {
+describe('warpbuild snapshot cache', () => {
   beforeEach(() => {
     setWarpBuildEnv()
   })
@@ -68,130 +70,130 @@ describe('warpbuild mirror cache', () => {
   describe('getMirrorCacheSkipReason', () => {
     const winOnly = process.platform === 'win32' ? it.skip : it
 
-    winOnly('returns null for the workflow repo on a WarpBuild runner', () => {
-      expect(
-        getMirrorCacheSkipReason(settingsFor('octocat', 'hello-world'))
-      ).toBeNull()
+    winOnly('returns null for the default checkout shape', () => {
+      expect(getMirrorCacheSkipReason(settingsFor())).toBeNull()
     })
 
     it('reports a non-WarpBuild runner', () => {
       delete process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN']
-      expect(
-        getMirrorCacheSkipReason(settingsFor('octocat', 'hello-world'))
-      ).toBe(SKIP_NOT_WARPBUILD)
+      expect(getMirrorCacheSkipReason(settingsFor())).toBe(SKIP_NOT_WARPBUILD)
     })
 
     it('reports repository: inputs that are not the workflow repo', () => {
       expect(
-        getMirrorCacheSkipReason(settingsFor('octocat', 'other-repo'))
+        getMirrorCacheSkipReason(settingsFor({repositoryName: 'other-repo'}))
       ).toBe(
         "repository 'octocat/other-repo' is not the workflow repository 'octocat/hello-world'"
       )
     })
 
-    it('reports a missing GITHUB_REPOSITORY_ID', () => {
-      delete process.env['GITHUB_REPOSITORY_ID']
-      expect(
-        getMirrorCacheSkipReason(settingsFor('octocat', 'hello-world'))
-      ).toBe('GITHUB_REPOSITORY_ID is not set')
+    it('requires an exact commit sha', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({commit: ''}))).toBe(
+        'no exact commit sha to key on'
+      )
+      expect(getMirrorCacheSkipReason(settingsFor({commit: 'main'}))).toBe(
+        'no exact commit sha to key on'
+      )
     })
 
-    winOnly('accepts explicit github.com server urls', () => {
-      expect(
-        getMirrorCacheSkipReason(
-          settingsFor('octocat', 'hello-world', 'https://github.com')
-        )
-      ).toBeNull()
+    it('only serves fetch-depth 1', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 0}))).toBe(
+        'fetch-depth is 0, cache only serves fetch-depth 1'
+      )
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 50}))).toBe(
+        'fetch-depth is 50, cache only serves fetch-depth 1'
+      )
     })
 
-    it('reports GHES server urls', () => {
+    it('skips fetch-tags, filters, sparse and lfs checkouts', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({fetchTags: true}))).toBe(
+        'fetch-tags is enabled'
+      )
+      expect(getMirrorCacheSkipReason(settingsFor({filter: 'blob:none'}))).toBe(
+        'a fetch filter is configured'
+      )
       expect(
-        getMirrorCacheSkipReason(
-          settingsFor('octocat', 'hello-world', 'https://ghes.example.com')
-        )
-      ).toBe("server 'https://ghes.example.com' is not github.com")
+        getMirrorCacheSkipReason(settingsFor({sparseCheckout: ['src']}))
+      ).toBe('sparse checkout is configured')
+      expect(getMirrorCacheSkipReason(settingsFor({lfs: true}))).toBe(
+        'lfs is enabled (lfs objects are not in the snapshot)'
+      )
+    })
+
+    winOnly('accepts sha-only checkouts (empty ref)', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({ref: ''}))).toBeNull()
+    })
+
+    it('skips unqualified refs', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({ref: 'main'}))).toBe(
+        "ref 'main' has no cacheable destination ref"
+      )
+    })
+  })
+
+  describe('computeDestinationRef', () => {
+    it('maps the refs the fetch would have created', () => {
+      expect(computeDestinationRef('refs/heads/main')).toBe(
+        'refs/remotes/origin/main'
+      )
+      expect(computeDestinationRef('refs/pull/42/merge')).toBe(
+        'refs/remotes/pull/42/merge'
+      )
+      expect(computeDestinationRef('refs/tags/v1.2.3')).toBe('refs/tags/v1.2.3')
+      expect(computeDestinationRef('')).toBe('')
+      expect(computeDestinationRef('main')).toBeNull()
     })
   })
 
   describe('backend api http contract', () => {
     const realFetch = globalThis.fetch
+    let lastUrl = ''
 
     afterEach(() => {
       globalThis.fetch = realFetch
     })
 
     function stubFetch(status: number, body: unknown): void {
-      globalThis.fetch = (async () =>
-        new Response(JSON.stringify(body), {status})) as typeof fetch
+      globalThis.fetch = (async (input: unknown) => {
+        lastUrl = String(input)
+        return new Response(JSON.stringify(body), {status})
+      }) as typeof fetch
     }
 
-    it('maps 200 to hit', async () => {
+    it('maps 200 to hit and keys by sha', async () => {
       stubFetch(200, {url: 'https://s3/x', size_bytes: 42, created_at: 'now'})
-      const result = await lookupMirror('123')
+      const result = await lookupSnapshot('123', SHA)
       expect(result.kind).toBe('hit')
-      if (result.kind === 'hit') {
-        expect(result.info.url).toBe('https://s3/x')
-      }
+      expect(lastUrl).toContain(`sha=${SHA}`)
     })
 
-    it('maps 404 to miss (hydrate)', async () => {
+    it('maps 404 to miss (upload after the stock fetch)', async () => {
       stubFetch(404, {sub_code: 'NFE_GITMIRROR'})
-      expect((await lookupMirror('123')).kind).toBe('miss')
+      expect((await lookupSnapshot('123', SHA)).kind).toBe('miss')
     })
 
-    it('maps 403 to disabled (backend kill switch — no hydration, no upload)', async () => {
+    it('maps 403 to disabled (backend kill switch)', async () => {
       stubFetch(403, {sub_code: 'PDE_GITMIRROR_DISABLED'})
-      expect((await lookupMirror('123')).kind).toBe('disabled')
-      expect((await requestUploadURL('123')).kind).toBe('disabled')
+      expect((await lookupSnapshot('123', SHA)).kind).toBe('disabled')
+      expect((await requestUploadURL('123', SHA)).kind).toBe('disabled')
     })
 
-    it('maps other statuses to error (fall back without hydrating)', async () => {
+    it('maps other statuses and network failures to error', async () => {
       stubFetch(500, {})
-      expect((await lookupMirror('123')).kind).toBe('error')
-      expect((await requestUploadURL('123')).kind).toBe('error')
-    })
-
-    it('maps network failures to error', async () => {
+      expect((await lookupSnapshot('123', SHA)).kind).toBe('error')
       globalThis.fetch = (async () => {
         throw new Error('boom')
       }) as typeof fetch
-      expect((await lookupMirror('123')).kind).toBe('error')
-      expect((await requestUploadURL('123')).kind).toBe('error')
+      expect((await lookupSnapshot('123', SHA)).kind).toBe('error')
+      expect((await requestUploadURL('123', SHA)).kind).toBe('error')
     })
 
     it('maps 200 upload responses to ok', async () => {
       stubFetch(200, {url: 'https://s3/put'})
-      const result = await requestUploadURL('123')
-      expect(result).toEqual({kind: 'ok', url: 'https://s3/put'})
-    })
-  })
-
-  describe('mirror layout', () => {
-    it('keeps the mirror inside .git', () => {
-      expect(mirrorPath('/work/repo')).toBe(
-        path.join('/work/repo', '.git', 'wb-mirror.git')
-      )
-    })
-
-    it('uses a relative alternates path that never leaves .git', () => {
-      expect(ALTERNATES_CONTENT).toBe('../wb-mirror.git/objects\n')
-      expect(path.isAbsolute(ALTERNATES_CONTENT.trim())).toBe(false)
-    })
-
-    it('writeAlternates writes the relative path into objects/info', async () => {
-      const workspace = await fs.promises.mkdtemp(
-        path.join(os.tmpdir(), 'wb-mirror-test-')
-      )
-      try {
-        await writeAlternates(workspace)
-        const content = await fs.promises.readFile(
-          path.join(workspace, '.git', 'objects', 'info', 'alternates'),
-          'utf8'
-        )
-        expect(content).toBe(ALTERNATES_CONTENT)
-      } finally {
-        await fs.promises.rm(workspace, {recursive: true, force: true})
-      }
+      expect(await requestUploadURL('123', SHA)).toEqual({
+        kind: 'ok',
+        url: 'https://s3/put'
+      })
     })
   })
 })
