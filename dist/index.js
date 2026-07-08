@@ -41777,6 +41777,7 @@ async function requestUploadURL(repoKey, sha) {
 
 
 
+
 // WarpBuild checkout snapshot cache: SHA-keyed tars of what the stock shallow fetch
 // produces. Hit = restore + skip the fetch; miss = upload after checkout. Keys are
 // immutable (no expiry). Fail-open: any error degrades to stock behavior.
@@ -41794,9 +41795,6 @@ function getMirrorCacheSkipReason(settings) {
     if (!process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN'] ||
         !process.env['WARPBUILD_HOST_URL']) {
         return SKIP_NOT_WARPBUILD;
-    }
-    if (process.platform === 'win32') {
-        return 'Windows is not supported by the snapshot cache yet';
     }
     const repoKey = process.env['GITHUB_REPOSITORY_ID'] || '';
     if (!repoKey) {
@@ -41878,6 +41876,11 @@ async function setup(settings) {
 async function setupInner(settings) {
     const repoKey = process.env['GITHUB_REPOSITORY_ID'];
     const sha = settings.commit;
+    // The restore/upload paths shell out to `tar`; without it, fall back cleanly.
+    if (!(await which('tar', false))) {
+        info('tar not found on PATH; using standard checkout');
+        return false;
+    }
     const lookup = await lookupSnapshot(repoKey, sha);
     if (lookup.kind === 'disabled') {
         info('Snapshot cache is disabled by the backend for this organization');
