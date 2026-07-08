@@ -6,8 +6,13 @@ import {
   afterEach,
   afterAll
 } from '@jest/globals'
+import * as exec from '@actions/exec'
+import * as fs from 'fs'
+import * as os from 'os'
+import * as path from 'path'
 import {
   SKIP_NOT_WARPBUILD,
+  assertSafeTarMembers,
   computeDestinationRef,
   getMirrorCacheSkipReason
 } from '../src/warpbuild/mirror-cache.js'
@@ -131,6 +136,69 @@ describe('warpbuild snapshot cache', () => {
     })
   })
 
+  describe('assertSafeTarMembers', () => {
+    async function makeTar(
+      dir: string,
+      members: string[],
+      writeFiles = true
+    ): Promise<string> {
+      if (writeFiles) {
+        for (const m of members) {
+          const abs = path.join(dir, m)
+          await fs.promises.mkdir(path.dirname(abs), {recursive: true})
+          await fs.promises.writeFile(abs, 'x')
+        }
+      }
+      const tar = path.join(dir, 'out.tar')
+      await exec.exec('tar', ['-cf', tar, '-C', dir, ...members])
+      return tar
+    }
+
+    it('accepts objects/ and shallow members', async () => {
+      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wb-tar-'))
+      try {
+        const tar = await makeTar(dir, ['objects/pack/p.pack', 'shallow'])
+        await expect(assertSafeTarMembers(tar)).resolves.toBeUndefined()
+      } finally {
+        await fs.promises.rm(dir, {recursive: true, force: true})
+      }
+    })
+
+    it('rejects members outside objects/ and shallow (e.g. hooks)', async () => {
+      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wb-tar-'))
+      try {
+        const tar = await makeTar(dir, ['objects/x', 'hooks/pre-commit'])
+        await expect(assertSafeTarMembers(tar)).rejects.toThrow(
+          /unexpected snapshot tar member/
+        )
+      } finally {
+        await fs.promises.rm(dir, {recursive: true, force: true})
+      }
+    })
+
+    it('rejects path traversal members', async () => {
+      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wb-tar-'))
+      try {
+        await fs.promises.mkdir(path.join(dir, 'sub'))
+        const tar = path.join(dir, 'evil.tar')
+        // -P preserves the ../ member instead of stripping it.
+        await fs.promises.writeFile(path.join(dir, 'evil'), 'x')
+        await exec.exec('tar', [
+          '-cPf',
+          tar,
+          '-C',
+          path.join(dir, 'sub'),
+          '../evil'
+        ])
+        await expect(assertSafeTarMembers(tar)).rejects.toThrow(
+          /unexpected snapshot tar member/
+        )
+      } finally {
+        await fs.promises.rm(dir, {recursive: true, force: true})
+      }
+    })
+  })
+
   describe('computeDestinationRef', () => {
     it('maps the refs the fetch would have created', () => {
       expect(computeDestinationRef('refs/heads/main')).toBe(
@@ -170,6 +238,11 @@ describe('warpbuild snapshot cache', () => {
     it('maps 404 to miss (upload after the stock fetch)', async () => {
       stubFetch(404, {sub_code: 'NFE_GITMIRROR'})
       expect((await lookupSnapshot('123', SHA)).kind).toBe('miss')
+    })
+
+    it('maps 409 upload responses to locked (another job is uploading)', async () => {
+      stubFetch(409, {sub_code: 'FVE_GITMIRROR_LOCKED'})
+      expect((await requestUploadURL('123', SHA)).kind).toBe('locked')
     })
 
     it('maps 403 to disabled (backend kill switch)', async () => {

@@ -41699,7 +41699,8 @@ const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.ur
 
 // Client for backend-core's /api/v1/git-mirrors endpoints, authed by the runner
 // verification token. Contract: 200 = presigned URL; 404 = miss (upload after the
-// stock fetch); 403 = unservable org (skip cache + upload); else = fall back.
+// stock fetch); 403 = unservable org (skip cache + upload); 409 = another job is
+// uploading this snapshot (skip upload); else = fall back.
 const API_TIMEOUT_MS = 10_000;
 function backend_api_baseUrl() {
     return (process.env['WARPBUILD_HOST_URL'] || '').replace(/\/+$/, '');
@@ -41752,6 +41753,10 @@ async function requestUploadURL(repoKey, sha) {
         if (res.status === 403) {
             core_debug(`[wb-cache] upload-url answered 403 (disabled)`);
             return { kind: 'disabled' };
+        }
+        if (res.status === 409) {
+            core_debug(`[wb-cache] upload-url answered 409 (locked)`);
+            return { kind: 'locked' };
         }
         core_debug(`[wb-cache] upload-url answered ${res.status}`);
         return { kind: 'error' };
@@ -41910,6 +41915,28 @@ async function contribute(settings) {
         endGroup();
     }
 }
+// Refuse any tar member outside objects/ or shallow, absolute, or with a `..`
+// component — the tar is remote and extracted into .git, so a crafted member could
+// escape (e.g. hooks/, ../) and run code during checkout.
+async function assertSafeTarMembers(tar) {
+    let listing = '';
+    await exec_exec('tar', ['-tf', tar], {
+        silent: true,
+        listeners: { stdout: (d) => (listing += d.toString()) }
+    });
+    for (const raw of listing.split('\n')) {
+        const member = raw.trim();
+        if (!member) {
+            continue;
+        }
+        const top = member.replace(/^\.\//, '').split('/')[0];
+        if (member.startsWith('/') ||
+            member.split('/').includes('..') ||
+            (top !== 'objects' && top !== 'shallow')) {
+            throw new Error(`unexpected snapshot tar member: ${member}`);
+        }
+    }
+}
 async function restoreSnapshot(settings, url, sha) {
     const gitDir = external_path_namespaceObject.join(settings.repositoryPath, '.git');
     const tmpTar = external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-snapshot-${process.pid}.tar`);
@@ -41921,6 +41948,7 @@ async function restoreSnapshot(settings, url, sha) {
             throw new Error(`snapshot download answered ${res.status}`);
         }
         await (0,promises_namespaceObject.pipeline)(external_stream_namespaceObject.Readable.fromWeb(res.body), external_fs_namespaceObject.createWriteStream(tmpTar));
+        await assertSafeTarMembers(tmpTar);
         await exec_exec('tar', ['-xf', tmpTar, '-C', gitDir]);
         const check = await exec_exec('git', ['-C', settings.repositoryPath, 'cat-file', '-e', `${sha}^{commit}`], { ignoreReturnCode: true });
         if (check !== 0) {
@@ -41974,9 +42002,11 @@ async function uploadSnapshot(settings) {
         const size = (await external_fs_namespaceObject.promises.stat(tmpTar)).size;
         const upload = await requestUploadURL(repoKey, sha);
         if (upload.kind !== 'ok') {
-            info(upload.kind === 'disabled'
-                ? 'Snapshot cache is disabled by the backend; not uploading'
-                : 'Snapshot cache backend unavailable; not uploading');
+            info(upload.kind === 'locked'
+                ? 'Another job is already uploading this snapshot; skipping'
+                : upload.kind === 'disabled'
+                    ? 'Snapshot cache is disabled by the backend; not uploading'
+                    : 'Snapshot cache backend unavailable; not uploading');
             return;
         }
         const init = {

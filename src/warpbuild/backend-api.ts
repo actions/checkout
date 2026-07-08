@@ -3,7 +3,8 @@ import * as core from '@actions/core'
 
 // Client for backend-core's /api/v1/git-mirrors endpoints, authed by the runner
 // verification token. Contract: 200 = presigned URL; 404 = miss (upload after the
-// stock fetch); 403 = unservable org (skip cache + upload); else = fall back.
+// stock fetch); 403 = unservable org (skip cache + upload); 409 = another job is
+// uploading this snapshot (skip upload); else = fall back.
 
 const API_TIMEOUT_MS = 10_000
 
@@ -22,6 +23,7 @@ export type SnapshotLookup =
 export type UploadURLResult =
   | {kind: 'ok'; url: string}
   | {kind: 'disabled'}
+  | {kind: 'locked'}
   | {kind: 'error'}
 
 function baseUrl(): string {
@@ -88,6 +90,10 @@ export async function requestUploadURL(
     if (res.status === 403) {
       core.debug(`[wb-cache] upload-url answered 403 (disabled)`)
       return {kind: 'disabled'}
+    }
+    if (res.status === 409) {
+      core.debug(`[wb-cache] upload-url answered 409 (locked)`)
+      return {kind: 'locked'}
     }
     core.debug(`[wb-cache] upload-url answered ${res.status}`)
     return {kind: 'error'}
