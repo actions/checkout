@@ -1,6 +1,7 @@
 /* eslint-disable i18n-text/no-en, import/no-unresolved -- upstream conventions; no TS import resolver configured */
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
+import * as io from '@actions/io'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
@@ -37,9 +38,6 @@ export function getMirrorCacheSkipReason(
     !process.env['WARPBUILD_HOST_URL']
   ) {
     return SKIP_NOT_WARPBUILD
-  }
-  if (process.platform === 'win32') {
-    return 'Windows is not supported by the snapshot cache yet'
   }
   const repoKey = process.env['GITHUB_REPOSITORY_ID'] || ''
   if (!repoKey) {
@@ -126,6 +124,12 @@ export async function setup(settings: IGitSourceSettings): Promise<boolean> {
 async function setupInner(settings: IGitSourceSettings): Promise<boolean> {
   const repoKey = process.env['GITHUB_REPOSITORY_ID'] as string
   const sha = settings.commit
+
+  // The restore/upload paths shell out to `tar`; without it, fall back cleanly.
+  if (!(await io.which('tar', false))) {
+    core.info('tar not found on PATH; using standard checkout')
+    return false
+  }
 
   const lookup = await api.lookupSnapshot(repoKey, sha)
 
