@@ -2,7 +2,7 @@
 
 This is [WarpBuild's](https://warpbuild.com) fork of `actions/checkout`, a drop-in
 replacement that adds a **checkout snapshot cache**: on WarpBuild runners, the `.git`
-objects a checkout produces are tarred and stored in S3, keyed by the exact commit SHA.
+objects a checkout produces are tarred and cached remotely, keyed by the exact commit SHA.
 A later job checking out the same commit restores that snapshot and skips the fetch from
 GitHub entirely — cutting request load (the main source of GitHub rate-limiting on
 matrix builds and busy repos). SHA keys are immutable, so there is no TTL or refresh.

@@ -41697,10 +41697,9 @@ const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.ur
 ;// CONCATENATED MODULE: ./src/warpbuild/backend-api.ts
 /* eslint-disable i18n-text/no-en -- upstream convention */
 
-// Client for backend-core's /api/v1/git-mirrors endpoints, authed by the runner
-// verification token. Contract: 200 = presigned URL; 404 = miss (upload after the
-// stock fetch); 403 = unservable org (skip cache + upload); 409 = another job is
-// uploading this snapshot (skip upload); else = fall back.
+// Client for backend-core's git-mirror download-url endpoint, authed by the runner
+// verification token. Contract: 200 = presigned URL (hit); 404 = miss; 403 = unservable
+// org; else = fall back. The upload half runs in the warpbuild-agent after the job.
 const API_TIMEOUT_MS = 10_000;
 function backend_api_baseUrl() {
     return (process.env['WARPBUILD_HOST_URL'] || '').replace(/\/+$/, '');
@@ -41732,40 +41731,6 @@ async function lookupSnapshot(repoKey, sha) {
         return { kind: 'error' };
     }
 }
-async function requestUploadURL(repoKey, sha) {
-    try {
-        const res = await fetch(`${backend_api_baseUrl()}/api/v1/git-mirrors/upload-url`, {
-            method: 'POST',
-            headers: {
-                authorization: authHeader(),
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify({ repo_key: repoKey, sha }),
-            signal: AbortSignal.timeout(API_TIMEOUT_MS)
-        });
-        if (res.status === 200) {
-            const body = (await res.json());
-            if (body.url) {
-                return { kind: 'ok', url: body.url };
-            }
-            return { kind: 'error' };
-        }
-        if (res.status === 403) {
-            core_debug(`[wb-cache] upload-url answered 403 (disabled)`);
-            return { kind: 'disabled' };
-        }
-        if (res.status === 409) {
-            core_debug(`[wb-cache] upload-url answered 409 (locked)`);
-            return { kind: 'locked' };
-        }
-        core_debug(`[wb-cache] upload-url answered ${res.status}`);
-        return { kind: 'error' };
-    }
-    catch (error) {
-        core_debug(`[wb-cache] upload-url failed: ${error}`);
-        return { kind: 'error' };
-    }
-}
 
 ;// CONCATENATED MODULE: ./src/warpbuild/mirror-cache.ts
 /* eslint-disable i18n-text/no-en, import/no-unresolved -- upstream conventions; no TS import resolver configured */
@@ -41782,9 +41747,6 @@ async function requestUploadURL(repoKey, sha) {
 // produces. Hit = restore + skip the fetch; miss = upload after checkout. Keys are
 // immutable (no expiry). Fail-open: any error degrades to stock behavior.
 const DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
-const UPLOAD_TIMEOUT_MS = 15 * 60_000;
-// "hit <sha>" | "uploaded <sha>", for e2e assertions.
-const CACHE_STATE_FILE = 'wb-cache-state';
 // Logged at debug (normal state outside WarpBuild); other reasons log at info.
 const SKIP_NOT_WARPBUILD = 'not running on a WarpBuild runner (WARPBUILD_* env not present)';
 const SHA_PATTERN = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
@@ -41849,16 +41811,17 @@ function computeDestinationRef(ref) {
     return null;
 }
 // Runs right after `git init`; true = restored (caller skips the fetch). Never throws.
+// Sets the `cache-hit` action output (true only on a restore).
 async function setup(settings) {
+    const restored = await setupImpl(settings);
+    setOutput('cache-hit', restored ? 'true' : 'false');
+    return restored;
+}
+async function setupImpl(settings) {
     decision = 'off';
     const skipReason = getMirrorCacheSkipReason(settings);
     if (skipReason) {
-        if (skipReason === SKIP_NOT_WARPBUILD) {
-            core_debug(`WarpBuild snapshot cache skipped: ${skipReason}`);
-        }
-        else {
-            info(`WarpBuild snapshot cache skipped: ${skipReason}`);
-        }
+        info(`WarpBuild snapshot cache skipped: ${skipReason}`);
         return false;
     }
     startGroup('WarpBuild: checkout snapshot cache');
@@ -41902,20 +41865,17 @@ async function setupInner(settings) {
     info('Snapshot restored; skipping the GitHub fetch entirely');
     return true;
 }
-// Runs after checkout; uploads the fetch result on a miss. Failures only warn.
+// Runs after checkout; on a miss records a manifest so the WarpBuild agent uploads the
+// snapshot after the job exits (keeping tar+upload off the customer's billed time).
 async function contribute(settings) {
     if (decision !== 'miss') {
         return;
     }
-    startGroup('WarpBuild: uploading checkout snapshot');
     try {
-        await uploadSnapshot(settings);
+        await writeSnapshotManifest(settings);
     }
     catch (error) {
-        warning(`Snapshot upload skipped: ${error}`);
-    }
-    finally {
-        endGroup();
+        warning(`Snapshot manifest not written: ${error}`);
     }
 }
 // Refuse any tar member outside objects/ or shallow, absolute, or with a `..`
@@ -41968,70 +41928,50 @@ async function restoreSnapshot(settings, url, sha) {
                 sha
             ]);
         }
-        await external_fs_namespaceObject.promises.writeFile(external_path_namespaceObject.join(gitDir, CACHE_STATE_FILE), `hit ${sha}\n`);
         return true;
     }
     catch (error) {
         warning(`Snapshot restore failed: ${error}`);
-        // Reset .git to its freshly-init state.
-        await external_fs_namespaceObject.promises.rm(external_path_namespaceObject.join(gitDir, 'objects'), {
-            recursive: true,
-            force: true
-        });
-        await external_fs_namespaceObject.promises.rm(external_path_namespaceObject.join(gitDir, 'shallow'), { force: true });
-        await external_fs_namespaceObject.promises.mkdir(external_path_namespaceObject.join(gitDir, 'objects', 'info'), {
-            recursive: true
-        });
-        await external_fs_namespaceObject.promises.mkdir(external_path_namespaceObject.join(gitDir, 'objects', 'pack'), {
-            recursive: true
-        });
+        await resetGitObjects(gitDir);
         return false;
     }
     finally {
         await external_fs_namespaceObject.promises.rm(tmpTar, { force: true });
     }
 }
-async function uploadSnapshot(settings) {
-    const repoKey = process.env['GITHUB_REPOSITORY_ID'];
+// Reset .git/objects (and drop any restored shallow) to the empty shape `git init`
+// creates, so a failed restore leaves no trace for the fallback fetch.
+async function resetGitObjects(gitDir) {
+    await external_fs_namespaceObject.promises.rm(external_path_namespaceObject.join(gitDir, 'objects'), {
+        recursive: true,
+        force: true
+    });
+    await external_fs_namespaceObject.promises.rm(external_path_namespaceObject.join(gitDir, 'shallow'), { force: true });
+    await external_fs_namespaceObject.promises.mkdir(external_path_namespaceObject.join(gitDir, 'objects', 'info'), {
+        recursive: true
+    });
+    await external_fs_namespaceObject.promises.mkdir(external_path_namespaceObject.join(gitDir, 'objects', 'pack'), {
+        recursive: true
+    });
+}
+// Directory the agent scans post-job for snapshots to upload. Under RUNNER_TEMP, which
+// is <runner>/_work/_temp — host-visible to the agent (it knows the runner dir).
+function manifestDir() {
+    const runnerTemp = process.env['RUNNER_TEMP'] || external_os_namespaceObject.tmpdir();
+    return external_path_namespaceObject.join(runnerTemp, 'wb-snapshots');
+}
+// One manifest per cache miss: the agent tars git_dir/objects and uploads it keyed by sha.
+async function writeSnapshotManifest(settings) {
     const sha = settings.commit;
-    const gitDir = external_path_namespaceObject.join(settings.repositoryPath, '.git');
-    const tmpTar = external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-snapshot-up-${process.pid}.tar`);
-    try {
-        const members = ['objects'];
-        if (external_fs_namespaceObject.existsSync(external_path_namespaceObject.join(gitDir, 'shallow'))) {
-            members.push('shallow');
-        }
-        await exec_exec('tar', ['-cf', tmpTar, '-C', gitDir, ...members]);
-        const size = (await external_fs_namespaceObject.promises.stat(tmpTar)).size;
-        const upload = await requestUploadURL(repoKey, sha);
-        if (upload.kind !== 'ok') {
-            info(upload.kind === 'locked'
-                ? 'Another job is already uploading this snapshot; skipping'
-                : upload.kind === 'disabled'
-                    ? 'Snapshot cache is disabled by the backend; not uploading'
-                    : 'Snapshot cache backend unavailable; not uploading');
-            return;
-        }
-        const init = {
-            method: 'PUT',
-            headers: {
-                'content-length': String(size),
-                'content-type': 'application/x-tar'
-            },
-            body: external_stream_namespaceObject.Readable.toWeb(external_fs_namespaceObject.createReadStream(tmpTar)),
-            duplex: 'half',
-            signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS)
-        };
-        const res = await fetch(upload.url, init);
-        if (!res.ok) {
-            throw new Error(`snapshot upload answered ${res.status}`);
-        }
-        await external_fs_namespaceObject.promises.writeFile(external_path_namespaceObject.join(gitDir, CACHE_STATE_FILE), `uploaded ${sha}\n`);
-        info(`Snapshot uploaded (${size} bytes); jobs checking out ${sha} will skip the GitHub fetch`);
-    }
-    finally {
-        await external_fs_namespaceObject.promises.rm(tmpTar, { force: true });
-    }
+    const manifest = {
+        repo_key: process.env['GITHUB_REPOSITORY_ID'],
+        sha,
+        git_dir: external_path_namespaceObject.join(settings.repositoryPath, '.git')
+    };
+    const dir = manifestDir();
+    await external_fs_namespaceObject.promises.mkdir(dir, { recursive: true });
+    await external_fs_namespaceObject.promises.writeFile(external_path_namespaceObject.join(dir, `${sha}.json`), JSON.stringify(manifest));
+    info(`Cache miss recorded for ${sha}; the WarpBuild agent will upload the snapshot after the job`);
 }
 
 ;// CONCATENATED MODULE: ./src/git-source-provider.ts

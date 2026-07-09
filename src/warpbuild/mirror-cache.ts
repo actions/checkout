@@ -15,10 +15,6 @@ import * as api from './backend-api.js'
 // immutable (no expiry). Fail-open: any error degrades to stock behavior.
 
 const DOWNLOAD_TIMEOUT_MS = 15 * 60_000
-const UPLOAD_TIMEOUT_MS = 15 * 60_000
-
-// "hit <sha>" | "uploaded <sha>", for e2e assertions.
-export const CACHE_STATE_FILE = 'wb-cache-state'
 
 // Logged at debug (normal state outside WarpBuild); other reasons log at info.
 export const SKIP_NOT_WARPBUILD =
@@ -97,15 +93,18 @@ export function computeDestinationRef(ref: string): string | null {
 }
 
 // Runs right after `git init`; true = restored (caller skips the fetch). Never throws.
+// Sets the `cache-hit` action output (true only on a restore).
 export async function setup(settings: IGitSourceSettings): Promise<boolean> {
+  const restored = await setupImpl(settings)
+  core.setOutput('cache-hit', restored ? 'true' : 'false')
+  return restored
+}
+
+async function setupImpl(settings: IGitSourceSettings): Promise<boolean> {
   decision = 'off'
   const skipReason = getMirrorCacheSkipReason(settings)
   if (skipReason) {
-    if (skipReason === SKIP_NOT_WARPBUILD) {
-      core.debug(`WarpBuild snapshot cache skipped: ${skipReason}`)
-    } else {
-      core.info(`WarpBuild snapshot cache skipped: ${skipReason}`)
-    }
+    core.info(`WarpBuild snapshot cache skipped: ${skipReason}`)
     return false
   }
   core.startGroup('WarpBuild: checkout snapshot cache')
@@ -160,18 +159,16 @@ async function setupInner(settings: IGitSourceSettings): Promise<boolean> {
   return true
 }
 
-// Runs after checkout; uploads the fetch result on a miss. Failures only warn.
+// Runs after checkout; on a miss records a manifest so the WarpBuild agent uploads the
+// snapshot after the job exits (keeping tar+upload off the customer's billed time).
 export async function contribute(settings: IGitSourceSettings): Promise<void> {
   if (decision !== 'miss') {
     return
   }
-  core.startGroup('WarpBuild: uploading checkout snapshot')
   try {
-    await uploadSnapshot(settings)
+    await writeSnapshotManifest(settings)
   } catch (error) {
-    core.warning(`Snapshot upload skipped: ${error}`)
-  } finally {
-    core.endGroup()
+    core.warning(`Snapshot manifest not written: ${error}`)
   }
 }
 
@@ -242,80 +239,56 @@ async function restoreSnapshot(
       ])
     }
 
-    await fs.promises.writeFile(
-      path.join(gitDir, CACHE_STATE_FILE),
-      `hit ${sha}\n`
-    )
     return true
   } catch (error) {
     core.warning(`Snapshot restore failed: ${error}`)
-    // Reset .git to its freshly-init state.
-    await fs.promises.rm(path.join(gitDir, 'objects'), {
-      recursive: true,
-      force: true
-    })
-    await fs.promises.rm(path.join(gitDir, 'shallow'), {force: true})
-    await fs.promises.mkdir(path.join(gitDir, 'objects', 'info'), {
-      recursive: true
-    })
-    await fs.promises.mkdir(path.join(gitDir, 'objects', 'pack'), {
-      recursive: true
-    })
+    await resetGitObjects(gitDir)
     return false
   } finally {
     await fs.promises.rm(tmpTar, {force: true})
   }
 }
 
-async function uploadSnapshot(settings: IGitSourceSettings): Promise<void> {
-  const repoKey = process.env['GITHUB_REPOSITORY_ID'] as string
+// Reset .git/objects (and drop any restored shallow) to the empty shape `git init`
+// creates, so a failed restore leaves no trace for the fallback fetch.
+export async function resetGitObjects(gitDir: string): Promise<void> {
+  await fs.promises.rm(path.join(gitDir, 'objects'), {
+    recursive: true,
+    force: true
+  })
+  await fs.promises.rm(path.join(gitDir, 'shallow'), {force: true})
+  await fs.promises.mkdir(path.join(gitDir, 'objects', 'info'), {
+    recursive: true
+  })
+  await fs.promises.mkdir(path.join(gitDir, 'objects', 'pack'), {
+    recursive: true
+  })
+}
+
+// Directory the agent scans post-job for snapshots to upload. Under RUNNER_TEMP, which
+// is <runner>/_work/_temp — host-visible to the agent (it knows the runner dir).
+export function manifestDir(): string {
+  const runnerTemp = process.env['RUNNER_TEMP'] || os.tmpdir()
+  return path.join(runnerTemp, 'wb-snapshots')
+}
+
+// One manifest per cache miss: the agent tars git_dir/objects and uploads it keyed by sha.
+async function writeSnapshotManifest(
+  settings: IGitSourceSettings
+): Promise<void> {
   const sha = settings.commit
-  const gitDir = path.join(settings.repositoryPath, '.git')
-  const tmpTar = path.join(os.tmpdir(), `wb-snapshot-up-${process.pid}.tar`)
-  try {
-    const members = ['objects']
-    if (fs.existsSync(path.join(gitDir, 'shallow'))) {
-      members.push('shallow')
-    }
-    await exec.exec('tar', ['-cf', tmpTar, '-C', gitDir, ...members])
-    const size = (await fs.promises.stat(tmpTar)).size
-
-    const upload = await api.requestUploadURL(repoKey, sha)
-    if (upload.kind !== 'ok') {
-      core.info(
-        upload.kind === 'locked'
-          ? 'Another job is already uploading this snapshot; skipping'
-          : upload.kind === 'disabled'
-            ? 'Snapshot cache is disabled by the backend; not uploading'
-            : 'Snapshot cache backend unavailable; not uploading'
-      )
-      return
-    }
-
-    const init: RequestInit & {duplex: 'half'} = {
-      method: 'PUT',
-      headers: {
-        'content-length': String(size),
-        'content-type': 'application/x-tar'
-      },
-      body: Readable.toWeb(
-        fs.createReadStream(tmpTar)
-      ) as unknown as ReadableStream,
-      duplex: 'half',
-      signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS)
-    }
-    const res = await fetch(upload.url, init)
-    if (!res.ok) {
-      throw new Error(`snapshot upload answered ${res.status}`)
-    }
-    await fs.promises.writeFile(
-      path.join(gitDir, CACHE_STATE_FILE),
-      `uploaded ${sha}\n`
-    )
-    core.info(
-      `Snapshot uploaded (${size} bytes); jobs checking out ${sha} will skip the GitHub fetch`
-    )
-  } finally {
-    await fs.promises.rm(tmpTar, {force: true})
+  const manifest = {
+    repo_key: process.env['GITHUB_REPOSITORY_ID'] as string,
+    sha,
+    git_dir: path.join(settings.repositoryPath, '.git')
   }
+  const dir = manifestDir()
+  await fs.promises.mkdir(dir, {recursive: true})
+  await fs.promises.writeFile(
+    path.join(dir, `${sha}.json`),
+    JSON.stringify(manifest)
+  )
+  core.info(
+    `Cache miss recorded for ${sha}; the WarpBuild agent will upload the snapshot after the job`
+  )
 }

@@ -14,9 +14,11 @@ import {
   SKIP_NOT_WARPBUILD,
   assertSafeTarMembers,
   computeDestinationRef,
-  getMirrorCacheSkipReason
+  getMirrorCacheSkipReason,
+  manifestDir,
+  resetGitObjects
 } from '../src/warpbuild/mirror-cache.js'
-import {lookupSnapshot, requestUploadURL} from '../src/warpbuild/backend-api.js'
+import {lookupSnapshot} from '../src/warpbuild/backend-api.js'
 import {IGitSourceSettings} from '../src/git-source-settings.js'
 
 const WB_ENV = [
@@ -136,6 +138,60 @@ describe('warpbuild snapshot cache', () => {
     })
   })
 
+  describe('resetGitObjects', () => {
+    it('restores the empty git-init object layout, dropping restored junk', async () => {
+      const gitDir = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), 'wb-reset-')
+      )
+      try {
+        // Simulate a partially-restored .git: stray objects, a pack, a shallow file.
+        await fs.promises.mkdir(path.join(gitDir, 'objects', 'pack'), {
+          recursive: true
+        })
+        await fs.promises.writeFile(
+          path.join(gitDir, 'objects', 'ab'),
+          'junk loose object'
+        )
+        await fs.promises.writeFile(
+          path.join(gitDir, 'objects', 'pack', 'pack-x.pack'),
+          'junk pack'
+        )
+        await fs.promises.writeFile(path.join(gitDir, 'shallow'), 'deadbeef\n')
+
+        await resetGitObjects(gitDir)
+
+        // shallow gone; objects/ holds only the two empty init dirs.
+        expect(fs.existsSync(path.join(gitDir, 'shallow'))).toBe(false)
+        expect(fs.existsSync(path.join(gitDir, 'objects', 'ab'))).toBe(false)
+        expect(
+          (await fs.promises.readdir(path.join(gitDir, 'objects'))).sort()
+        ).toEqual(['info', 'pack'])
+        expect(
+          await fs.promises.readdir(path.join(gitDir, 'objects', 'pack'))
+        ).toEqual([])
+        expect(
+          await fs.promises.readdir(path.join(gitDir, 'objects', 'info'))
+        ).toEqual([])
+      } finally {
+        await fs.promises.rm(gitDir, {recursive: true, force: true})
+      }
+    })
+
+    it('is a no-op-safe on an already-clean .git', async () => {
+      const gitDir = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), 'wb-reset-')
+      )
+      try {
+        await expect(resetGitObjects(gitDir)).resolves.toBeUndefined()
+        expect(
+          (await fs.promises.readdir(path.join(gitDir, 'objects'))).sort()
+        ).toEqual(['info', 'pack'])
+      } finally {
+        await fs.promises.rm(gitDir, {recursive: true, force: true})
+      }
+    })
+  })
+
   describe('assertSafeTarMembers', () => {
     async function makeTar(
       dir: string,
@@ -235,20 +291,14 @@ describe('warpbuild snapshot cache', () => {
       expect(lastUrl).toContain(`sha=${SHA}`)
     })
 
-    it('maps 404 to miss (upload after the stock fetch)', async () => {
+    it('maps 404 to miss (agent uploads after the job)', async () => {
       stubFetch(404, {sub_code: 'NFE_GITMIRROR'})
       expect((await lookupSnapshot('123', SHA)).kind).toBe('miss')
-    })
-
-    it('maps 409 upload responses to locked (another job is uploading)', async () => {
-      stubFetch(409, {sub_code: 'FVE_GITMIRROR_LOCKED'})
-      expect((await requestUploadURL('123', SHA)).kind).toBe('locked')
     })
 
     it('maps 403 to disabled (backend kill switch)', async () => {
       stubFetch(403, {sub_code: 'PDE_GITMIRROR_DISABLED'})
       expect((await lookupSnapshot('123', SHA)).kind).toBe('disabled')
-      expect((await requestUploadURL('123', SHA)).kind).toBe('disabled')
     })
 
     it('maps other statuses and network failures to error', async () => {
@@ -258,15 +308,24 @@ describe('warpbuild snapshot cache', () => {
         throw new Error('boom')
       }) as typeof fetch
       expect((await lookupSnapshot('123', SHA)).kind).toBe('error')
-      expect((await requestUploadURL('123', SHA)).kind).toBe('error')
+    })
+  })
+
+  describe('manifestDir', () => {
+    const saved = process.env['RUNNER_TEMP']
+    afterEach(() => {
+      if (saved === undefined) {
+        delete process.env['RUNNER_TEMP']
+      } else {
+        process.env['RUNNER_TEMP'] = saved
+      }
     })
 
-    it('maps 200 upload responses to ok', async () => {
-      stubFetch(200, {url: 'https://s3/put'})
-      expect(await requestUploadURL('123', SHA)).toEqual({
-        kind: 'ok',
-        url: 'https://s3/put'
-      })
+    it('places manifests under RUNNER_TEMP/wb-snapshots', () => {
+      process.env['RUNNER_TEMP'] = path.join(os.tmpdir(), 'runner-temp-x')
+      expect(manifestDir()).toBe(
+        path.join(os.tmpdir(), 'runner-temp-x', 'wb-snapshots')
+      )
     })
   })
 })
