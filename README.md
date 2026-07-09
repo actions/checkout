@@ -386,3 +386,16 @@ permissions:
 # License
 
 The scripts and documentation in this project are released under the [MIT License](LICENSE)
+# Job Scraper Bot 🤖
+
+Ovaj alat je dizajniran za automatizirano praćenje tržišta rada u stvarnom vremenu. Umjesto ručnog pregledavanja oglasnika, bot filtrira relevantne oglase prema zadanim ključnim riječima i arhivira ih za daljnju analizu.
+
+## Što bot radi?
+- **Automatsko pretraživanje:** Prati izvore i filtrira oglase prema vašim interesima (npr. 'junior', 'remote', 'developer').
+- **Arhiviranje:** Sprema sve pronađene rezultate u lokalnu datoteku (`poslovi_arhiv.txt`) s vremenskom oznakom.
+- **Sigurnost:** Podaci su zaštićeni, a konfiguracija omogućuje sigurno korištenje bez izlaganja osjetljivih ključeva.
+
+## Kako koristiti
+1. Instalirajte potrebne knjižnice:
+   ```bash
+   pip install -r requirements.txt
