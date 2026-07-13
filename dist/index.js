@@ -41697,9 +41697,11 @@ const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.ur
 ;// CONCATENATED MODULE: ./src/warpbuild/backend-api.ts
 /* eslint-disable i18n-text/no-en -- upstream convention */
 
-// Client for backend-core's git-mirror download-url endpoint, authed by the runner
-// verification token. Contract: 200 = presigned URL (hit); 404 = miss; 403 = unservable
-// org; else = fall back. The upload half runs in the warpbuild-agent after the job.
+// Client for backend-core's git-mirror endpoints, authed by the runner verification
+// token. The action seeds from a bare base mirror + a per-branch delta bundle (both
+// presigned GETs), delta-fetches the tip from GitHub, then uploads the refreshed
+// per-branch bundle — or, on a cold repo, the base — via a presigned PUT. Every call
+// fails closed to stock checkout.
 const API_TIMEOUT_MS = 10_000;
 function backend_api_baseUrl() {
     return (process.env['WARPBUILD_HOST_URL'] || '').replace(/\/+$/, '');
@@ -41707,29 +41709,70 @@ function backend_api_baseUrl() {
 function authHeader() {
     return `Bearer ${process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN'] || ''}`;
 }
-async function lookupSnapshot(repoKey, sha) {
+function backend_api_endpoint(p) {
+    return `${backend_api_baseUrl()}/api/v1/git-mirrors/${p}`;
+}
+async function lookupRestore(repoKey, ref) {
     try {
-        const res = await fetch(`${backend_api_baseUrl()}/api/v1/git-mirrors/download-url?repo_key=${encodeURIComponent(repoKey)}&sha=${encodeURIComponent(sha)}`, {
+        const res = await fetch(`${backend_api_endpoint('restore-url')}?repo_key=${encodeURIComponent(repoKey)}&ref=${encodeURIComponent(ref)}`, {
             headers: { authorization: authHeader() },
             signal: AbortSignal.timeout(API_TIMEOUT_MS)
         });
         if (res.status === 200) {
-            return { kind: 'hit', info: (await res.json()) };
+            const body = (await res.json());
+            return { kind: 'restore', base: body.base, branch: body.branch ?? null };
         }
         if (res.status === 404) {
-            return { kind: 'miss' };
+            return { kind: 'cold' };
         }
         if (res.status === 403) {
-            core_debug(`[wb-cache] download-url answered 403 (disabled)`);
+            core_debug('[wb-cache] restore-url answered 403 (disabled)');
             return { kind: 'disabled' };
         }
-        core_debug(`[wb-cache] download-url answered ${res.status}`);
+        core_debug(`[wb-cache] restore-url answered ${res.status}`);
         return { kind: 'error' };
     }
     catch (error) {
-        core_debug(`[wb-cache] download-url failed: ${error}`);
+        core_debug(`[wb-cache] restore-url failed: ${error}`);
         return { kind: 'error' };
     }
+}
+async function requestUpload(p, body) {
+    try {
+        const res = await fetch(backend_api_endpoint(p), {
+            method: 'POST',
+            headers: {
+                authorization: authHeader(),
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(API_TIMEOUT_MS)
+        });
+        if (res.status === 200) {
+            const b = (await res.json());
+            return { kind: 'grant', url: b.url };
+        }
+        if (res.status === 409) {
+            return { kind: 'locked' };
+        }
+        if (res.status === 403) {
+            return { kind: 'disabled' };
+        }
+        core_debug(`[wb-cache] ${p} answered ${res.status}`);
+        return { kind: 'error' };
+    }
+    catch (error) {
+        core_debug(`[wb-cache] ${p} failed: ${error}`);
+        return { kind: 'error' };
+    }
+}
+// Cold repo: request the single-flight grant to build + upload the base mirror.
+async function requestBaseUpload(repoKey) {
+    return requestUpload('base/upload-url', { repo_key: repoKey });
+}
+// Warm repo: request the grant to overwrite this branch's delta bundle.
+async function requestBranchUpload(repoKey, ref, sha) {
+    return requestUpload('branch/upload-url', { repo_key: repoKey, ref, sha });
 }
 
 ;// CONCATENATED MODULE: ./src/warpbuild/mirror-cache.ts
@@ -41743,23 +41786,29 @@ async function lookupSnapshot(repoKey, sha) {
 
 
 
-// WarpBuild checkout snapshot cache: SHA-keyed tars of what the stock shallow fetch
-// produces. Hit = restore + skip the fetch; miss = upload after checkout. Keys are
-// immutable (no expiry). Fail-open: any error degrades to stock behavior.
+// WarpBuild checkout cache: a bare base mirror + per-branch orderless delta bundles on
+// S3. We seed the base (+ this branch's delta) before the fetch, so the GitHub fetch is
+// only the tip delta — or nothing. Each run overwrites its branch's bundle (base-relative,
+// so order-free); a cold repo single-flights the base build. Fail-open: any error →
+// standard checkout.
 const DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
-// Logged at debug (normal state outside WarpBuild); other reasons log at info.
+const UPLOAD_TIMEOUT_MS = 15 * 60_000;
+// Logged at info when off; the WARPBUILD_* env is only present on our runners.
 const SKIP_NOT_WARPBUILD = 'not running on a WarpBuild runner (WARPBUILD_* env not present)';
 const SHA_PATTERN = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
-let decision = 'off';
-// Null = attempt the cache; else a reason to log. Only the default checkout shape
-// is served.
+// Seeded bundles land here, out of the user's ref space; excluded objects for deltas.
+const BASE_REFNS = 'refs/wb/base';
+const BRANCH_REFNS = 'refs/wb/branch';
+const UPLOAD_TIP_REF = 'refs/wb/tip';
+let plan = { mode: 'off', repoKey: '', refKey: '' };
+// Null = attempt the cache; else a reason to log. The mirror serves full history for any
+// depth, so fetch-depth is not gated; sparse/lfs/filter change the object set we model.
 function getMirrorCacheSkipReason(settings) {
     if (!process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN'] ||
         !process.env['WARPBUILD_HOST_URL']) {
         return SKIP_NOT_WARPBUILD;
     }
-    const repoKey = process.env['GITHUB_REPOSITORY_ID'] || '';
-    if (!repoKey) {
+    if (!process.env['GITHUB_REPOSITORY_ID']) {
         return 'GITHUB_REPOSITORY_ID is not set';
     }
     const checkoutRepo = `${settings.repositoryOwner}/${settings.repositoryName}`;
@@ -41773,12 +41822,6 @@ function getMirrorCacheSkipReason(settings) {
     if (!settings.commit || !SHA_PATTERN.test(settings.commit)) {
         return 'no exact commit sha to key on';
     }
-    if (settings.fetchDepth !== 1) {
-        return `fetch-depth is ${settings.fetchDepth}, cache only serves fetch-depth 1`;
-    }
-    if (settings.fetchTags) {
-        return 'fetch-tags is enabled';
-    }
     if (settings.filter) {
         return 'a fetch filter is configured';
     }
@@ -41786,51 +41829,49 @@ function getMirrorCacheSkipReason(settings) {
         return 'sparse checkout is configured';
     }
     if (settings.lfs) {
-        return 'lfs is enabled (lfs objects are not in the snapshot)';
-    }
-    if (settings.ref && computeDestinationRef(settings.ref) === null) {
-        return `ref '${settings.ref}' has no cacheable destination ref`;
+        return 'lfs is enabled (lfs objects are not in the mirror)';
     }
     return null;
 }
-// The local ref the fetch would have created ('' = none needed, null = uncacheable).
-function computeDestinationRef(ref) {
-    if (!ref) {
+// The durable branch to key the per-branch bundle on. For pull_request events the merge
+// SHA is synthetic, so we key on the base branch; otherwise the pushed branch. '' for
+// tags / detached HEAD → seed the base only, upload nothing.
+function computeRefKey(settings) {
+    const baseRef = process.env['GITHUB_BASE_REF']; // set on pull_request events
+    if (baseRef) {
+        return baseRef;
+    }
+    const ref = process.env['GITHUB_REF'] || settings.ref || '';
+    if (ref.startsWith('refs/heads/')) {
+        return ref.substring('refs/heads/'.length);
+    }
+    if (ref.startsWith('refs/tags/') || ref.startsWith('refs/pull/')) {
         return '';
     }
-    const upper = ref.toUpperCase();
-    if (upper.startsWith('REFS/HEADS/')) {
-        return `refs/remotes/origin/${ref.substring('refs/heads/'.length)}`;
-    }
-    if (upper.startsWith('REFS/PULL/')) {
-        return `refs/remotes/pull/${ref.substring('refs/pull/'.length)}`;
-    }
-    if (upper.startsWith('REFS/TAGS/')) {
-        return ref;
-    }
-    return null;
+    // Already a short branch name, or empty.
+    return SHA_PATTERN.test(ref) ? '' : ref;
 }
-// Runs right after `git init`; true = restored (caller skips the fetch). Never throws.
-// Sets the `cache-hit` action output (true only on a restore).
+// Runs after `git init`, before the fetch. Returns the mode the fetch/contribute steps
+// branch on. Never throws. Sets the `cache-hit` output (true only when seeded from cache).
 async function setup(settings) {
-    const restored = await setupImpl(settings);
-    setOutput('cache-hit', restored ? 'true' : 'false');
-    return restored;
+    const mode = await setupImpl(settings);
+    setOutput('cache-hit', mode === 'seeded' ? 'true' : 'false');
+    return mode;
 }
 async function setupImpl(settings) {
-    decision = 'off';
+    plan = { mode: 'off', repoKey: '', refKey: '' };
     const skipReason = getMirrorCacheSkipReason(settings);
     if (skipReason) {
-        info(`WarpBuild snapshot cache skipped: ${skipReason}`);
-        return false;
+        info(`WarpBuild mirror cache skipped: ${skipReason}`);
+        return 'off';
     }
-    startGroup('WarpBuild: checkout snapshot cache');
+    startGroup('WarpBuild: checkout mirror cache');
     try {
         return await setupInner(settings);
     }
     catch (error) {
-        warning(`WarpBuild snapshot cache unavailable, using standard checkout: ${error}`);
-        return false;
+        warning(`WarpBuild mirror cache unavailable, using standard checkout: ${error}`);
+        return 'off';
     }
     finally {
         endGroup();
@@ -41838,140 +41879,196 @@ async function setupImpl(settings) {
 }
 async function setupInner(settings) {
     const repoKey = process.env['GITHUB_REPOSITORY_ID'];
-    const sha = settings.commit;
-    // The restore/upload paths shell out to `tar`; without it, fall back cleanly.
-    if (!(await which('tar', false))) {
-        info('tar not found on PATH; using standard checkout');
-        return false;
-    }
-    const lookup = await lookupSnapshot(repoKey, sha);
+    const refKey = computeRefKey(settings);
+    plan = { mode: 'off', repoKey, refKey };
+    const lookup = await lookupRestore(repoKey, refKey);
     if (lookup.kind === 'disabled') {
-        info('Snapshot cache is disabled by the backend for this organization');
-        return false;
+        info('Mirror cache is disabled by the backend for this organization');
+        return 'off';
     }
     if (lookup.kind === 'error') {
-        info('Snapshot cache backend unavailable; using standard checkout');
-        return false;
+        info('Mirror cache backend unavailable; using standard checkout');
+        return 'off';
     }
-    if (lookup.kind === 'miss') {
-        info(`Cache miss for ${sha}: the standard fetch will run and its result will be uploaded`);
-        decision = 'miss';
-        return false;
+    if (lookup.kind === 'cold') {
+        const grant = await requestBaseUpload(repoKey);
+        if (grant.kind === 'grant') {
+            info('Cold repo: building the base mirror this run (full fetch, then upload)');
+            plan = { mode: 'cold-build', repoKey, refKey, baseUploadUrl: grant.url };
+            return 'cold-build';
+        }
+        info('Cold repo: base build already in progress elsewhere; using standard checkout');
+        return 'off';
     }
-    info(`Cache hit for ${sha}: restoring snapshot (${lookup.info.size_bytes} bytes)`);
-    if (!(await restoreSnapshot(settings, lookup.info.url, sha))) {
-        return false;
+    // Restore: seed the base, then this branch's delta if present.
+    await seedBundle(settings.repositoryPath, lookup.base.url, BASE_REFNS);
+    if (lookup.branch) {
+        try {
+            await seedBundle(settings.repositoryPath, lookup.branch.url, BRANCH_REFNS);
+        }
+        catch (error) {
+            info(`Branch delta seed skipped (${error}); base only`);
+        }
     }
-    info('Snapshot restored; skipping the GitHub fetch entirely');
-    return true;
+    info(`Seeded base mirror${lookup.branch ? ' + branch delta' : ''}; the GitHub fetch will be a tip delta`);
+    plan = { mode: 'seeded', repoKey, refKey };
+    return 'seeded';
 }
-// Runs after checkout; on a miss records a manifest so the WarpBuild agent uploads the
-// snapshot after the job exits (keeping tar+upload off the customer's billed time).
+// Runs after checkout, in the same step (`.git` still pristine). Uploads the base (cold)
+// or this branch's refreshed delta (seeded). Best-effort — never fails the checkout.
 async function contribute(settings) {
-    if (decision !== 'miss') {
-        return;
-    }
     try {
-        await writeSnapshotManifest(settings);
+        if (plan.mode === 'cold-build') {
+            await uploadBaseMirror(settings);
+        }
+        else if (plan.mode === 'seeded') {
+            await uploadBranchDelta(settings);
+        }
     }
     catch (error) {
-        warning(`Snapshot manifest not written: ${error}`);
+        warning(`WarpBuild mirror upload skipped: ${error}`);
     }
 }
-// Refuse any tar member outside objects/ or shallow, absolute, or with a `..`
-// component — the tar is remote and extracted into .git, so a crafted member could
-// escape (e.g. hooks/, ../) and run code during checkout.
-async function assertSafeTarMembers(tar) {
-    let listing = '';
-    await exec_exec('tar', ['-tf', tar], {
-        silent: true,
-        listeners: { stdout: (d) => (listing += d.toString()) }
-    });
-    for (const raw of listing.split('\n')) {
-        const member = raw.trim();
-        if (!member) {
-            continue;
-        }
-        const top = member.replace(/^\.\//, '').split('/')[0];
-        if (member.startsWith('/') ||
-            member.split('/').includes('..') ||
-            (top !== 'objects' && top !== 'shallow')) {
-            throw new Error(`unexpected snapshot tar member: ${member}`);
-        }
-    }
-}
-async function restoreSnapshot(settings, url, sha) {
-    const gitDir = external_path_namespaceObject.join(settings.repositoryPath, '.git');
-    const tmpTar = external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-snapshot-${process.pid}.tar`);
+// Download a bundle and fetch its refs into refNs/* so its objects seed the local repo
+// (and count as "haves" for the delta negotiation). The bundle is a git-validated file;
+// nothing is extracted into .git directly.
+async function seedBundle(repoPath, url, refNs) {
+    const tmp = tempBundlePath('seed');
     try {
-        const res = await fetch(url, {
-            signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)
-        });
-        if (!res.ok || !res.body) {
-            throw new Error(`snapshot download answered ${res.status}`);
-        }
-        await (0,promises_namespaceObject.pipeline)(external_stream_namespaceObject.Readable.fromWeb(res.body), external_fs_namespaceObject.createWriteStream(tmpTar));
-        await assertSafeTarMembers(tmpTar);
-        await exec_exec('tar', ['-xf', tmpTar, '-C', gitDir]);
-        const check = await exec_exec('git', ['-C', settings.repositoryPath, 'cat-file', '-e', `${sha}^{commit}`], { ignoreReturnCode: true });
-        if (check !== 0) {
-            throw new Error(`restored snapshot does not contain ${sha}`);
-        }
-        // The ref the skipped fetch would have created; upstream's verification needs it.
-        const dstRef = computeDestinationRef(settings.ref);
-        if (dstRef) {
-            await exec_exec('git', [
-                '-C',
-                settings.repositoryPath,
-                'update-ref',
-                dstRef,
-                sha
-            ]);
-        }
-        return true;
-    }
-    catch (error) {
-        warning(`Snapshot restore failed: ${error}`);
-        await resetGitObjects(gitDir);
-        return false;
+        await downloadTo(url, tmp);
+        await exec_exec('git', [
+            '-C',
+            repoPath,
+            'fetch',
+            '--quiet',
+            '--no-tags',
+            tmp,
+            `+refs/*:${refNs}/*`
+        ]);
     }
     finally {
-        await external_fs_namespaceObject.promises.rm(tmpTar, { force: true });
+        await external_fs_namespaceObject.promises.rm(tmp, { force: true });
     }
 }
-// Reset .git/objects (and drop any restored shallow) to the empty shape `git init`
-// creates, so a failed restore leaves no trace for the fallback fetch.
+// Cold-build: after the forced full fetch the repo holds all branches under
+// refs/remotes/origin/* and all tags. Bundle exactly those (not `--all`, which would
+// also sweep up the ephemeral triggering PR merge ref) as the base and upload.
+async function uploadBaseMirror(settings) {
+    if (!plan.baseUploadUrl) {
+        return;
+    }
+    const tmp = tempBundlePath('base');
+    try {
+        await exec_exec('git', [
+            '-C',
+            settings.repositoryPath,
+            'bundle',
+            'create',
+            tmp,
+            '--remotes=origin',
+            '--tags'
+        ]);
+        await httpPut(plan.baseUploadUrl, tmp);
+        info('Uploaded base mirror');
+    }
+    finally {
+        await external_fs_namespaceObject.promises.rm(tmp, { force: true });
+    }
+}
+// Seeded: build the base-relative delta (target sha, excluding everything in the base)
+// and overwrite this branch's bundle. Guarded by a per-branch lock server-side.
+async function uploadBranchDelta(settings) {
+    if (!plan.refKey) {
+        return; // tag / detached HEAD: nothing to roll
+    }
+    const repoPath = settings.repositoryPath;
+    const sha = settings.commit;
+    const grant = await requestBranchUpload(plan.repoKey, plan.refKey, sha);
+    if (grant.kind !== 'grant') {
+        info(`Branch delta upload skipped (${grant.kind})`);
+        return;
+    }
+    const excludes = await baseRefExcludes(repoPath);
+    if (excludes.length === 0) {
+        info('No base refs to diff against; branch delta skipped');
+        return;
+    }
+    const tmp = tempBundlePath('branch');
+    try {
+        await exec_exec('git', ['-C', repoPath, 'update-ref', UPLOAD_TIP_REF, sha]);
+        await exec_exec('git', [
+            '-C',
+            repoPath,
+            'bundle',
+            'create',
+            tmp,
+            UPLOAD_TIP_REF,
+            ...excludes
+        ]);
+        await httpPut(grant.url, tmp);
+        info(`Uploaded branch delta for '${plan.refKey}'`);
+    }
+    finally {
+        await external_fs_namespaceObject.promises.rm(tmp, { force: true });
+        await exec_exec('git', ['-C', repoPath, 'update-ref', '-d', UPLOAD_TIP_REF], {
+            ignoreReturnCode: true
+        });
+    }
+}
+// `^refname` for every seeded base ref — the exclusion set that makes the delta bundle
+// base-relative (and therefore order-free).
+async function baseRefExcludes(repoPath) {
+    let out = '';
+    await exec_exec('git', ['-C', repoPath, 'for-each-ref', '--format=^%(refname)', BASE_REFNS], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
+    return out
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean);
+}
+async function downloadTo(url, dest) {
+    const res = await fetch(url, {
+        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)
+    });
+    if (!res.ok || !res.body) {
+        throw new Error(`download answered ${res.status}`);
+    }
+    await (0,promises_namespaceObject.pipeline)(external_stream_namespaceObject.Readable.fromWeb(res.body), external_fs_namespaceObject.createWriteStream(dest));
+}
+async function httpPut(url, file) {
+    const stat = await external_fs_namespaceObject.promises.stat(file);
+    const res = await fetch(url, {
+        method: 'PUT',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- node stream body
+        body: external_fs_namespaceObject.createReadStream(file),
+        duplex: 'half',
+        headers: { 'content-length': String(stat.size) },
+        signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- duplex not yet typed
+    });
+    if (!res.ok) {
+        throw new Error(`PUT answered ${res.status}`);
+    }
+}
+function tempBundlePath(tag) {
+    return external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-${tag}-${process.pid}-${Date.now()}.bundle`);
+}
+// Kept for callers/tests: reset .git/objects to the empty `git init` shape.
 async function resetGitObjects(gitDir) {
-    await external_fs_namespaceObject.promises.rm(external_path_namespaceObject.join(gitDir, 'objects'), {
+    await fs.promises.rm(path.join(gitDir, 'objects'), {
         recursive: true,
         force: true
     });
-    await external_fs_namespaceObject.promises.rm(external_path_namespaceObject.join(gitDir, 'shallow'), { force: true });
-    await external_fs_namespaceObject.promises.mkdir(external_path_namespaceObject.join(gitDir, 'objects', 'info'), {
+    await fs.promises.rm(path.join(gitDir, 'shallow'), { force: true });
+    await fs.promises.mkdir(path.join(gitDir, 'objects', 'info'), {
         recursive: true
     });
-    await external_fs_namespaceObject.promises.mkdir(external_path_namespaceObject.join(gitDir, 'objects', 'pack'), {
+    await fs.promises.mkdir(path.join(gitDir, 'objects', 'pack'), {
         recursive: true
     });
 }
-// Directory the agent scans post-job for snapshots to upload. Under RUNNER_TEMP, which
-// is <runner>/_work/_temp — host-visible to the agent (it knows the runner dir).
-function manifestDir() {
-    const runnerTemp = process.env['RUNNER_TEMP'] || external_os_namespaceObject.tmpdir();
-    return external_path_namespaceObject.join(runnerTemp, 'wb-snapshots');
-}
-// One manifest per cache miss: the agent tars git_dir/objects and uploads it keyed by sha.
-async function writeSnapshotManifest(settings) {
-    const sha = settings.commit;
-    const manifest = {
-        repo_key: process.env['GITHUB_REPOSITORY_ID'],
-        sha,
-        git_dir: external_path_namespaceObject.join(settings.repositoryPath, '.git')
-    };
-    const dir = manifestDir();
-    await external_fs_namespaceObject.promises.mkdir(dir, { recursive: true });
-    await external_fs_namespaceObject.promises.writeFile(external_path_namespaceObject.join(dir, `${sha}.json`), JSON.stringify(manifest));
-    info(`Cache miss recorded for ${sha}; the WarpBuild agent will upload the snapshot after the job`);
+// Kept so tests referencing io stay valid; the mirror path no longer shells to `tar`.
+async function hasGit() {
+    return Boolean(await io.which('git', false));
 }
 
 ;// CONCATENATED MODULE: ./src/git-source-provider.ts
@@ -42007,7 +42104,7 @@ async function getSource(settings) {
     const git = await getGitCommandManager(settings);
     endGroup();
     let authHelper = null;
-    let warpbuildRestored = false;
+    let warpbuildMode = 'off';
     try {
         if (git) {
             authHelper = createAuthHelper(git, settings);
@@ -42059,7 +42156,7 @@ async function getSource(settings) {
             await git.remoteAdd('origin', repositoryUrl);
             endGroup();
             // WarpBuild snapshot cache: hit = objects restored, fetch below is skipped
-            warpbuildRestored = await setup(settings);
+            warpbuildMode = await setup(settings);
         }
         // Disable automatic garbage collection
         startGroup('Disabling automatic garbage collection');
@@ -42099,10 +42196,17 @@ async function getSource(settings) {
         else if (settings.sparseCheckout) {
             fetchOptions.filter = 'blob:none';
         }
-        if (warpbuildRestored) {
-            info('Skipping fetch: checkout was restored from the snapshot cache');
+        if (warpbuildMode === 'seeded') {
+            // Seeded from the mirror: fetch only the tip delta, negotiating against the seeded
+            // objects. No depth — the base is full history, so this stays non-shallow.
+            const refSpec = getRefSpec(settings.ref, settings.commit);
+            await git.fetch(refSpec, fetchOptions);
+            if (!(await testRef(git, settings.ref, settings.commit))) {
+                throw new Error(`The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
+                    `The ref may have been updated after the workflow was triggered.`);
+            }
         }
-        else if (settings.fetchDepth <= 0) {
+        else if (warpbuildMode === 'cold-build' || settings.fetchDepth <= 0) {
             // Fetch all branches and tags
             let refSpec = getRefSpecForAllHistory(settings.ref, settings.commit);
             await git.fetch(refSpec, fetchOptions);

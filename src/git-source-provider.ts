@@ -41,7 +41,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   core.endGroup()
 
   let authHelper: gitAuthHelper.IGitAuthHelper | null = null
-  let warpbuildRestored = false
+  let warpbuildMode: warpbuildMirror.MirrorMode = 'off'
   try {
     if (git) {
       authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -134,7 +134,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       core.endGroup()
 
       // WarpBuild snapshot cache: hit = objects restored, fetch below is skipped
-      warpbuildRestored = await warpbuildMirror.setup(settings)
+      warpbuildMode = await warpbuildMirror.setup(settings)
     }
 
     // Disable automatic garbage collection
@@ -190,9 +190,18 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       fetchOptions.filter = 'blob:none'
     }
 
-    if (warpbuildRestored) {
-      core.info('Skipping fetch: checkout was restored from the snapshot cache')
-    } else if (settings.fetchDepth <= 0) {
+    if (warpbuildMode === 'seeded') {
+      // Seeded from the mirror: fetch only the tip delta, negotiating against the seeded
+      // objects. No depth — the base is full history, so this stays non-shallow.
+      const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
+      await git.fetch(refSpec, fetchOptions)
+      if (!(await refHelper.testRef(git, settings.ref, settings.commit))) {
+        throw new Error(
+          `The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
+            `The ref may have been updated after the workflow was triggered.`
+        )
+      }
+    } else if (warpbuildMode === 'cold-build' || settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,

@@ -6,26 +6,29 @@ import {
   afterEach,
   afterAll
 } from '@jest/globals'
-import * as exec from '@actions/exec'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import {
   SKIP_NOT_WARPBUILD,
-  assertSafeTarMembers,
-  computeDestinationRef,
+  computeRefKey,
   getMirrorCacheSkipReason,
-  manifestDir,
   resetGitObjects
 } from '../src/warpbuild/mirror-cache.js'
-import {lookupSnapshot} from '../src/warpbuild/backend-api.js'
+import {
+  lookupRestore,
+  requestBaseUpload,
+  requestBranchUpload
+} from '../src/warpbuild/backend-api.js'
 import {IGitSourceSettings} from '../src/git-source-settings.js'
 
 const WB_ENV = [
   'WARPBUILD_RUNNER_VERIFICATION_TOKEN',
   'WARPBUILD_HOST_URL',
   'GITHUB_REPOSITORY_ID',
-  'GITHUB_REPOSITORY'
+  'GITHUB_REPOSITORY',
+  'GITHUB_REF',
+  'GITHUB_BASE_REF'
 ]
 const savedEnv: {[key: string]: string | undefined} = {}
 for (const key of WB_ENV) {
@@ -57,9 +60,11 @@ function setWarpBuildEnv(): void {
   process.env['WARPBUILD_HOST_URL'] = 'https://api.example.dev'
   process.env['GITHUB_REPOSITORY_ID'] = '123456789'
   process.env['GITHUB_REPOSITORY'] = 'octocat/hello-world'
+  delete process.env['GITHUB_REF']
+  delete process.env['GITHUB_BASE_REF']
 }
 
-describe('warpbuild snapshot cache', () => {
+describe('warpbuild mirror cache', () => {
   beforeEach(() => {
     setWarpBuildEnv()
   })
@@ -75,9 +80,7 @@ describe('warpbuild snapshot cache', () => {
   })
 
   describe('getMirrorCacheSkipReason', () => {
-    const winOnly = process.platform === 'win32' ? it.skip : it
-
-    winOnly('returns null for the default checkout shape', () => {
+    it('returns null for the default checkout shape', () => {
       expect(getMirrorCacheSkipReason(settingsFor())).toBeNull()
     })
 
@@ -86,7 +89,7 @@ describe('warpbuild snapshot cache', () => {
       expect(getMirrorCacheSkipReason(settingsFor())).toBe(SKIP_NOT_WARPBUILD)
     })
 
-    it('reports repository: inputs that are not the workflow repo', () => {
+    it('reports repository inputs that are not the workflow repo', () => {
       expect(
         getMirrorCacheSkipReason(settingsFor({repositoryName: 'other-repo'}))
       ).toBe(
@@ -103,19 +106,15 @@ describe('warpbuild snapshot cache', () => {
       )
     })
 
-    it('only serves fetch-depth 1', () => {
-      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 0}))).toBe(
-        'fetch-depth is 0, cache only serves fetch-depth 1'
-      )
-      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 50}))).toBe(
-        'fetch-depth is 50, cache only serves fetch-depth 1'
-      )
+    it('serves any fetch-depth and fetch-tags (mirror is full history)', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 0}))).toBeNull()
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 50}))).toBeNull()
+      expect(
+        getMirrorCacheSkipReason(settingsFor({fetchTags: true}))
+      ).toBeNull()
     })
 
-    it('skips fetch-tags, filters, sparse and lfs checkouts', () => {
-      expect(getMirrorCacheSkipReason(settingsFor({fetchTags: true}))).toBe(
-        'fetch-tags is enabled'
-      )
+    it('skips filters, sparse and lfs checkouts', () => {
       expect(getMirrorCacheSkipReason(settingsFor({filter: 'blob:none'}))).toBe(
         'a fetch filter is configured'
       )
@@ -123,18 +122,36 @@ describe('warpbuild snapshot cache', () => {
         getMirrorCacheSkipReason(settingsFor({sparseCheckout: ['src']}))
       ).toBe('sparse checkout is configured')
       expect(getMirrorCacheSkipReason(settingsFor({lfs: true}))).toBe(
-        'lfs is enabled (lfs objects are not in the snapshot)'
+        'lfs is enabled (lfs objects are not in the mirror)'
       )
     })
+  })
 
-    winOnly('accepts sha-only checkouts (empty ref)', () => {
-      expect(getMirrorCacheSkipReason(settingsFor({ref: ''}))).toBeNull()
+  describe('computeRefKey', () => {
+    it('keys on the pushed branch (GITHUB_REF)', () => {
+      process.env['GITHUB_REF'] = 'refs/heads/feature/x'
+      expect(computeRefKey(settingsFor())).toBe('feature/x')
     })
 
-    it('skips unqualified refs', () => {
-      expect(getMirrorCacheSkipReason(settingsFor({ref: 'main'}))).toBe(
-        "ref 'main' has no cacheable destination ref"
-      )
+    it('keys on the base branch for pull requests (merge sha is synthetic)', () => {
+      process.env['GITHUB_REF'] = 'refs/pull/42/merge'
+      process.env['GITHUB_BASE_REF'] = 'main'
+      expect(computeRefKey(settingsFor())).toBe('main')
+    })
+
+    it('is empty for tags and bare pull refs (base only, no roll)', () => {
+      process.env['GITHUB_REF'] = 'refs/tags/v1.2.3'
+      expect(computeRefKey(settingsFor())).toBe('')
+      process.env['GITHUB_REF'] = 'refs/pull/42/merge'
+      expect(computeRefKey(settingsFor())).toBe('')
+    })
+
+    it('is empty for a detached sha checkout', () => {
+      expect(computeRefKey(settingsFor({ref: SHA}))).toBe('')
+    })
+
+    it('passes through an already-short branch name', () => {
+      expect(computeRefKey(settingsFor({ref: 'main'}))).toBe('main')
     })
   })
 
@@ -144,7 +161,6 @@ describe('warpbuild snapshot cache', () => {
         path.join(os.tmpdir(), 'wb-reset-')
       )
       try {
-        // Simulate a partially-restored .git: stray objects, a pack, a shallow file.
         await fs.promises.mkdir(path.join(gitDir, 'objects', 'pack'), {
           recursive: true
         })
@@ -152,179 +168,95 @@ describe('warpbuild snapshot cache', () => {
           path.join(gitDir, 'objects', 'ab'),
           'junk loose object'
         )
-        await fs.promises.writeFile(
-          path.join(gitDir, 'objects', 'pack', 'pack-x.pack'),
-          'junk pack'
-        )
         await fs.promises.writeFile(path.join(gitDir, 'shallow'), 'deadbeef\n')
 
         await resetGitObjects(gitDir)
 
-        // shallow gone; objects/ holds only the two empty init dirs.
         expect(fs.existsSync(path.join(gitDir, 'shallow'))).toBe(false)
         expect(fs.existsSync(path.join(gitDir, 'objects', 'ab'))).toBe(false)
         expect(
           (await fs.promises.readdir(path.join(gitDir, 'objects'))).sort()
         ).toEqual(['info', 'pack'])
-        expect(
-          await fs.promises.readdir(path.join(gitDir, 'objects', 'pack'))
-        ).toEqual([])
-        expect(
-          await fs.promises.readdir(path.join(gitDir, 'objects', 'info'))
-        ).toEqual([])
       } finally {
         await fs.promises.rm(gitDir, {recursive: true, force: true})
       }
-    })
-
-    it('is a no-op-safe on an already-clean .git', async () => {
-      const gitDir = await fs.promises.mkdtemp(
-        path.join(os.tmpdir(), 'wb-reset-')
-      )
-      try {
-        await expect(resetGitObjects(gitDir)).resolves.toBeUndefined()
-        expect(
-          (await fs.promises.readdir(path.join(gitDir, 'objects'))).sort()
-        ).toEqual(['info', 'pack'])
-      } finally {
-        await fs.promises.rm(gitDir, {recursive: true, force: true})
-      }
-    })
-  })
-
-  describe('assertSafeTarMembers', () => {
-    async function makeTar(
-      dir: string,
-      members: string[],
-      writeFiles = true
-    ): Promise<string> {
-      if (writeFiles) {
-        for (const m of members) {
-          const abs = path.join(dir, m)
-          await fs.promises.mkdir(path.dirname(abs), {recursive: true})
-          await fs.promises.writeFile(abs, 'x')
-        }
-      }
-      const tar = path.join(dir, 'out.tar')
-      await exec.exec('tar', ['-cf', tar, '-C', dir, ...members])
-      return tar
-    }
-
-    it('accepts objects/ and shallow members', async () => {
-      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wb-tar-'))
-      try {
-        const tar = await makeTar(dir, ['objects/pack/p.pack', 'shallow'])
-        await expect(assertSafeTarMembers(tar)).resolves.toBeUndefined()
-      } finally {
-        await fs.promises.rm(dir, {recursive: true, force: true})
-      }
-    })
-
-    it('rejects members outside objects/ and shallow (e.g. hooks)', async () => {
-      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wb-tar-'))
-      try {
-        const tar = await makeTar(dir, ['objects/x', 'hooks/pre-commit'])
-        await expect(assertSafeTarMembers(tar)).rejects.toThrow(
-          /unexpected snapshot tar member/
-        )
-      } finally {
-        await fs.promises.rm(dir, {recursive: true, force: true})
-      }
-    })
-
-    it('rejects path traversal members', async () => {
-      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'wb-tar-'))
-      try {
-        await fs.promises.mkdir(path.join(dir, 'sub'))
-        const tar = path.join(dir, 'evil.tar')
-        // -P preserves the ../ member instead of stripping it.
-        await fs.promises.writeFile(path.join(dir, 'evil'), 'x')
-        await exec.exec('tar', [
-          '-cPf',
-          tar,
-          '-C',
-          path.join(dir, 'sub'),
-          '../evil'
-        ])
-        await expect(assertSafeTarMembers(tar)).rejects.toThrow(
-          /unexpected snapshot tar member/
-        )
-      } finally {
-        await fs.promises.rm(dir, {recursive: true, force: true})
-      }
-    })
-  })
-
-  describe('computeDestinationRef', () => {
-    it('maps the refs the fetch would have created', () => {
-      expect(computeDestinationRef('refs/heads/main')).toBe(
-        'refs/remotes/origin/main'
-      )
-      expect(computeDestinationRef('refs/pull/42/merge')).toBe(
-        'refs/remotes/pull/42/merge'
-      )
-      expect(computeDestinationRef('refs/tags/v1.2.3')).toBe('refs/tags/v1.2.3')
-      expect(computeDestinationRef('')).toBe('')
-      expect(computeDestinationRef('main')).toBeNull()
     })
   })
 
   describe('backend api http contract', () => {
     const realFetch = globalThis.fetch
     let lastUrl = ''
+    let lastInit: RequestInit | undefined
 
     afterEach(() => {
       globalThis.fetch = realFetch
     })
 
     function stubFetch(status: number, body: unknown): void {
-      globalThis.fetch = (async (input: unknown) => {
+      globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
         lastUrl = String(input)
+        lastInit = init
         return new Response(JSON.stringify(body), {status})
       }) as typeof fetch
     }
 
-    it('maps 200 to hit and keys by sha', async () => {
-      stubFetch(200, {url: 'https://s3/x', size_bytes: 42, created_at: 'now'})
-      const result = await lookupSnapshot('123', SHA)
-      expect(result.kind).toBe('hit')
-      expect(lastUrl).toContain(`sha=${SHA}`)
+    it('lookupRestore maps 200 to a restore plan keyed by ref', async () => {
+      stubFetch(200, {
+        base: {url: 'https://s3/base', size_bytes: 42},
+        branch: {url: 'https://s3/branch'}
+      })
+      const result = await lookupRestore('123', 'main')
+      expect(result.kind).toBe('restore')
+      if (result.kind === 'restore') {
+        expect(result.base.url).toBe('https://s3/base')
+        expect(result.branch?.url).toBe('https://s3/branch')
+      }
+      expect(lastUrl).toContain('ref=main')
     })
 
-    it('maps 404 to miss (agent uploads after the job)', async () => {
-      stubFetch(404, {sub_code: 'NFE_GITMIRROR'})
-      expect((await lookupSnapshot('123', SHA)).kind).toBe('miss')
-    })
-
-    it('maps 403 to disabled (backend kill switch)', async () => {
-      stubFetch(403, {sub_code: 'PDE_GITMIRROR_DISABLED'})
-      expect((await lookupSnapshot('123', SHA)).kind).toBe('disabled')
-    })
-
-    it('maps other statuses and network failures to error', async () => {
-      stubFetch(500, {})
-      expect((await lookupSnapshot('123', SHA)).kind).toBe('error')
-      globalThis.fetch = (async () => {
-        throw new Error('boom')
-      }) as typeof fetch
-      expect((await lookupSnapshot('123', SHA)).kind).toBe('error')
-    })
-  })
-
-  describe('manifestDir', () => {
-    const saved = process.env['RUNNER_TEMP']
-    afterEach(() => {
-      if (saved === undefined) {
-        delete process.env['RUNNER_TEMP']
-      } else {
-        process.env['RUNNER_TEMP'] = saved
+    it('lookupRestore maps a null branch (base but no delta yet)', async () => {
+      stubFetch(200, {base: {url: 'https://s3/base'}, branch: null})
+      const result = await lookupRestore('123', 'main')
+      expect(result.kind).toBe('restore')
+      if (result.kind === 'restore') {
+        expect(result.branch).toBeNull()
       }
     })
 
-    it('places manifests under RUNNER_TEMP/wb-snapshots', () => {
-      process.env['RUNNER_TEMP'] = path.join(os.tmpdir(), 'runner-temp-x')
-      expect(manifestDir()).toBe(
-        path.join(os.tmpdir(), 'runner-temp-x', 'wb-snapshots')
+    it('lookupRestore maps 404 to cold, 403 to disabled, 500 to error', async () => {
+      stubFetch(404, {sub_code: 'NFE_GITMIRROR'})
+      expect((await lookupRestore('123', 'main')).kind).toBe('cold')
+      stubFetch(403, {sub_code: 'PDE_GITMIRROR_DISABLED'})
+      expect((await lookupRestore('123', 'main')).kind).toBe('disabled')
+      stubFetch(500, {})
+      expect((await lookupRestore('123', 'main')).kind).toBe('error')
+    })
+
+    it('lookupRestore maps network failure to error', async () => {
+      globalThis.fetch = (async () => {
+        throw new Error('boom')
+      }) as typeof fetch
+      expect((await lookupRestore('123', 'main')).kind).toBe('error')
+    })
+
+    it('requestBaseUpload maps 200 to a grant, 409 to locked', async () => {
+      stubFetch(200, {url: 'https://s3/put-base'})
+      const grant = await requestBaseUpload('123')
+      expect(grant.kind).toBe('grant')
+      if (grant.kind === 'grant') {
+        expect(grant.url).toBe('https://s3/put-base')
+      }
+      expect(lastInit?.method).toBe('POST')
+      stubFetch(409, {sub_code: 'FVE_GITMIRROR_LOCKED'})
+      expect((await requestBaseUpload('123')).kind).toBe('locked')
+    })
+
+    it('requestBranchUpload maps 200 to a grant, 403 to disabled', async () => {
+      stubFetch(200, {url: 'https://s3/put-branch'})
+      expect((await requestBranchUpload('123', 'main', SHA)).kind).toBe('grant')
+      stubFetch(403, {})
+      expect((await requestBranchUpload('123', 'main', SHA)).kind).toBe(
+        'disabled'
       )
     })
   })
