@@ -41983,41 +41983,68 @@ async function uploadBranchDelta(settings) {
     }
     const repoPath = settings.repositoryPath;
     const sha = settings.commit;
-    const grant = await requestBranchUpload(plan.repoKey, plan.refKey, sha);
-    if (grant.kind !== 'grant') {
-        info(`Branch delta upload skipped (${grant.kind})`);
-        return;
-    }
-    if (!(await hasBaseRefs(repoPath))) {
-        info('No base refs to diff against; branch delta skipped');
-        return;
-    }
-    const tmp = tempBundlePath('branch');
+    await exec_exec('git', ['-C', repoPath, 'update-ref', UPLOAD_TIP_REF, sha]);
     try {
-        await exec_exec('git', ['-C', repoPath, 'update-ref', UPLOAD_TIP_REF, sha]);
-        // Exclude the base with a single --glob, not one `^ref` arg per ref: a large repo
-        // has hundreds of base refs, and that many args overflows the Windows command-line
-        // limit (ENAMETOOLONG). The glob matches the multi-level seeded refs and yields the
-        // same base-relative (order-free) delta.
-        await exec_exec('git', [
-            '-C',
-            repoPath,
-            'bundle',
-            'create',
-            tmp,
-            UPLOAD_TIP_REF,
-            '--not',
-            `--glob=${BASE_REFNS}/*`
-        ]);
-        await httpPut(grant.url, tmp);
-        info(`Uploaded branch delta for '${plan.refKey}'`);
+        if (!(await hasBaseRefs(repoPath))) {
+            info('No base refs to diff against; branch delta skipped');
+            return;
+        }
+        // If the tip is already in the base there is no delta to roll, and `git bundle
+        // create` errors on an empty range ("Refusing to create empty bundle"). Detect it
+        // first — and before taking the server lock, so an empty delta never blocks the
+        // other jobs racing the same branch.
+        if (await branchDeltaIsEmpty(repoPath)) {
+            info('Tip already contained in the base; no branch delta to upload');
+            return;
+        }
+        const grant = await requestBranchUpload(plan.repoKey, plan.refKey, sha);
+        if (grant.kind !== 'grant') {
+            info(`Branch delta upload skipped (${grant.kind})`);
+            return;
+        }
+        const tmp = tempBundlePath('branch');
+        try {
+            // Exclude the base with a single --glob, not one `^ref` arg per ref: a large repo
+            // has hundreds of base refs, and that many args overflows the Windows command-line
+            // limit (ENAMETOOLONG). The glob matches the multi-level seeded refs and yields the
+            // same base-relative (order-free) delta.
+            await exec_exec('git', [
+                '-C',
+                repoPath,
+                'bundle',
+                'create',
+                tmp,
+                UPLOAD_TIP_REF,
+                '--not',
+                `--glob=${BASE_REFNS}/*`
+            ]);
+            await httpPut(grant.url, tmp);
+            info(`Uploaded branch delta for '${plan.refKey}'`);
+        }
+        finally {
+            await external_fs_namespaceObject.promises.rm(tmp, { force: true });
+        }
     }
     finally {
-        await external_fs_namespaceObject.promises.rm(tmp, { force: true });
         await exec_exec('git', ['-C', repoPath, 'update-ref', '-d', UPLOAD_TIP_REF], {
             ignoreReturnCode: true
         });
     }
+}
+// The tip's delta against the base is empty when the tip is already reachable from the
+// base — nothing new to bundle.
+async function branchDeltaIsEmpty(repoPath) {
+    let out = '';
+    await exec_exec('git', [
+        '-C',
+        repoPath,
+        'rev-list',
+        '--count',
+        UPLOAD_TIP_REF,
+        '--not',
+        `--glob=${BASE_REFNS}/*`
+    ], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
+    return out.trim() === '0';
 }
 // Whether any base ref was seeded — the guard that keeps the delta base-relative. The
 // base is excluded by glob (see uploadBranchDelta), so we only need existence here.
