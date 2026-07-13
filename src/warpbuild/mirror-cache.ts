@@ -2,6 +2,7 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
+import * as crypto from 'crypto'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
@@ -40,8 +41,13 @@ interface Plan {
 }
 let plan: Plan = {mode: 'off', repoKey: '', refKey: ''}
 
-// Null = attempt the cache; else a reason to log. The mirror serves full history for any
-// depth, so fetch-depth is not gated; sparse/lfs/filter change the object set we model.
+// Null = attempt the cache; else a reason to log. We engage only where the result matches
+// upstream: full history (fetch-depth 0) or the default depth 1. An explicit shallow depth
+// (>= 2) is a deliberate request we can't honour (the mirror is full history), so we defer
+// to upstream. sparse/filter change the object set we model, so they defer too. LFS does
+// NOT defer: the bundle carries the git objects (including LFS pointer blobs), and the
+// stock `git lfs fetch`/`checkout` steps pull the actual LFS binaries from GitHub on top,
+// exactly as upstream — the mirror only accelerates the git-object half.
 export function getMirrorCacheSkipReason(
   settings: IGitSourceSettings
 ): string | null {
@@ -68,15 +74,18 @@ export function getMirrorCacheSkipReason(
   if (!settings.commit || !SHA_PATTERN.test(settings.commit)) {
     return 'no exact commit sha to key on'
   }
+  // Respect an explicit shallow request: depth 0 (all) and the default depth 1 engage the
+  // mirror; anything deeper is a deliberate shallow the mirror can't reproduce → upstream.
+  if (settings.fetchDepth > 1) {
+    return `fetch-depth ${settings.fetchDepth} is an explicit shallow depth; using upstream checkout`
+  }
   if (settings.filter) {
     return 'a fetch filter is configured'
   }
   if (settings.sparseCheckout) {
     return 'sparse checkout is configured'
   }
-  if (settings.lfs) {
-    return 'lfs is enabled (lfs objects are not in the mirror)'
-  }
+  // LFS intentionally does not skip — see the note above getMirrorCacheSkipReason.
   return null
 }
 
@@ -107,6 +116,15 @@ export async function setup(settings: IGitSourceSettings): Promise<MirrorMode> {
   return mode
 }
 
+// Called by getSource when a mirror-seeded fetch fails: clear our refs and disengage, so
+// the caller can retry the standard fetch against a clean repo. Also re-sets cache-hit to
+// false since we're no longer serving from cache.
+export async function abandon(settings: IGitSourceSettings): Promise<void> {
+  plan = {mode: 'off', repoKey: '', refKey: ''}
+  core.setOutput('cache-hit', 'false')
+  await cleanupWbRefs(settings.repositoryPath)
+}
+
 async function setupImpl(settings: IGitSourceSettings): Promise<MirrorMode> {
   plan = {mode: 'off', repoKey: '', refKey: ''}
   const skipReason = getMirrorCacheSkipReason(settings)
@@ -121,6 +139,9 @@ async function setupImpl(settings: IGitSourceSettings): Promise<MirrorMode> {
     core.warning(
       `WarpBuild mirror cache unavailable, using standard checkout: ${error}`
     )
+    // A partial seed may have left refs/wb/*; strip it so the stock fetch runs against a
+    // clean repo (objects just dangle harmlessly).
+    await cleanupWbRefs(settings.repositoryPath)
     return 'off'
   } finally {
     core.endGroup()
@@ -159,6 +180,14 @@ async function setupInner(settings: IGitSourceSettings): Promise<MirrorMode> {
 
   // Restore: seed the base, then this branch's delta if present.
   await seedBundle(settings.repositoryPath, lookup.base.url, BASE_REFNS)
+  // Full-history checkout: mirror the base's branches + tags into refs/remotes/origin/* +
+  // refs/tags/* so the resulting .git matches an upstream `fetch-depth: 0` checkout (the
+  // delta fetch then advances the target ref to its current tip). A shallow upstream fetch
+  // (depth 1) populates only the target ref, so there we keep the base internal and let the
+  // delta fetch provide just that ref.
+  if (settings.fetchDepth <= 0) {
+    await exposeBaseRefs(settings.repositoryPath)
+  }
   if (lookup.branch) {
     try {
       await seedBundle(settings.repositoryPath, lookup.branch.url, BRANCH_REFNS)
@@ -175,17 +204,40 @@ async function setupInner(settings: IGitSourceSettings): Promise<MirrorMode> {
   return 'seeded'
 }
 
-// Runs after checkout, in the same step (`.git` still pristine). Uploads the base (cold)
-// or this branch's refreshed delta (seeded). Best-effort — never fails the checkout.
+// Runs LAST in getSource — the checkout has already succeeded. Uploads the base (cold) or
+// this branch's refreshed delta (seeded). Hardened so it can NEVER fail the step: its own
+// try/catch for normal errors, plus scoped process guards (installed only for the upload
+// window) that turn an *uncaught* error from the git/upload work — e.g. a spawn error that
+// bypasses the promise chain, like the arg-length crash we hit on Windows — into a clean
+// exit(0). Safe because nothing checkout-relevant runs after this point.
 export async function contribute(settings: IGitSourceSettings): Promise<void> {
+  if (plan.mode !== 'cold-build' && plan.mode !== 'seeded') {
+    return
+  }
+  const guard = (error: unknown): void => {
+    core.warning(
+      `WarpBuild mirror upload error ignored — checkout already complete: ${error}`
+    )
+    process.exit(0)
+  }
+  process.on('uncaughtException', guard)
+  process.on('unhandledRejection', guard)
   try {
     if (plan.mode === 'cold-build') {
       await uploadBaseMirror(settings)
-    } else if (plan.mode === 'seeded') {
+    } else {
       await uploadBranchDelta(settings)
     }
   } catch (error) {
     core.warning(`WarpBuild mirror upload skipped: ${error}`)
+  } finally {
+    // Seeded mode created the internal refs/wb/* namespace; strip it so the customer's
+    // .git carries no mirror fingerprint (matches upstream; won't break push --mirror).
+    if (plan.mode === 'seeded') {
+      await cleanupWbRefs(settings.repositoryPath)
+    }
+    process.removeListener('uncaughtException', guard)
+    process.removeListener('unhandledRejection', guard)
   }
 }
 
@@ -211,6 +263,53 @@ async function seedBundle(
     ])
   } finally {
     await fs.promises.rm(tmp, {force: true})
+  }
+}
+
+// Copy the seeded base's branches + tags out to the namespaces upstream uses
+// (refs/remotes/origin/* + refs/tags/*), so a full-history checkout's .git matches
+// upstream. Runs before the delta fetch, while the target ref is still absent, so the
+// `create` directives don't collide. update-ref --stdin keeps it Windows arg-length safe.
+async function exposeBaseRefs(repoPath: string): Promise<void> {
+  let out = ''
+  await exec.exec(
+    'git',
+    [
+      '-C',
+      repoPath,
+      'for-each-ref',
+      '--format=create refs/%(refname:lstrip=3) %(objectname)',
+      `${BASE_REFNS}/remotes/origin`,
+      `${BASE_REFNS}/tags`
+    ],
+    {silent: true, listeners: {stdout: (d: Buffer) => (out += d.toString())}}
+  )
+  if (!out.trim()) {
+    return
+  }
+  await exec.exec('git', ['-C', repoPath, 'update-ref', '--stdin'], {
+    input: Buffer.from(out)
+  })
+}
+
+// Remove the internal refs/wb/* namespace. Objects stay (reachable from the real refs), so
+// the checkout is unaffected; only the mirror's bookkeeping refs go. Best-effort.
+async function cleanupWbRefs(repoPath: string): Promise<void> {
+  try {
+    let out = ''
+    await exec.exec(
+      'git',
+      ['-C', repoPath, 'for-each-ref', '--format=delete %(refname)', 'refs/wb'],
+      {silent: true, listeners: {stdout: (d: Buffer) => (out += d.toString())}}
+    )
+    if (!out.trim()) {
+      return
+    }
+    await exec.exec('git', ['-C', repoPath, 'update-ref', '--stdin'], {
+      input: Buffer.from(out)
+    })
+  } catch (error) {
+    core.debug(`WarpBuild ref cleanup skipped: ${error}`)
   }
 }
 
@@ -363,7 +462,12 @@ async function httpPut(url: string, file: string): Promise<void> {
 }
 
 function tempBundlePath(tag: string): string {
-  return path.join(os.tmpdir(), `wb-${tag}-${process.pid}-${Date.now()}.bundle`)
+  // Unpredictable name so a bundle write can't be pre-empted by a symlink planted on a
+  // shared tmpdir.
+  return path.join(
+    os.tmpdir(),
+    `wb-${tag}-${crypto.randomBytes(12).toString('hex')}.bundle`
+  )
 }
 
 // Kept for callers/tests: reset .git/objects to the empty `git init` shape.

@@ -41786,6 +41786,7 @@ async function requestBranchUpload(repoKey, ref, sha) {
 
 
 
+
 // WarpBuild checkout cache: a bare base mirror + per-branch orderless delta bundles on
 // S3. We seed the base (+ this branch's delta) before the fetch, so the GitHub fetch is
 // only the tip delta — or nothing. Each run overwrites its branch's bundle (base-relative,
@@ -41801,8 +41802,13 @@ const BASE_REFNS = 'refs/wb/base';
 const BRANCH_REFNS = 'refs/wb/branch';
 const UPLOAD_TIP_REF = 'refs/wb/tip';
 let plan = { mode: 'off', repoKey: '', refKey: '' };
-// Null = attempt the cache; else a reason to log. The mirror serves full history for any
-// depth, so fetch-depth is not gated; sparse/lfs/filter change the object set we model.
+// Null = attempt the cache; else a reason to log. We engage only where the result matches
+// upstream: full history (fetch-depth 0) or the default depth 1. An explicit shallow depth
+// (>= 2) is a deliberate request we can't honour (the mirror is full history), so we defer
+// to upstream. sparse/filter change the object set we model, so they defer too. LFS does
+// NOT defer: the bundle carries the git objects (including LFS pointer blobs), and the
+// stock `git lfs fetch`/`checkout` steps pull the actual LFS binaries from GitHub on top,
+// exactly as upstream — the mirror only accelerates the git-object half.
 function getMirrorCacheSkipReason(settings) {
     if (!process.env['WARPBUILD_RUNNER_VERIFICATION_TOKEN'] ||
         !process.env['WARPBUILD_HOST_URL']) {
@@ -41822,15 +41828,18 @@ function getMirrorCacheSkipReason(settings) {
     if (!settings.commit || !SHA_PATTERN.test(settings.commit)) {
         return 'no exact commit sha to key on';
     }
+    // Respect an explicit shallow request: depth 0 (all) and the default depth 1 engage the
+    // mirror; anything deeper is a deliberate shallow the mirror can't reproduce → upstream.
+    if (settings.fetchDepth > 1) {
+        return `fetch-depth ${settings.fetchDepth} is an explicit shallow depth; using upstream checkout`;
+    }
     if (settings.filter) {
         return 'a fetch filter is configured';
     }
     if (settings.sparseCheckout) {
         return 'sparse checkout is configured';
     }
-    if (settings.lfs) {
-        return 'lfs is enabled (lfs objects are not in the mirror)';
-    }
+    // LFS intentionally does not skip — see the note above getMirrorCacheSkipReason.
     return null;
 }
 // The durable branch to key the per-branch bundle on. For pull_request events the merge
@@ -41858,6 +41867,14 @@ async function setup(settings) {
     setOutput('cache-hit', mode === 'seeded' ? 'true' : 'false');
     return mode;
 }
+// Called by getSource when a mirror-seeded fetch fails: clear our refs and disengage, so
+// the caller can retry the standard fetch against a clean repo. Also re-sets cache-hit to
+// false since we're no longer serving from cache.
+async function abandon(settings) {
+    plan = { mode: 'off', repoKey: '', refKey: '' };
+    setOutput('cache-hit', 'false');
+    await cleanupWbRefs(settings.repositoryPath);
+}
 async function setupImpl(settings) {
     plan = { mode: 'off', repoKey: '', refKey: '' };
     const skipReason = getMirrorCacheSkipReason(settings);
@@ -41871,6 +41888,9 @@ async function setupImpl(settings) {
     }
     catch (error) {
         warning(`WarpBuild mirror cache unavailable, using standard checkout: ${error}`);
+        // A partial seed may have left refs/wb/*; strip it so the stock fetch runs against a
+        // clean repo (objects just dangle harmlessly).
+        await cleanupWbRefs(settings.repositoryPath);
         return 'off';
     }
     finally {
@@ -41902,6 +41922,14 @@ async function setupInner(settings) {
     }
     // Restore: seed the base, then this branch's delta if present.
     await seedBundle(settings.repositoryPath, lookup.base.url, BASE_REFNS);
+    // Full-history checkout: mirror the base's branches + tags into refs/remotes/origin/* +
+    // refs/tags/* so the resulting .git matches an upstream `fetch-depth: 0` checkout (the
+    // delta fetch then advances the target ref to its current tip). A shallow upstream fetch
+    // (depth 1) populates only the target ref, so there we keep the base internal and let the
+    // delta fetch provide just that ref.
+    if (settings.fetchDepth <= 0) {
+        await exposeBaseRefs(settings.repositoryPath);
+    }
     if (lookup.branch) {
         try {
             await seedBundle(settings.repositoryPath, lookup.branch.url, BRANCH_REFNS);
@@ -41914,19 +41942,41 @@ async function setupInner(settings) {
     plan = { mode: 'seeded', repoKey, refKey };
     return 'seeded';
 }
-// Runs after checkout, in the same step (`.git` still pristine). Uploads the base (cold)
-// or this branch's refreshed delta (seeded). Best-effort — never fails the checkout.
+// Runs LAST in getSource — the checkout has already succeeded. Uploads the base (cold) or
+// this branch's refreshed delta (seeded). Hardened so it can NEVER fail the step: its own
+// try/catch for normal errors, plus scoped process guards (installed only for the upload
+// window) that turn an *uncaught* error from the git/upload work — e.g. a spawn error that
+// bypasses the promise chain, like the arg-length crash we hit on Windows — into a clean
+// exit(0). Safe because nothing checkout-relevant runs after this point.
 async function contribute(settings) {
+    if (plan.mode !== 'cold-build' && plan.mode !== 'seeded') {
+        return;
+    }
+    const guard = (error) => {
+        warning(`WarpBuild mirror upload error ignored — checkout already complete: ${error}`);
+        process.exit(0);
+    };
+    process.on('uncaughtException', guard);
+    process.on('unhandledRejection', guard);
     try {
         if (plan.mode === 'cold-build') {
             await uploadBaseMirror(settings);
         }
-        else if (plan.mode === 'seeded') {
+        else {
             await uploadBranchDelta(settings);
         }
     }
     catch (error) {
         warning(`WarpBuild mirror upload skipped: ${error}`);
+    }
+    finally {
+        // Seeded mode created the internal refs/wb/* namespace; strip it so the customer's
+        // .git carries no mirror fingerprint (matches upstream; won't break push --mirror).
+        if (plan.mode === 'seeded') {
+            await cleanupWbRefs(settings.repositoryPath);
+        }
+        process.removeListener('uncaughtException', guard);
+        process.removeListener('unhandledRejection', guard);
     }
 }
 // Download a bundle and fetch its refs into refNs/* so its objects seed the local repo
@@ -41948,6 +41998,44 @@ async function seedBundle(repoPath, url, refNs) {
     }
     finally {
         await external_fs_namespaceObject.promises.rm(tmp, { force: true });
+    }
+}
+// Copy the seeded base's branches + tags out to the namespaces upstream uses
+// (refs/remotes/origin/* + refs/tags/*), so a full-history checkout's .git matches
+// upstream. Runs before the delta fetch, while the target ref is still absent, so the
+// `create` directives don't collide. update-ref --stdin keeps it Windows arg-length safe.
+async function exposeBaseRefs(repoPath) {
+    let out = '';
+    await exec_exec('git', [
+        '-C',
+        repoPath,
+        'for-each-ref',
+        '--format=create refs/%(refname:lstrip=3) %(objectname)',
+        `${BASE_REFNS}/remotes/origin`,
+        `${BASE_REFNS}/tags`
+    ], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
+    if (!out.trim()) {
+        return;
+    }
+    await exec_exec('git', ['-C', repoPath, 'update-ref', '--stdin'], {
+        input: Buffer.from(out)
+    });
+}
+// Remove the internal refs/wb/* namespace. Objects stay (reachable from the real refs), so
+// the checkout is unaffected; only the mirror's bookkeeping refs go. Best-effort.
+async function cleanupWbRefs(repoPath) {
+    try {
+        let out = '';
+        await exec_exec('git', ['-C', repoPath, 'for-each-ref', '--format=delete %(refname)', 'refs/wb'], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
+        if (!out.trim()) {
+            return;
+        }
+        await exec_exec('git', ['-C', repoPath, 'update-ref', '--stdin'], {
+            input: Buffer.from(out)
+        });
+    }
+    catch (error) {
+        core_debug(`WarpBuild ref cleanup skipped: ${error}`);
     }
 }
 // Cold-build: after the forced full fetch the repo holds all branches under
@@ -42078,7 +42166,9 @@ async function httpPut(url, file) {
     }
 }
 function tempBundlePath(tag) {
-    return external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-${tag}-${process.pid}-${Date.now()}.bundle`);
+    // Unpredictable name so a bundle write can't be pre-empted by a symlink planted on a
+    // shared tmpdir.
+    return external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-${tag}-${external_crypto_namespaceObject.randomBytes(12).toString('hex')}.bundle`);
 }
 // Kept for callers/tests: reset .git/objects to the empty `git init` shape.
 async function resetGitObjects(gitDir) {
@@ -42224,15 +42314,28 @@ async function getSource(settings) {
         else if (settings.sparseCheckout) {
             fetchOptions.filter = 'blob:none';
         }
+        let warpbuildFetchDone = false;
         if (warpbuildMode === 'seeded') {
             // Seeded from the mirror: fetch only the tip delta, negotiating against the seeded
-            // objects. No depth — the base is full history, so this stays non-shallow.
-            const refSpec = getRefSpec(settings.ref, settings.commit);
-            await git.fetch(refSpec, fetchOptions);
-            if (!(await testRef(git, settings.ref, settings.commit))) {
-                throw new Error(`The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
-                    `The ref may have been updated after the workflow was triggered.`);
+            // objects. No depth — the base is full history, so this stays non-shallow. If it
+            // fails for any reason, disengage cleanly and fall through to the standard fetch.
+            try {
+                const refSpec = getRefSpec(settings.ref, settings.commit);
+                await git.fetch(refSpec, fetchOptions);
+                if (!(await testRef(git, settings.ref, settings.commit))) {
+                    throw new Error(`The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
+                        `The ref may have been updated after the workflow was triggered.`);
+                }
+                warpbuildFetchDone = true;
             }
+            catch (error) {
+                warning(`WarpBuild mirror delta fetch failed; falling back to standard checkout: ${error}`);
+                await abandon(settings);
+                warpbuildMode = 'off';
+            }
+        }
+        if (warpbuildFetchDone) {
+            // The seeded delta fetch already brought in the target commit.
         }
         else if (warpbuildMode === 'cold-build' || settings.fetchDepth <= 0) {
             // Fetch all branches and tags
@@ -42300,8 +42403,6 @@ async function getSource(settings) {
         startGroup('Checking out the ref');
         await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
         endGroup();
-        // WarpBuild snapshot cache: upload the fetch result on a miss
-        await contribute(settings);
         // Submodules
         if (settings.submodules) {
             // Temporarily override global config
@@ -42328,6 +42429,16 @@ async function getSource(settings) {
         setOutput('commit', commitSHA.trim());
         // Check for incorrect pull request merge commit
         await checkCommitInfo(settings.authToken, commitInfo, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.githubServerUrl);
+        // WarpBuild mirror: best-effort upload, run LAST in getSource so it can never affect
+        // the checkout result. Belt-and-suspenders around contribute()'s own try/catch and the
+        // scoped process guard it installs (which ignores any uncaught upload error now that
+        // the checkout is already complete).
+        try {
+            await contribute(settings);
+        }
+        catch (error) {
+            warning(`WarpBuild mirror upload skipped: ${error}`);
+        }
     }
     finally {
         // Remove auth

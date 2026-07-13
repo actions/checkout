@@ -106,24 +106,34 @@ describe('warpbuild mirror cache', () => {
       )
     })
 
-    it('serves any fetch-depth and fetch-tags (mirror is full history)', () => {
+    it('engages for depth 0/1, defers explicit shallow (>=2) to upstream', () => {
       expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 0}))).toBeNull()
-      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 50}))).toBeNull()
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 1}))).toBeNull()
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 2}))).toContain(
+        'explicit shallow depth'
+      )
+      expect(getMirrorCacheSkipReason(settingsFor({fetchDepth: 50}))).toContain(
+        'explicit shallow depth'
+      )
       expect(
         getMirrorCacheSkipReason(settingsFor({fetchTags: true}))
       ).toBeNull()
     })
 
-    it('skips filters, sparse and lfs checkouts', () => {
+    it('skips filters and sparse checkouts', () => {
       expect(getMirrorCacheSkipReason(settingsFor({filter: 'blob:none'}))).toBe(
         'a fetch filter is configured'
       )
       expect(
         getMirrorCacheSkipReason(settingsFor({sparseCheckout: ['src']}))
       ).toBe('sparse checkout is configured')
-      expect(getMirrorCacheSkipReason(settingsFor({lfs: true}))).toBe(
-        'lfs is enabled (lfs objects are not in the mirror)'
-      )
+    })
+
+    it('engages for lfs (git objects from the mirror, lfs binaries fetched on top)', () => {
+      expect(getMirrorCacheSkipReason(settingsFor({lfs: true}))).toBeNull()
+      expect(
+        getMirrorCacheSkipReason(settingsFor({lfs: true, fetchDepth: 1}))
+      ).toBeNull()
     })
   })
 
