@@ -41988,14 +41988,17 @@ async function uploadBranchDelta(settings) {
         info(`Branch delta upload skipped (${grant.kind})`);
         return;
     }
-    const excludes = await baseRefExcludes(repoPath);
-    if (excludes.length === 0) {
+    if (!(await hasBaseRefs(repoPath))) {
         info('No base refs to diff against; branch delta skipped');
         return;
     }
     const tmp = tempBundlePath('branch');
     try {
         await exec_exec('git', ['-C', repoPath, 'update-ref', UPLOAD_TIP_REF, sha]);
+        // Exclude the base with a single --glob, not one `^ref` arg per ref: a large repo
+        // has hundreds of base refs, and that many args overflows the Windows command-line
+        // limit (ENAMETOOLONG). The glob matches the multi-level seeded refs and yields the
+        // same base-relative (order-free) delta.
         await exec_exec('git', [
             '-C',
             repoPath,
@@ -42003,7 +42006,8 @@ async function uploadBranchDelta(settings) {
             'create',
             tmp,
             UPLOAD_TIP_REF,
-            ...excludes
+            '--not',
+            `--glob=${BASE_REFNS}/*`
         ]);
         await httpPut(grant.url, tmp);
         info(`Uploaded branch delta for '${plan.refKey}'`);
@@ -42015,15 +42019,12 @@ async function uploadBranchDelta(settings) {
         });
     }
 }
-// `^refname` for every seeded base ref — the exclusion set that makes the delta bundle
-// base-relative (and therefore order-free).
-async function baseRefExcludes(repoPath) {
+// Whether any base ref was seeded — the guard that keeps the delta base-relative. The
+// base is excluded by glob (see uploadBranchDelta), so we only need existence here.
+async function hasBaseRefs(repoPath) {
     let out = '';
-    await exec_exec('git', ['-C', repoPath, 'for-each-ref', '--format=^%(refname)', BASE_REFNS], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
-    return out
-        .split('\n')
-        .map(s => s.trim())
-        .filter(Boolean);
+    await exec_exec('git', ['-C', repoPath, 'for-each-ref', '--count=1', '--format=1', BASE_REFNS], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
+    return out.trim().length > 0;
 }
 async function downloadTo(url, dest) {
     const res = await fetch(url, {
