@@ -591,11 +591,15 @@ async function httpPut(url: string, file: string): Promise<void> {
   }
 }
 
+// Bundles live in a private mkdtemp'd dir (0700) — a co-tenant can't pre-empt a write via a
+// planted symlink, and mkdtempSync is the primitive CodeQL accepts (js/insecure-temporary-file).
+let mirrorTmpDir: string | undefined
 function tempBundlePath(tag: string): string {
-  // Unpredictable name so a bundle write can't be pre-empted by a symlink planted on a
-  // shared tmpdir.
+  if (!mirrorTmpDir) {
+    mirrorTmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wb-mirror-'))
+  }
   return path.join(
-    os.tmpdir(),
+    mirrorTmpDir,
     `wb-${tag}-${crypto.randomBytes(12).toString('hex')}.bundle`
   )
 }

@@ -42335,10 +42335,14 @@ async function httpPut(url, file) {
         throw new Error(`PUT answered ${res.status}`);
     }
 }
+// Bundles live in a private mkdtemp'd dir (0700) — a co-tenant can't pre-empt a write via a
+// planted symlink, and mkdtempSync is the primitive CodeQL accepts (js/insecure-temporary-file).
+let mirrorTmpDir;
 function tempBundlePath(tag) {
-    // Unpredictable name so a bundle write can't be pre-empted by a symlink planted on a
-    // shared tmpdir.
-    return external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), `wb-${tag}-${external_crypto_namespaceObject.randomBytes(12).toString('hex')}.bundle`);
+    if (!mirrorTmpDir) {
+        mirrorTmpDir = external_fs_namespaceObject.mkdtempSync(external_path_namespaceObject.join(external_os_namespaceObject.tmpdir(), 'wb-mirror-'));
+    }
+    return external_path_namespaceObject.join(mirrorTmpDir, `wb-${tag}-${external_crypto_namespaceObject.randomBytes(12).toString('hex')}.bundle`);
 }
 // Kept for callers/tests: reset .git/objects to the empty `git init` shape.
 async function resetGitObjects(gitDir) {
