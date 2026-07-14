@@ -2,11 +2,11 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
+import {HttpClient} from '@actions/http-client'
 import * as crypto from 'crypto'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import {Readable} from 'stream'
 import {pipeline} from 'stream/promises'
 import {IGitSourceSettings} from '../git-source-settings.js'
 import * as api from './backend-api.js'
@@ -17,14 +17,14 @@ import * as api from './backend-api.js'
 // so order-free); a cold repo single-flights the base build. Fail-open: any error →
 // standard checkout.
 
-const DOWNLOAD_TIMEOUT_MS = 15 * 60_000
 const UPLOAD_TIMEOUT_MS = 15 * 60_000
 
-// Concurrent range-download tuning. A single stream saturates at the per-connection ceiling
-// (~15 MB/s on a WAN); parallel range GETs reach link rate (~200 MB/s), as WarpBuilds/cache does.
-const SEGMENT_SIZE = 8 * 1024 * 1024
+// Concurrent range-download tuning, matched to WarpBuilds/cache: 4 MiB blocks, 8-wide, over a
+// keep-alive http.Agent. A single stream saturates at the per-connection ceiling (~15 MB/s on a
+// WAN); parallel range GETs reach link rate (~200 MB/s).
+const SEGMENT_SIZE = 4 * 1024 * 1024
 const SEGMENT_CONCURRENCY = 8
-const SEGMENT_TIMEOUT_MS = 60_000
+const SEGMENT_TIMEOUT_MS = 30_000
 const SEGMENT_RETRIES = 5
 
 // Logged at info when off; the WARPBUILD_* env is only present on our runners.
@@ -449,45 +449,54 @@ async function downloadTo(
   what: string
 ): Promise<void> {
   const started = Date.now()
-  const total = await probeRangeSize(url)
-  if (total === null) {
-    await downloadSingleStream(url, dest)
-    const bytes = (await fs.promises.stat(dest)).size
-    core.info(
-      `Mirror download [${what}]: ${fmtSize(bytes)} single-stream, no range support, ${fmtElapsed(started, bytes)}`
-    )
-    return
-  }
-  const segments: [number, number][] = []
-  for (let off = 0; off < total; off += SEGMENT_SIZE) {
-    segments.push([off, Math.min(SEGMENT_SIZE, total - off)])
-  }
-  const width = Math.min(SEGMENT_CONCURRENCY, segments.length)
-  const fh = await fs.promises.open(dest, 'w')
+  // Keep-alive http.Agent (like WarpBuilds/cache) — real parallel sockets; bare fetch under-parallelizes.
+  const http = new HttpClient('warpbuild-checkout-mirror', undefined, {
+    socketTimeout: SEGMENT_TIMEOUT_MS,
+    keepAlive: true
+  })
   try {
-    let next = 0
-    const worker = async (): Promise<void> => {
-      for (;;) {
-        const i = next++
-        if (i >= segments.length) {
-          return
+    const total = await probeRangeSize(http, url)
+    if (total === null) {
+      await downloadSingleStream(http, url, dest)
+      const bytes = (await fs.promises.stat(dest)).size
+      core.info(
+        `Mirror download [${what}]: ${fmtSize(bytes)} single-stream, no range support, ${fmtElapsed(started, bytes)}`
+      )
+      return
+    }
+    const segments: [number, number][] = []
+    for (let off = 0; off < total; off += SEGMENT_SIZE) {
+      segments.push([off, Math.min(SEGMENT_SIZE, total - off)])
+    }
+    const width = Math.min(SEGMENT_CONCURRENCY, segments.length)
+    const fh = await fs.promises.open(dest, 'w')
+    try {
+      let next = 0
+      const worker = async (): Promise<void> => {
+        for (;;) {
+          const i = next++
+          if (i >= segments.length) {
+            return
+          }
+          const [offset, count] = segments[i]
+          const buf = await downloadSegment(http, url, offset, count)
+          await fh.write(buf, 0, count, offset)
         }
-        const [offset, count] = segments[i]
-        const buf = await downloadSegment(url, offset, count)
-        await fh.write(buf, 0, count, offset)
       }
+      const pool: Promise<void>[] = []
+      for (let k = 0; k < width; k++) {
+        pool.push(worker())
+      }
+      await Promise.all(pool)
+    } finally {
+      await fh.close()
     }
-    const pool: Promise<void>[] = []
-    for (let k = 0; k < width; k++) {
-      pool.push(worker())
-    }
-    await Promise.all(pool)
+    core.info(
+      `Mirror download [${what}]: ${fmtSize(total)} in ${segments.length} ranged segments ×${width}, ${fmtElapsed(started, total)}`
+    )
   } finally {
-    await fh.close()
+    http.dispose()
   }
-  core.info(
-    `Mirror download [${what}]: ${fmtSize(total)} in ${segments.length} ranged segments ×${width}, ${fmtElapsed(started, total)}`
-  )
 }
 
 // Size + elapsed/throughput for the mirror download o11y line.
@@ -501,21 +510,26 @@ function fmtElapsed(startedMs: number, bytes: number): string {
 }
 
 // GET bytes=0-0 to learn the total size and confirm range support; null → not supported.
-async function probeRangeSize(url: string): Promise<number | null> {
-  const res = await fetch(url, {
-    headers: {range: 'bytes=0-0'},
-    signal: AbortSignal.timeout(SEGMENT_TIMEOUT_MS)
-  })
-  if (res.status !== 206) {
+async function probeRangeSize(
+  http: HttpClient,
+  url: string
+): Promise<number | null> {
+  const res = await http.get(url, {Range: 'bytes=0-0'})
+  if (res.message.statusCode !== 206) {
+    res.message.destroy() // no range support; don't read a full 200 body into memory
     return null
   }
-  const match = res.headers.get('content-range')?.match(/\/(\d+)\s*$/)
+  await res.readBody() // 1 byte; return the socket to the keep-alive pool
+  const contentRange = res.message.headers['content-range']
+  const match =
+    typeof contentRange === 'string' ? contentRange.match(/\/(\d+)\s*$/) : null
   const total = match ? parseInt(match[1], 10) : NaN
   return Number.isFinite(total) && total > 0 ? total : null
 }
 
-// One range GET with per-segment timeout + retries; returns exactly `count` bytes.
+// One range GET with retries over the shared keep-alive client; returns exactly `count` bytes.
 async function downloadSegment(
+  http: HttpClient,
   url: string,
   offset: number,
   count: number
@@ -523,14 +537,17 @@ async function downloadSegment(
   let lastErr: unknown
   for (let attempt = 0; attempt <= SEGMENT_RETRIES; attempt++) {
     try {
-      const res = await fetch(url, {
-        headers: {range: `bytes=${offset}-${offset + count - 1}`},
-        signal: AbortSignal.timeout(SEGMENT_TIMEOUT_MS)
+      const res = await http.get(url, {
+        Range: `bytes=${offset}-${offset + count - 1}`
       })
-      if (res.status !== 206) {
-        throw new Error(`range GET answered ${res.status}`)
+      if (res.message.statusCode !== 206) {
+        await res.readBody() // drain before retrying so the socket is reusable
+        throw new Error(`range GET answered ${res.message.statusCode}`)
       }
-      const buf = Buffer.from(await res.arrayBuffer())
+      const buf = await res.readBodyBuffer?.()
+      if (!buf) {
+        throw new Error('http-client response lacks readBodyBuffer')
+      }
       if (buf.length !== count) {
         throw new Error(`short segment at ${offset}: ${buf.length}/${count}`)
       }
@@ -544,17 +561,18 @@ async function downloadSegment(
     : new Error(`segment at ${offset} failed`)
 }
 
-async function downloadSingleStream(url: string, dest: string): Promise<void> {
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)
-  })
-  if (!res.ok || !res.body) {
-    throw new Error(`download answered ${res.status}`)
+async function downloadSingleStream(
+  http: HttpClient,
+  url: string,
+  dest: string
+): Promise<void> {
+  const res = await http.get(url)
+  const status = res.message.statusCode ?? 0
+  if (status < 200 || status >= 300) {
+    await res.readBody()
+    throw new Error(`download answered ${status}`)
   }
-  await pipeline(
-    Readable.fromWeb(res.body as import('stream/web').ReadableStream),
-    fs.createWriteStream(dest)
-  )
+  await pipeline(res.message, fs.createWriteStream(dest))
 }
 
 async function httpPut(url: string, file: string): Promise<void> {

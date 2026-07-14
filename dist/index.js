@@ -31883,6 +31883,64 @@ function qstring(str) {
 /******/ }
 /******/ 
 /************************************************************************/
+/******/ /* webpack/runtime/create fake namespace object */
+/******/ (() => {
+/******/ 	var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
+/******/ 	var leafPrototypes;
+/******/ 	// create a fake namespace object
+/******/ 	// mode & 1: value is a module id, require it
+/******/ 	// mode & 2: merge all properties of value into the ns
+/******/ 	// mode & 4: return value when already ns object
+/******/ 	// mode & 16: return value when it's Promise-like
+/******/ 	// mode & 8|1: behave like require
+/******/ 	__nccwpck_require__.t = function(value, mode) {
+/******/ 		if(mode & 1) value = this(value);
+/******/ 		if(mode & 8) return value;
+/******/ 		if(typeof value === 'object' && value) {
+/******/ 			if((mode & 4) && value.__esModule) return value;
+/******/ 			if((mode & 16) && typeof value.then === 'function') return value;
+/******/ 		}
+/******/ 		var ns = Object.create(null);
+/******/ 		__nccwpck_require__.r(ns);
+/******/ 		var def = {};
+/******/ 		leafPrototypes = leafPrototypes || [null, getProto({}), getProto([]), getProto(getProto)];
+/******/ 		for(var current = mode & 2 && value; typeof current == 'object' && !~leafPrototypes.indexOf(current); current = getProto(current)) {
+/******/ 			Object.getOwnPropertyNames(current).forEach((key) => (def[key] = () => (value[key])));
+/******/ 		}
+/******/ 		def['default'] = () => (value);
+/******/ 		__nccwpck_require__.d(ns, def);
+/******/ 		return ns;
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/define property getters */
+/******/ (() => {
+/******/ 	// define getter functions for harmony exports
+/******/ 	__nccwpck_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 			}
+/******/ 		}
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/hasOwnProperty shorthand */
+/******/ (() => {
+/******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/make namespace object */
+/******/ (() => {
+/******/ 	// define __esModule on exports
+/******/ 	__nccwpck_require__.r = (exports) => {
+/******/ 		if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 			Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 		}
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/compat */
 /******/ 
 /******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
@@ -32063,8 +32121,10 @@ function file_command_prepareKeyValueMessage(key, value) {
 const external_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
 // EXTERNAL MODULE: external "http"
 var external_http_ = __nccwpck_require__(8611);
+var external_http_namespaceObject = /*#__PURE__*/__nccwpck_require__.t(external_http_, 2);
 // EXTERNAL MODULE: external "https"
 var external_https_ = __nccwpck_require__(5692);
+var external_https_namespaceObject = /*#__PURE__*/__nccwpck_require__.t(external_https_, 2);
 ;// CONCATENATED MODULE: ./node_modules/@actions/http-client/lib/proxy.js
 function getProxyUrl(reqUrl) {
     const usingSsl = reqUrl.protocol === 'https:';
@@ -32157,7 +32217,7 @@ class DecodedURL extends URL {
 }
 //# sourceMappingURL=proxy.js.map
 // EXTERNAL MODULE: ./node_modules/tunnel/index.js
-var node_modules_tunnel = __nccwpck_require__(770);
+var tunnel = __nccwpck_require__(770);
 // EXTERNAL MODULE: ./node_modules/undici/index.js
 var undici = __nccwpck_require__(6752);
 ;// CONCATENATED MODULE: ./node_modules/@actions/http-client/lib/index.js
@@ -32235,7 +32295,7 @@ const HttpResponseRetryCodes = [
     HttpCodes.ServiceUnavailable,
     HttpCodes.GatewayTimeout
 ];
-const RetryableHttpVerbs = (/* unused pure expression or super */ null && (['OPTIONS', 'GET', 'DELETE', 'HEAD']));
+const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
 const ExponentialBackoffCeiling = 10;
 const ExponentialBackoffTimeSlice = 5;
 class HttpClientError extends Error {
@@ -32584,7 +32644,7 @@ class lib_HttpClient {
     }
     getAgentDispatcher(serverUrl) {
         const parsedUrl = new URL(serverUrl);
-        const proxyUrl = pm.getProxyUrl(parsedUrl);
+        const proxyUrl = getProxyUrl(parsedUrl);
         const useProxy = proxyUrl && proxyUrl.hostname;
         if (!useProxy) {
             return;
@@ -32595,7 +32655,7 @@ class lib_HttpClient {
         const info = {};
         info.parsedUrl = requestUrl;
         const usingSsl = info.parsedUrl.protocol === 'https:';
-        info.httpModule = usingSsl ? https : http;
+        info.httpModule = usingSsl ? external_https_namespaceObject : external_http_namespaceObject;
         const defaultPort = usingSsl ? 443 : 80;
         info.options = {};
         info.options.host = info.parsedUrl.hostname;
@@ -32694,7 +32754,7 @@ class lib_HttpClient {
     }
     _getAgent(parsedUrl) {
         let agent;
-        const proxyUrl = pm.getProxyUrl(parsedUrl);
+        const proxyUrl = getProxyUrl(parsedUrl);
         const useProxy = proxyUrl && proxyUrl.hostname;
         if (this._keepAlive && useProxy) {
             agent = this._proxyAgent;
@@ -32709,7 +32769,7 @@ class lib_HttpClient {
         const usingSsl = parsedUrl.protocol === 'https:';
         let maxSockets = 100;
         if (this.requestOptions) {
-            maxSockets = this.requestOptions.maxSockets || http.globalAgent.maxSockets;
+            maxSockets = this.requestOptions.maxSockets || external_http_.globalAgent.maxSockets;
         }
         // This is `useProxy` again, but we need to check `proxyURl` directly for TypeScripts's flow analysis.
         if (proxyUrl && proxyUrl.hostname) {
@@ -32734,7 +32794,7 @@ class lib_HttpClient {
         // if tunneling agent isn't assigned create a new agent
         if (!agent) {
             const options = { keepAlive: this._keepAlive, maxSockets };
-            agent = usingSsl ? new https.Agent(options) : new http.Agent(options);
+            agent = usingSsl ? new external_https_.Agent(options) : new external_http_.Agent(options);
             this._agent = agent;
         }
         if (usingSsl && this._ignoreSslError) {
@@ -32757,7 +32817,7 @@ class lib_HttpClient {
             return proxyAgent;
         }
         const usingSsl = parsedUrl.protocol === 'https:';
-        proxyAgent = new ProxyAgent(Object.assign({ uri: proxyUrl.href, pipelining: !this._keepAlive ? 0 : 1 }, ((proxyUrl.username || proxyUrl.password) && {
+        proxyAgent = new undici.ProxyAgent(Object.assign({ uri: proxyUrl.href, pipelining: !this._keepAlive ? 0 : 1 }, ((proxyUrl.username || proxyUrl.password) && {
             token: `Basic ${Buffer.from(`${proxyUrl.username}:${proxyUrl.password}`).toString('base64')}`
         })));
         this._proxyAgentDispatcher = proxyAgent;
@@ -41792,13 +41852,13 @@ async function requestBranchUpload(repoKey, ref, sha) {
 // only the tip delta — or nothing. Each run overwrites its branch's bundle (base-relative,
 // so order-free); a cold repo single-flights the base build. Fail-open: any error →
 // standard checkout.
-const DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
 const UPLOAD_TIMEOUT_MS = 15 * 60_000;
-// Concurrent range-download tuning. A single stream saturates at the per-connection ceiling
-// (~15 MB/s on a WAN); parallel range GETs reach link rate (~200 MB/s), as WarpBuilds/cache does.
-const SEGMENT_SIZE = 8 * 1024 * 1024;
+// Concurrent range-download tuning, matched to WarpBuilds/cache: 4 MiB blocks, 8-wide, over a
+// keep-alive http.Agent. A single stream saturates at the per-connection ceiling (~15 MB/s on a
+// WAN); parallel range GETs reach link rate (~200 MB/s).
+const SEGMENT_SIZE = 4 * 1024 * 1024;
 const SEGMENT_CONCURRENCY = 8;
-const SEGMENT_TIMEOUT_MS = 60_000;
+const SEGMENT_TIMEOUT_MS = 30_000;
 const SEGMENT_RETRIES = 5;
 // Logged at info when off; the WARPBUILD_* env is only present on our runners.
 const SKIP_NOT_WARPBUILD = 'not running on a WarpBuild runner (WARPBUILD_* env not present)';
@@ -42153,42 +42213,52 @@ async function hasBaseRefs(repoPath) {
 // Falls back to a single stream when the server doesn't support ranges.
 async function downloadTo(url, dest, what) {
     const started = Date.now();
-    const total = await probeRangeSize(url);
-    if (total === null) {
-        await downloadSingleStream(url, dest);
-        const bytes = (await external_fs_namespaceObject.promises.stat(dest)).size;
-        info(`Mirror download [${what}]: ${fmtSize(bytes)} single-stream, no range support, ${fmtElapsed(started, bytes)}`);
-        return;
-    }
-    const segments = [];
-    for (let off = 0; off < total; off += SEGMENT_SIZE) {
-        segments.push([off, Math.min(SEGMENT_SIZE, total - off)]);
-    }
-    const width = Math.min(SEGMENT_CONCURRENCY, segments.length);
-    const fh = await external_fs_namespaceObject.promises.open(dest, 'w');
+    // Keep-alive http.Agent (like WarpBuilds/cache) — real parallel sockets; bare fetch under-parallelizes.
+    const http = new lib_HttpClient('warpbuild-checkout-mirror', undefined, {
+        socketTimeout: SEGMENT_TIMEOUT_MS,
+        keepAlive: true
+    });
     try {
-        let next = 0;
-        const worker = async () => {
-            for (;;) {
-                const i = next++;
-                if (i >= segments.length) {
-                    return;
-                }
-                const [offset, count] = segments[i];
-                const buf = await downloadSegment(url, offset, count);
-                await fh.write(buf, 0, count, offset);
-            }
-        };
-        const pool = [];
-        for (let k = 0; k < width; k++) {
-            pool.push(worker());
+        const total = await probeRangeSize(http, url);
+        if (total === null) {
+            await downloadSingleStream(http, url, dest);
+            const bytes = (await external_fs_namespaceObject.promises.stat(dest)).size;
+            info(`Mirror download [${what}]: ${fmtSize(bytes)} single-stream, no range support, ${fmtElapsed(started, bytes)}`);
+            return;
         }
-        await Promise.all(pool);
+        const segments = [];
+        for (let off = 0; off < total; off += SEGMENT_SIZE) {
+            segments.push([off, Math.min(SEGMENT_SIZE, total - off)]);
+        }
+        const width = Math.min(SEGMENT_CONCURRENCY, segments.length);
+        const fh = await external_fs_namespaceObject.promises.open(dest, 'w');
+        try {
+            let next = 0;
+            const worker = async () => {
+                for (;;) {
+                    const i = next++;
+                    if (i >= segments.length) {
+                        return;
+                    }
+                    const [offset, count] = segments[i];
+                    const buf = await downloadSegment(http, url, offset, count);
+                    await fh.write(buf, 0, count, offset);
+                }
+            };
+            const pool = [];
+            for (let k = 0; k < width; k++) {
+                pool.push(worker());
+            }
+            await Promise.all(pool);
+        }
+        finally {
+            await fh.close();
+        }
+        info(`Mirror download [${what}]: ${fmtSize(total)} in ${segments.length} ranged segments ×${width}, ${fmtElapsed(started, total)}`);
     }
     finally {
-        await fh.close();
+        http.dispose();
     }
-    info(`Mirror download [${what}]: ${fmtSize(total)} in ${segments.length} ranged segments ×${width}, ${fmtElapsed(started, total)}`);
 }
 // Size + elapsed/throughput for the mirror download o11y line.
 function fmtSize(bytes) {
@@ -42200,31 +42270,34 @@ function fmtElapsed(startedMs, bytes) {
     return `${secs.toFixed(2)}s (${rate} MB/s)`;
 }
 // GET bytes=0-0 to learn the total size and confirm range support; null → not supported.
-async function probeRangeSize(url) {
-    const res = await fetch(url, {
-        headers: { range: 'bytes=0-0' },
-        signal: AbortSignal.timeout(SEGMENT_TIMEOUT_MS)
-    });
-    if (res.status !== 206) {
+async function probeRangeSize(http, url) {
+    const res = await http.get(url, { Range: 'bytes=0-0' });
+    if (res.message.statusCode !== 206) {
+        res.message.destroy(); // no range support; don't read a full 200 body into memory
         return null;
     }
-    const match = res.headers.get('content-range')?.match(/\/(\d+)\s*$/);
+    await res.readBody(); // 1 byte; return the socket to the keep-alive pool
+    const contentRange = res.message.headers['content-range'];
+    const match = typeof contentRange === 'string' ? contentRange.match(/\/(\d+)\s*$/) : null;
     const total = match ? parseInt(match[1], 10) : NaN;
     return Number.isFinite(total) && total > 0 ? total : null;
 }
-// One range GET with per-segment timeout + retries; returns exactly `count` bytes.
-async function downloadSegment(url, offset, count) {
+// One range GET with retries over the shared keep-alive client; returns exactly `count` bytes.
+async function downloadSegment(http, url, offset, count) {
     let lastErr;
     for (let attempt = 0; attempt <= SEGMENT_RETRIES; attempt++) {
         try {
-            const res = await fetch(url, {
-                headers: { range: `bytes=${offset}-${offset + count - 1}` },
-                signal: AbortSignal.timeout(SEGMENT_TIMEOUT_MS)
+            const res = await http.get(url, {
+                Range: `bytes=${offset}-${offset + count - 1}`
             });
-            if (res.status !== 206) {
-                throw new Error(`range GET answered ${res.status}`);
+            if (res.message.statusCode !== 206) {
+                await res.readBody(); // drain before retrying so the socket is reusable
+                throw new Error(`range GET answered ${res.message.statusCode}`);
             }
-            const buf = Buffer.from(await res.arrayBuffer());
+            const buf = await res.readBodyBuffer?.();
+            if (!buf) {
+                throw new Error('http-client response lacks readBodyBuffer');
+            }
             if (buf.length !== count) {
                 throw new Error(`short segment at ${offset}: ${buf.length}/${count}`);
             }
@@ -42238,14 +42311,14 @@ async function downloadSegment(url, offset, count) {
         ? lastErr
         : new Error(`segment at ${offset} failed`);
 }
-async function downloadSingleStream(url, dest) {
-    const res = await fetch(url, {
-        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)
-    });
-    if (!res.ok || !res.body) {
-        throw new Error(`download answered ${res.status}`);
+async function downloadSingleStream(http, url, dest) {
+    const res = await http.get(url);
+    const status = res.message.statusCode ?? 0;
+    if (status < 200 || status >= 300) {
+        await res.readBody();
+        throw new Error(`download answered ${status}`);
     }
-    await (0,promises_namespaceObject.pipeline)(external_stream_namespaceObject.Readable.fromWeb(res.body), external_fs_namespaceObject.createWriteStream(dest));
+    await (0,promises_namespaceObject.pipeline)(res.message, external_fs_namespaceObject.createWriteStream(dest));
 }
 async function httpPut(url, file) {
     const stat = await external_fs_namespaceObject.promises.stat(file);
