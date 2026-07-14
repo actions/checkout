@@ -1,21 +1,22 @@
 # WarpBuild Checkout
 
 This is [WarpBuild's](https://warpbuild.com) fork of `actions/checkout`, a drop-in
-replacement that adds a **checkout snapshot cache**: on WarpBuild runners, the `.git`
-objects a checkout produces are tarred and cached remotely, keyed by the exact commit SHA.
-A later job checking out the same commit restores that snapshot and skips the fetch from
-GitHub entirely — cutting request load (the main source of GitHub rate-limiting on
-matrix builds and busy repos). SHA keys are immutable, so there is no TTL or refresh.
+replacement that adds a **git-mirror cache**. On WarpBuild runners it keeps a per-repo
+`base` bundle (full history, built once) plus a small per-branch delta bundle in object
+storage, and seeds them into the repository before the fetch — so the fetch from GitHub
+shrinks to just the **tip delta**. That cuts the requests and bytes pulled from GitHub.
+Bundles download over parallel ranged reads, rather than single-stream.
 
-- Only the default checkout shape is cached (`fetch-depth: 1`, no tags/filter/sparse/LFS);
-  everything else runs exactly like upstream.
-- Zero new inputs — behavior is identical to upstream everywhere except WarpBuild runners.
+- Engages only on WarpBuild runners, for the default shallow (`fetch-depth: 1`) and full
+  (`fetch-depth: 0`) checkout shapes. Explicit shallow (`fetch-depth >= 2`), `filter`, and
+  `sparse-checkout` defer to upstream. **LFS coexists** — the bundle carries the git
+  objects and stock `git lfs` pulls the binaries on top.
+- No new inputs; adds one output, `cache-hit` (`true` when the checkout was seeded from the
+  mirror). Behavior is identical to upstream everywhere except WarpBuild runners.
 - Fail-open — any cache error degrades to stock `actions/checkout` behavior.
-- All fork code lives in `src/warpbuild/`
+- All fork code lives in `src/warpbuild/`.
 
 ---
-
-[![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
 # Checkout v7
 
@@ -71,13 +72,13 @@ You are welcome to still raise bugs in this repo.
 
 # What's new
 
-Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
+Please refer to the [release page](https://github.com/WarpBuilds/checkout/releases/latest) for the latest release notes.
 
 # Usage
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -197,6 +198,14 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ```
 <!-- end usage -->
 
+# Outputs
+
+| Output | Description |
+| --- | --- |
+| `ref` | The branch, tag or SHA that was checked out. |
+| `commit` | The commit SHA that was checked out. |
+| `cache-hit` | `true` if the checkout was seeded from the WarpBuild mirror (WarpBuild runners only), otherwise `false`. |
+
 # Scenarios
 
 - [Checkout V5](#checkout-v5)
@@ -225,7 +234,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     sparse-checkout: .
 ```
@@ -233,7 +242,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files and `.github` and `src` folder
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     sparse-checkout: |
       .github
@@ -243,7 +252,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only a single file
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     sparse-checkout: |
       README.md
@@ -253,7 +262,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     fetch-depth: 0
 ```
@@ -261,7 +270,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     ref: my-branch
 ```
@@ -269,7 +278,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -279,12 +288,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v7
+  uses: WarpBuilds/checkout@v7
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v7
+  uses: WarpBuilds/checkout@v7
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -295,10 +304,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v7
+  uses: WarpBuilds/checkout@v7
 
 - name: Checkout tools repo
-  uses: actions/checkout@v7
+  uses: WarpBuilds/checkout@v7
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -309,12 +318,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v7
+  uses: WarpBuilds/checkout@v7
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v7
+  uses: WarpBuilds/checkout@v7
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -327,7 +336,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v7
+- uses: WarpBuilds/checkout@v7
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -343,7 +352,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: WarpBuilds/checkout@v7
 ```
 
 ## Push a commit using the built-in token
@@ -354,7 +363,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: WarpBuilds/checkout@v7
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
@@ -376,7 +385,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: WarpBuilds/checkout@v7
         with:
           ref: ${{ github.head_ref }}
       - run: |
