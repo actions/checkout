@@ -41794,6 +41794,12 @@ async function requestBranchUpload(repoKey, ref, sha) {
 // standard checkout.
 const DOWNLOAD_TIMEOUT_MS = 15 * 60_000;
 const UPLOAD_TIMEOUT_MS = 15 * 60_000;
+// Concurrent range-download tuning. A single stream saturates at the per-connection ceiling
+// (~15 MB/s on a WAN); parallel range GETs reach link rate (~200 MB/s), as WarpBuilds/cache does.
+const SEGMENT_SIZE = 8 * 1024 * 1024;
+const SEGMENT_CONCURRENCY = 8;
+const SEGMENT_TIMEOUT_MS = 60_000;
+const SEGMENT_RETRIES = 5;
 // Logged at info when off; the WARPBUILD_* env is only present on our runners.
 const SKIP_NOT_WARPBUILD = 'not running on a WarpBuild runner (WARPBUILD_* env not present)';
 const SHA_PATTERN = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
@@ -42141,7 +42147,83 @@ async function hasBaseRefs(repoPath) {
     await exec_exec('git', ['-C', repoPath, 'for-each-ref', '--count=1', '--format=1', BASE_REFNS], { silent: true, listeners: { stdout: (d) => (out += d.toString()) } });
     return out.trim().length > 0;
 }
+// Download a presigned GET to dest with concurrent HTTP range requests, so the base bundle
+// (tens/hundreds of MiB) transfers at link rate instead of the single-stream ~15 MB/s ceiling.
+// Falls back to a single stream when the server doesn't support ranges.
 async function downloadTo(url, dest) {
+    const total = await probeRangeSize(url);
+    if (total === null) {
+        await downloadSingleStream(url, dest);
+        return;
+    }
+    const fh = await external_fs_namespaceObject.promises.open(dest, 'w');
+    try {
+        const segments = [];
+        for (let off = 0; off < total; off += SEGMENT_SIZE) {
+            segments.push([off, Math.min(SEGMENT_SIZE, total - off)]);
+        }
+        let next = 0;
+        const worker = async () => {
+            for (;;) {
+                const i = next++;
+                if (i >= segments.length) {
+                    return;
+                }
+                const [offset, count] = segments[i];
+                const buf = await downloadSegment(url, offset, count);
+                await fh.write(buf, 0, count, offset);
+            }
+        };
+        const pool = [];
+        for (let k = 0; k < Math.min(SEGMENT_CONCURRENCY, segments.length); k++) {
+            pool.push(worker());
+        }
+        await Promise.all(pool);
+    }
+    finally {
+        await fh.close();
+    }
+}
+// GET bytes=0-0 to learn the total size and confirm range support; null → not supported.
+async function probeRangeSize(url) {
+    const res = await fetch(url, {
+        headers: { range: 'bytes=0-0' },
+        signal: AbortSignal.timeout(SEGMENT_TIMEOUT_MS)
+    });
+    if (res.status !== 206) {
+        return null;
+    }
+    const match = res.headers.get('content-range')?.match(/\/(\d+)\s*$/);
+    const total = match ? parseInt(match[1], 10) : NaN;
+    return Number.isFinite(total) && total > 0 ? total : null;
+}
+// One range GET with per-segment timeout + retries; returns exactly `count` bytes.
+async function downloadSegment(url, offset, count) {
+    let lastErr;
+    for (let attempt = 0; attempt <= SEGMENT_RETRIES; attempt++) {
+        try {
+            const res = await fetch(url, {
+                headers: { range: `bytes=${offset}-${offset + count - 1}` },
+                signal: AbortSignal.timeout(SEGMENT_TIMEOUT_MS)
+            });
+            if (res.status !== 206) {
+                throw new Error(`range GET answered ${res.status}`);
+            }
+            const buf = Buffer.from(await res.arrayBuffer());
+            if (buf.length !== count) {
+                throw new Error(`short segment at ${offset}: ${buf.length}/${count}`);
+            }
+            return buf;
+        }
+        catch (error) {
+            lastErr = error;
+        }
+    }
+    throw lastErr instanceof Error
+        ? lastErr
+        : new Error(`segment at ${offset} failed`);
+}
+async function downloadSingleStream(url, dest) {
     const res = await fetch(url, {
         signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS)
     });
