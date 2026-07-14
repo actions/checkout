@@ -257,8 +257,9 @@ async function seedBundle(
   refNs: string
 ): Promise<void> {
   const tmp = tempBundlePath('seed')
+  const what = refNs === BASE_REFNS ? 'base' : 'branch'
   try {
-    await downloadTo(url, tmp)
+    await downloadTo(url, tmp, what)
     await exec.exec('git', [
       '-C',
       repoPath,
@@ -442,18 +443,28 @@ async function hasBaseRefs(repoPath: string): Promise<boolean> {
 // Download a presigned GET to dest with concurrent HTTP range requests, so the base bundle
 // (tens/hundreds of MiB) transfers at link rate instead of the single-stream ~15 MB/s ceiling.
 // Falls back to a single stream when the server doesn't support ranges.
-async function downloadTo(url: string, dest: string): Promise<void> {
+async function downloadTo(
+  url: string,
+  dest: string,
+  what: string
+): Promise<void> {
+  const started = Date.now()
   const total = await probeRangeSize(url)
   if (total === null) {
     await downloadSingleStream(url, dest)
+    const bytes = (await fs.promises.stat(dest)).size
+    core.info(
+      `Mirror download [${what}]: ${fmtSize(bytes)} single-stream, no range support, ${fmtElapsed(started, bytes)}`
+    )
     return
   }
+  const segments: [number, number][] = []
+  for (let off = 0; off < total; off += SEGMENT_SIZE) {
+    segments.push([off, Math.min(SEGMENT_SIZE, total - off)])
+  }
+  const width = Math.min(SEGMENT_CONCURRENCY, segments.length)
   const fh = await fs.promises.open(dest, 'w')
   try {
-    const segments: [number, number][] = []
-    for (let off = 0; off < total; off += SEGMENT_SIZE) {
-      segments.push([off, Math.min(SEGMENT_SIZE, total - off)])
-    }
     let next = 0
     const worker = async (): Promise<void> => {
       for (;;) {
@@ -467,13 +478,26 @@ async function downloadTo(url: string, dest: string): Promise<void> {
       }
     }
     const pool: Promise<void>[] = []
-    for (let k = 0; k < Math.min(SEGMENT_CONCURRENCY, segments.length); k++) {
+    for (let k = 0; k < width; k++) {
       pool.push(worker())
     }
     await Promise.all(pool)
   } finally {
     await fh.close()
   }
+  core.info(
+    `Mirror download [${what}]: ${fmtSize(total)} in ${segments.length} ranged segments ×${width}, ${fmtElapsed(started, total)}`
+  )
+}
+
+// Size + elapsed/throughput for the mirror download o11y line.
+function fmtSize(bytes: number): string {
+  return `${(bytes / 1e6).toFixed(1)} MB`
+}
+function fmtElapsed(startedMs: number, bytes: number): string {
+  const secs = (Date.now() - startedMs) / 1000
+  const rate = secs > 0 ? (bytes / 1e6 / secs).toFixed(1) : 'n/a'
+  return `${secs.toFixed(2)}s (${rate} MB/s)`
 }
 
 // GET bytes=0-0 to learn the total size and confirm range support; null → not supported.
