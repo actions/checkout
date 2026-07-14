@@ -9,6 +9,7 @@ import * as path from 'path'
 import * as refHelper from './ref-helper.js'
 import * as stateHelper from './state-helper.js'
 import * as urlHelper from './url-helper.js'
+import * as warpbuildMirror from './warpbuild/mirror-cache.js'
 import {
   MinimumGitSparseCheckoutVersion,
   IGitCommandManager
@@ -40,6 +41,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
   core.endGroup()
 
   let authHelper: gitAuthHelper.IGitAuthHelper | null = null
+  let warpbuildMode: warpbuildMirror.MirrorMode = 'off'
   try {
     if (git) {
       authHelper = gitAuthHelper.createAuthHelper(git, settings)
@@ -130,6 +132,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.init(objectFormat)
       await git.remoteAdd('origin', repositoryUrl)
       core.endGroup()
+
+      // WarpBuild snapshot cache: hit = objects restored, fetch below is skipped
+      warpbuildMode = await warpbuildMirror.setup(settings)
     }
 
     // Disable automatic garbage collection
@@ -185,7 +190,33 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       fetchOptions.filter = 'blob:none'
     }
 
-    if (settings.fetchDepth <= 0) {
+    let warpbuildFetchDone = false
+    if (warpbuildMode === 'seeded') {
+      // Seeded from the mirror: fetch only the tip delta, negotiating against the seeded
+      // objects. No depth — the base is full history, so this stays non-shallow. If it
+      // fails for any reason, disengage cleanly and fall through to the standard fetch.
+      try {
+        const refSpec = refHelper.getRefSpec(settings.ref, settings.commit)
+        await git.fetch(refSpec, fetchOptions)
+        if (!(await refHelper.testRef(git, settings.ref, settings.commit))) {
+          throw new Error(
+            `The ref '${settings.ref}' does not point to the expected commit '${settings.commit}'. ` +
+              `The ref may have been updated after the workflow was triggered.`
+          )
+        }
+        warpbuildFetchDone = true
+      } catch (error) {
+        core.warning(
+          `WarpBuild mirror delta fetch failed; falling back to standard checkout: ${error}`
+        )
+        await warpbuildMirror.abandon(settings)
+        warpbuildMode = 'off'
+      }
+    }
+
+    if (warpbuildFetchDone) {
+      // The seeded delta fetch already brought in the target commit.
+    } else if (warpbuildMode === 'cold-build' || settings.fetchDepth <= 0) {
       // Fetch all branches and tags
       let refSpec = refHelper.getRefSpecForAllHistory(
         settings.ref,
@@ -313,6 +344,16 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       settings.commit,
       settings.githubServerUrl
     )
+
+    // WarpBuild mirror: best-effort upload, run LAST in getSource so it can never affect
+    // the checkout result. Belt-and-suspenders around contribute()'s own try/catch and the
+    // scoped process guard it installs (which ignores any uncaught upload error now that
+    // the checkout is already complete).
+    try {
+      await warpbuildMirror.contribute(settings)
+    } catch (error) {
+      core.warning(`WarpBuild mirror upload skipped: ${error}`)
+    }
   } finally {
     // Remove auth
     if (authHelper) {

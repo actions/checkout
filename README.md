@@ -1,3 +1,20 @@
+# WarpBuild Checkout
+
+This is [WarpBuild's](https://warpbuild.com) fork of `actions/checkout`, a drop-in
+replacement that adds a **checkout snapshot cache**: on WarpBuild runners, the `.git`
+objects a checkout produces are tarred and cached remotely, keyed by the exact commit SHA.
+A later job checking out the same commit restores that snapshot and skips the fetch from
+GitHub entirely — cutting request load (the main source of GitHub rate-limiting on
+matrix builds and busy repos). SHA keys are immutable, so there is no TTL or refresh.
+
+- Only the default checkout shape is cached (`fetch-depth: 1`, no tags/filter/sparse/LFS);
+  everything else runs exactly like upstream.
+- Zero new inputs — behavior is identical to upstream everywhere except WarpBuild runners.
+- Fail-open — any cache error degrades to stock `actions/checkout` behavior.
+- All fork code lives in `src/warpbuild/`
+
+---
+
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
 # Checkout v7
