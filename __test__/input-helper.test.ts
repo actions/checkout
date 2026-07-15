@@ -143,4 +143,50 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
   })
+
+  describe('unsafe PR checkout guard', () => {
+    const forkPayload = {
+      repository: {id: 100},
+      pull_request: {
+        head: {
+          sha: '1234567890123456789012345678901234567890',
+          repo: {id: 200, full_name: 'attacker/fork'}
+        },
+        merge_commit_sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      }
+    }
+
+    it('allows the default self-checkout on a fork pull_request_target', async () => {
+      const originalEvent = github.context.eventName
+      const originalPayload = github.context.payload
+      try {
+        github.context.eventName = 'pull_request_target'
+        github.context.payload = forkPayload as any
+        // Simulate a rebase/fast-forward merge where the base tip (event SHA)
+        // equals the PR head SHA. The default self-checkout must still succeed.
+        github.context.sha = '1234567890123456789012345678901234567890'
+        const settings: IGitSourceSettings = await inputHelper.getInputs()
+        expect(settings.commit).toBe('1234567890123456789012345678901234567890')
+      } finally {
+        github.context.eventName = originalEvent
+        github.context.payload = originalPayload
+      }
+    })
+
+    it('refuses an explicit fork repository on pull_request_target', async () => {
+      const originalEvent = github.context.eventName
+      const originalPayload = github.context.payload
+      try {
+        github.context.eventName = 'pull_request_target'
+        github.context.payload = forkPayload as any
+        inputs.repository = 'attacker/fork'
+        await expect(inputHelper.getInputs()).rejects.toThrow(
+          /Refusing to check out fork pull request code/
+        )
+      } finally {
+        github.context.eventName = originalEvent
+        github.context.payload = originalPayload
+      }
+    })
+  })
 })
