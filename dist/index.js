@@ -42107,7 +42107,7 @@ async function getInputs() {
     // guard.
     //
     // The trim below strips only the ASCII whitespace characters which are all forbidden
-    // in a git branch name. 
+    // in a git branch name.
     //   \t  U+0009  horizontal tab   - ASCII control, forbidden in ref names
     //   \n  U+000A  line feed        - ASCII control, forbidden in ref names
     //   \v  U+000B  vertical tab     - ASCII control, forbidden in ref names
