@@ -180,4 +180,50 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
   })
+
+  describe('unsafe PR checkout guard', () => {
+    const forkPayload = {
+      repository: {id: 100},
+      pull_request: {
+        head: {
+          sha: '1234567890123456789012345678901234567890',
+          repo: {id: 200, full_name: 'attacker/fork'}
+        },
+        merge_commit_sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      }
+    }
+
+    it('allows the default self-checkout on a fork pull_request_target', async () => {
+      const originalEvent = mockGithubContext.eventName
+      const originalPayload = mockGithubContext.payload
+      try {
+        mockGithubContext.eventName = 'pull_request_target'
+        mockGithubContext.payload = forkPayload
+        // Simulate a rebase/fast-forward merge where the base tip (event SHA)
+        // equals the PR head SHA. The default self-checkout must still succeed.
+        mockGithubContext.sha = '1234567890123456789012345678901234567890'
+        const settings: IGitSourceSettings = await inputHelper.getInputs()
+        expect(settings.commit).toBe('1234567890123456789012345678901234567890')
+      } finally {
+        mockGithubContext.eventName = originalEvent
+        mockGithubContext.payload = originalPayload
+      }
+    })
+
+    it('refuses an explicit fork repository on pull_request_target', async () => {
+      const originalEvent = mockGithubContext.eventName
+      const originalPayload = mockGithubContext.payload
+      try {
+        mockGithubContext.eventName = 'pull_request_target'
+        mockGithubContext.payload = forkPayload
+        inputs.repository = 'attacker/fork'
+        await expect(inputHelper.getInputs()).rejects.toThrow(
+          /Refusing to check out fork pull request code/
+        )
+      } finally {
+        mockGithubContext.eventName = originalEvent
+        mockGithubContext.payload = originalPayload
+      }
+    })
+  })
 })
