@@ -24,9 +24,20 @@ const mockGithubContext: any = {
   payload: {}
 }
 
+// Replicate @actions/core getInput behavior: it trims whitespace by default
+// (String.prototype.trim(), which strips characters such as a leading U+FEFF BOM)
+// unless trimWhitespace is explicitly set to false.
+const getInputImpl = (name: string, options?: {trimWhitespace?: boolean}) => {
+  const val = inputs[name] ?? ''
+  if (options && options.trimWhitespace === false) {
+    return val
+  }
+  return typeof val === 'string' ? val.trim() : val
+}
+
 // Mock @actions/core before loading input-helper
 jest.unstable_mockModule('@actions/core', () => ({
-  getInput: jest.fn((name: string) => inputs[name]),
+  getInput: jest.fn(getInputImpl),
   getBooleanInput: jest.fn((name: string) => inputs[name]),
   getMultilineInput: jest.fn((name: string) =>
     inputs[name] ? String(inputs[name]).split('\n').filter(Boolean) : []
@@ -76,9 +87,7 @@ describe('input-helper tests', () => {
     inputs = {}
     jest.clearAllMocks()
     // Re-apply default mocks
-    ;(core.getInput as jest.Mock<any>).mockImplementation(
-      (name: string) => inputs[name]
-    )
+    ;(core.getInput as jest.Mock<any>).mockImplementation(getInputImpl as any)
     mockDirectoryExistsSync.mockImplementation(
       (p: string) => p === gitHubWorkspace
     )
@@ -174,6 +183,36 @@ describe('input-helper tests', () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.ref).toBe('refs/heads/some-other-ref')
     expect(settings.commit).toBeFalsy()
+  })
+
+  it('does not reclassify a ref as sha when a BOM is prefixed', async () => {
+    // A fork branch named "<U+FEFF>" + 40 hex chars. core.getInput trims the
+    // BOM by default, which previously collapsed this into a bare SHA and
+    // bypassed the unsafe fork PR checkout guard.
+    inputs.ref = '\uFEFF522d932fae5296da51fdf431934425ecf891c6a2'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.commit).toBeFalsy()
+    expect(settings.ref).toBe('522d932fae5296da51fdf431934425ecf891c6a2')
+  })
+
+  it('does not reclassify a sha-256 ref as sha when a BOM is prefixed', async () => {
+    inputs.ref =
+      '\uFEFF1111111111222222222233333333334444444444555555555566666666667777'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.commit).toBeFalsy()
+    expect(settings.ref).toBe(
+      '1111111111222222222233333333334444444444555555555566666666667777'
+    )
+  })
+
+  it('treats a sha surrounded by ascii whitespace as a commit', async () => {
+    // ASCII whitespace can only come from the workflow author's YAML (git ref
+    // names cannot contain it), so trimming it and treating the value as a
+    // commit is safe.
+    inputs.ref = '  1111111111222222222233333333334444444444  '
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.ref).toBeFalsy()
+    expect(settings.commit).toBe('1111111111222222222233333333334444444444')
   })
 
   it('sets workflow organization ID', async () => {

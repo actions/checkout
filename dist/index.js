@@ -42100,6 +42100,22 @@ async function getInputs() {
         `${github_context.repo.owner}/${github_context.repo.repo}`.toUpperCase();
     // Source branch, source version
     result.ref = getInput('ref');
+    // core.getInput()'s default trim strips a range of Unicode characters such as a
+    // leading BOM (U+FEFF) or NBSP (U+00A0). Those are valid in a git ref name, so
+    // a fork branch named "<BOM>" + 40 hex chars would trim down to a bare SHA and
+    // be silently reclassified as a commit, bypassing the unsafe fork PR checkout
+    // guard.
+    //
+    // The trim below strips only the ASCII whitespace characters which are all forbidden
+    // in a git branch name. 
+    //   \t  U+0009  horizontal tab   - ASCII control, forbidden in ref names
+    //   \n  U+000A  line feed        - ASCII control, forbidden in ref names
+    //   \v  U+000B  vertical tab     - ASCII control, forbidden in ref names
+    //   \f  U+000C  form feed        - ASCII control, forbidden in ref names
+    //   \r  U+000D  carriage return  - ASCII control, forbidden in ref names
+    //   ' ' U+0020  space            - forbidden in ref names
+    const asciiTrimmedRef = getInput('ref', { trimWhitespace: false })
+        .replace(/^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g, '');
     if (!result.ref) {
         if (isWorkflowRepository) {
             result.ref = github_context.ref;
@@ -42112,8 +42128,8 @@ async function getInputs() {
         }
     }
     // SHA?
-    else if (result.ref.match(/^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/)) {
-        result.commit = result.ref;
+    else if (asciiTrimmedRef.match(/^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/)) {
+        result.commit = asciiTrimmedRef;
         result.ref = '';
     }
     core_debug(`ref = '${result.ref}'`);
