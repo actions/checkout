@@ -7,7 +7,7 @@ import * as workflowContextHelper from './workflow-context-helper'
 import {IGitSourceSettings} from './git-source-settings'
 
 export async function getInputs(): Promise<IGitSourceSettings> {
-  const result = ({} as unknown) as IGitSourceSettings
+  const result = {} as unknown as IGitSourceSettings
 
   // GitHub workspace
   let githubWorkspacePath = process.env['GITHUB_WORKSPACE']
@@ -121,7 +121,8 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     (core.getInput('persist-credentials') || 'false').toUpperCase() === 'TRUE'
 
   // Workflow organization ID
-  result.workflowOrganizationId = await workflowContextHelper.getOrganizationId()
+  result.workflowOrganizationId =
+    await workflowContextHelper.getOrganizationId()
 
   // Set safe.directory in git global config.
   result.setSafeDirectory =
@@ -133,12 +134,19 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     'TRUE'
   core.debug(`allow unsafe PR checkout = ${result.allowUnsafePrCheckout}`)
 
-  unsafePrCheckoutHelper.assertSafePrCheckout({
-    qualifiedRepository,
-    ref: result.ref,
-    commit: result.commit,
-    allowUnsafePrCheckout: result.allowUnsafePrCheckout
-  })
+  // The default self-checkout (this repository with no explicit ref) always
+  // resolves to the trusted ref/commit GitHub set for the triggering event, so
+  // the fork-checkout guard only needs to run when the caller customized the
+  // repository or ref.
+  const isDefaultCheckout = isWorkflowRepository && !core.getInput('ref')
+  if (!isDefaultCheckout) {
+    unsafePrCheckoutHelper.assertSafePrCheckout({
+      qualifiedRepository,
+      ref: result.ref,
+      commit: result.commit,
+      allowUnsafePrCheckout: result.allowUnsafePrCheckout
+    })
+  }
 
   return result
 }

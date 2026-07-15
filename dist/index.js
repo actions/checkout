@@ -18568,12 +18568,19 @@ function getInputs() {
             (core.getInput('allow-unsafe-pr-checkout') || 'false').toUpperCase() ===
                 'TRUE';
         core.debug(`allow unsafe PR checkout = ${result.allowUnsafePrCheckout}`);
-        unsafePrCheckoutHelper.assertSafePrCheckout({
-            qualifiedRepository,
-            ref: result.ref,
-            commit: result.commit,
-            allowUnsafePrCheckout: result.allowUnsafePrCheckout
-        });
+        // The default self-checkout (this repository with no explicit ref) always
+        // resolves to the trusted ref/commit GitHub set for the triggering event, so
+        // the fork-checkout guard only needs to run when the caller customized the
+        // repository or ref.
+        const isDefaultCheckout = isWorkflowRepository && !core.getInput('ref');
+        if (!isDefaultCheckout) {
+            unsafePrCheckoutHelper.assertSafePrCheckout({
+                qualifiedRepository,
+                ref: result.ref,
+                commit: result.commit,
+                allowUnsafePrCheckout: result.allowUnsafePrCheckout
+            });
+        }
         return result;
     });
 }
