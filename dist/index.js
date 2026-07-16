@@ -1700,6 +1700,23 @@ function getInputs() {
             `${github.context.repo.owner}/${github.context.repo.repo}`.toUpperCase();
         // Source branch, source version
         result.ref = core.getInput('ref');
+        // core.getInput()'s default trim strips a range of Unicode characters such as a
+        // leading BOM (U+FEFF) or NBSP (U+00A0). Those are valid in a git ref name, so
+        // a fork branch named "<BOM>" + 40 hex chars would trim down to a bare SHA and
+        // be silently reclassified as a commit, bypassing the unsafe fork PR checkout
+        // guard.
+        //
+        // The trim below strips only the ASCII whitespace characters which are all forbidden
+        // in a git branch name.
+        //   \t  U+0009  horizontal tab   - ASCII control, forbidden in ref names
+        //   \n  U+000A  line feed        - ASCII control, forbidden in ref names
+        //   \v  U+000B  vertical tab     - ASCII control, forbidden in ref names
+        //   \f  U+000C  form feed        - ASCII control, forbidden in ref names
+        //   \r  U+000D  carriage return  - ASCII control, forbidden in ref names
+        //   ' ' U+0020  space            - forbidden in ref names
+        const asciiTrimmedRef = core
+            .getInput('ref', { trimWhitespace: false })
+            .replace(/^[\t\n\v\f\r ]+|[\t\n\v\f\r ]+$/g, '');
         if (!result.ref) {
             if (isWorkflowRepository) {
                 result.ref = github.context.ref;
@@ -1712,8 +1729,8 @@ function getInputs() {
             }
         }
         // SHA?
-        else if (result.ref.match(/^[0-9a-fA-F]{40}$/)) {
-            result.commit = result.ref;
+        else if (asciiTrimmedRef.match(/^[0-9a-fA-F]{40}$/)) {
+            result.commit = asciiTrimmedRef;
             result.ref = '';
         }
         core.debug(`ref = '${result.ref}'`);
@@ -1779,12 +1796,19 @@ function getInputs() {
             (core.getInput('allow-unsafe-pr-checkout') || 'false').toUpperCase() ===
                 'TRUE';
         core.debug(`allow unsafe PR checkout = ${result.allowUnsafePrCheckout}`);
-        unsafePrCheckoutHelper.assertSafePrCheckout({
-            qualifiedRepository,
-            ref: result.ref,
-            commit: result.commit,
-            allowUnsafePrCheckout: result.allowUnsafePrCheckout
-        });
+        // The default self-checkout (this repository with no explicit ref) always
+        // resolves to the trusted ref/commit GitHub set for the triggering event, so
+        // the fork-checkout guard only needs to run when the caller customized the
+        // repository or ref.
+        const isDefaultCheckout = isWorkflowRepository && !core.getInput('ref');
+        if (!isDefaultCheckout) {
+            unsafePrCheckoutHelper.assertSafePrCheckout({
+                qualifiedRepository,
+                ref: result.ref,
+                commit: result.commit,
+                allowUnsafePrCheckout: result.allowUnsafePrCheckout
+            });
+        }
         return result;
     });
 }
