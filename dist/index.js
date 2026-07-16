@@ -35918,8 +35918,9 @@ class GitCommandManager {
         return output.exitCode === 0;
     }
     async tryDisableAutomaticGarbageCollection() {
-        const output = await this.execGit(['config', '--local', 'gc.auto', '0'], true);
-        return output.exitCode === 0;
+        const maintenanceOutput = await this.execGit(['config', '--local', 'maintenance.auto', 'false'], true);
+        const gcOutput = await this.execGit(['config', '--local', 'gc.auto', '0'], true);
+        return maintenanceOutput.exitCode === 0 && gcOutput.exitCode === 0;
     }
     async tryGetFetchUrl() {
         const output = await this.execGit(['config', '--local', '--get', 'remote.origin.url'], true);
@@ -41889,7 +41890,7 @@ async function getSource(settings) {
             startGroup('Fetching submodules');
             await git.submoduleSync(settings.nestedSubmodules);
             await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
-            await git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
+            await git.submoduleForeach('git config --local maintenance.auto false && git config --local gc.auto 0', settings.nestedSubmodules);
             endGroup();
             // Persist credentials
             if (settings.persistCredentials) {
