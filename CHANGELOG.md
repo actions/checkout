@@ -1,6 +1,6 @@
 # Changelog
 
-### v7.0.1
+## v7.0.1
 * Bump github/codeql-action from 3 to 4 by @dependabot[bot] in https://github.com/actions/checkout/pull/2475
 * Bump actions/setup-node from 4 to 6 by @dependabot[bot] in https://github.com/actions/checkout/pull/2477
 * Bump docker/build-push-action from 6.5.0 to 7.2.0 by @dependabot[bot] in https://github.com/actions/checkout/pull/2478
