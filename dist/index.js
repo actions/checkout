@@ -35913,7 +35913,7 @@ class GitCommandManager {
         else {
             args.push(globalConfig ? '--global' : '--local');
         }
-        args.push('--unset', configKey, configValue);
+        args.push('--unset', configKey, regexp_helper_escape(configValue));
         const output = await this.execGit(args, true);
         return output.exitCode === 0;
     }
