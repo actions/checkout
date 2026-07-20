@@ -35872,7 +35872,7 @@ class GitCommandManager {
         }
         await this.execGit(args);
     }
-    async submoduleUpdate(fetchDepth, recursive) {
+    async submoduleUpdate(fetchDepth, recursive, filter) {
         const args = ['-c', 'protocol.version=2'];
         args.push('submodule', 'update', '--init', '--force');
         if (fetchDepth > 0) {
@@ -35880,6 +35880,9 @@ class GitCommandManager {
         }
         if (recursive) {
             args.push('--recursive');
+        }
+        if (filter) {
+            args.push(`--filter=${filter}`);
         }
         await this.execGit(args);
     }
@@ -41888,7 +41891,7 @@ async function getSource(settings) {
             // Checkout submodules
             startGroup('Fetching submodules');
             await git.submoduleSync(settings.nestedSubmodules);
-            await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules);
+            await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules, fetchOptions.filter);
             await git.submoduleForeach('git config --local gc.auto 0', settings.nestedSubmodules);
             endGroup();
             // Persist credentials
