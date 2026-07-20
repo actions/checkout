@@ -1,4 +1,5 @@
 # Changelog
+pathum2583@gmail.com 
 
 ## v7.0.1
 * Skip running unsafe pr check if input is default by @aiqiaoy in https://github.com/actions/checkout/pull/2518
