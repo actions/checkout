@@ -1,26 +1,14 @@
 # Changelog
 
 ## v7.0.1
-* Bump github/codeql-action from 3 to 4 by @dependabot[bot] in https://github.com/actions/checkout/pull/2475
-* Bump actions/setup-node from 4 to 6 by @dependabot[bot] in https://github.com/actions/checkout/pull/2477
-* Bump docker/build-push-action from 6.5.0 to 7.2.0 by @dependabot[bot] in https://github.com/actions/checkout/pull/2478
-* Bump docker/login-action from 3.3.0 to 4.2.0 by @dependabot[bot] in https://github.com/actions/checkout/pull/2479
-* Bump actions/checkout from 6 to 7 by @dependabot[bot] in https://github.com/actions/checkout/pull/2488
-* Bump actions/upload-artifact from 4 to 7 by @dependabot[bot] in https://github.com/actions/checkout/pull/2476
-* eslint 9 by @dependabot[bot] in https://github.com/actions/checkout/pull/2474
-* Bump the minor-actions-dependencies group with 2 updates by @dependabot[bot] in https://github.com/actions/checkout/pull/2499
 * skip running unsafe pr check if input is default by @aiqiaoy in https://github.com/actions/checkout/pull/2518
 * trim only ascii whitespace for branch by @aiqiaoy in https://github.com/actions/checkout/pull/2521
 * escape values passed to --unset by @aiqiaoy in https://github.com/actions/checkout/pull/2530
+* Various dependency updates
 
 ## v7.0.0
 * Block checking out fork PR for pull_request_target and workflow_run by @aiqiaoy in https://github.com/actions/checkout/pull/2454
-* Bump actions/publish-immutable-action from 0.0.3 to 0.0.4 in the minor-actions-dependencies group across 1 directory by @dependabot[bot] in https://github.com/actions/checkout/pull/2458
-* Bump flatted from 3.3.1 to 3.4.2 by @dependabot[bot] in https://github.com/actions/checkout/pull/2460
-* Bump js-yaml from 4.1.0 to 4.2.0 by @dependabot[bot] in https://github.com/actions/checkout/pull/2461
-* Bump @actions/core and @actions/tool-cache and Remove uuid by @dependabot[bot] in https://github.com/actions/checkout/pull/2459
-* upgrade module to esm and update dependencies by @aiqiaoy in https://github.com/actions/checkout/pull/2463
-* Bump the minor-npm-dependencies group across 1 directory with 3 updates by @dependabot[bot] in https://github.com/actions/checkout/pull/2462
+* Various dependency updates 
 
 ## v6.0.3
 * Fix checkout init for SHA-256 repositories by @yaananth in https://github.com/actions/checkout/pull/2439
