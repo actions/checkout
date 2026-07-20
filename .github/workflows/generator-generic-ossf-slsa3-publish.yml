@@ -1,0 +1,105 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# This workflow lets you generate SLSA provenance file for your project.
+# The generation satisfies level 3 for the provenance requirements - see https://slsa.dev/spec/v0.1/requirements
+# The project is an initiative of the OpenSSF (openssf.org) and is developed at
+# https://github.com/slsa-framework/slsa-github-generator.
+# The provenance file can be verified using https://github.com/slsa-framework/slsa-verifier.
+# For more information about SLSA and how it improves the supply-chain, visit slsa.dev.
+
+name: SLSA generic generator
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ========================================================
+      #
+      # Step 1: Build your artifacts.
+      #
+      # ========================================================
+      - name: Build artifacts
+        run: |
+            # These are some amazing artifacts.
+            echo "artifact1" > artifact1
+            echo "artifact2" > artifact2
+
+      # ========================================================
+      #
+      # Step 2: Add a step to generate the provenance subjects
+      #         as shown below. Update the sha256 sum arguments
+      #         to include all binaries that you generate
+      #         provenance for.
+      #
+      # ========================================================
+      - name: Generate subject for provenance
+        id: hash
+        run: |
+          set -euo pipefail
+
+          # List the artifacts the provenance will refer to.
+          files=$(ls artifact*)
+          # Generate the subjects (base64 encoded).
+          echo "hashes=$(sha256sum $files | base64 -w0)" >> "${GITHUB_OUTPUT}"
+
+  provenance:
+    needs: [build]
+    permissions:            - name: Deploy HelmFile
+  # You may pin to the exact commit or the version.
+  # uses: cloudposse/github-action-deploy-helmfile@fcc0ea83519505047bd34a4e017f1d0c3516a5cc
+  uses: cloudposse/github-action-deploy-helmfile@0.7.0
+  with:
+    # Cluster name
+    cluster: 
+    # AWS region
+    aws-region: # optional, default is us-east-1
+    # The path where lives the helmfile.
+    helmfile-path: # optional, default is deploy
+    # Helmfile name
+    helmfile: # optional, default is helmfile.yaml
+    # Operation with helmfiles. (valid options - `deploy`, `destroy`)
+    operation: # default is deploy
+    # Helmfile environment
+    environment: # optional, default is preview
+    # Git SHA
+    gitref-sha: # optional, default is 
+    # Kubernetes namespace
+    namespace: 
+    # Docker image
+    image: 
+    # Docker image tag
+    image-tag: 
+    # Debug mode
+    debug: # optional, default is false
+    # The name of the label used to describe the helm release
+    release_label_name: # optional, default is release
+    # YAML string with extra values to use in a helmfile deploy
+    values_yaml: # optional
+    # Helm version
+    helm_version: # optional, default is 3.11.1
+    # Helmfile version
+    helmfile_version: # optional, default is 0.143.5
+    # Kubectl version
+    kubectl_version: # optional, default is 1.26.3
+    # Kubectl version
+    chamber_version: # optional, default is 2.11.1
+          
+      actions: read   # To read the workflow path.
+      id-token: write # To sign the provenance.
+      contents: write # To add assets to a release.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true # Optional: Upload to a new release
