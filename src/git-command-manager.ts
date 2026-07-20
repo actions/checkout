@@ -517,11 +517,15 @@ class GitCommandManager {
   }
 
   async tryDisableAutomaticGarbageCollection(): Promise<boolean> {
-    const output = await this.execGit(
+    const maintenanceOutput = await this.execGit(
+      ['config', '--local', 'maintenance.auto', 'false'],
+      true
+    )
+    const gcOutput = await this.execGit(
       ['config', '--local', 'gc.auto', '0'],
       true
     )
-    return output.exitCode === 0
+    return maintenanceOutput.exitCode === 0 && gcOutput.exitCode === 0
   }
 
   async tryGetFetchUrl(): Promise<string> {

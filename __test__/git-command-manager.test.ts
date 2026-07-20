@@ -572,3 +572,39 @@ describe('git user-agent with orchestration ID', () => {
     )
   })
 })
+
+describe('automatic garbage collection configuration', () => {
+  beforeEach(() => {
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('git version 2.54.0'))
+      }
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('disables maintenance and legacy garbage collection', async () => {
+    git = await commandManager.createCommandManager('test', false, false)
+
+    await expect(git.tryDisableAutomaticGarbageCollection()).resolves.toBe(
+      true
+    )
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['config', '--local', 'maintenance.auto', 'false'],
+      expect.objectContaining({ignoreReturnCode: true})
+    )
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['config', '--local', 'gc.auto', '0'],
+      expect.objectContaining({ignoreReturnCode: true})
+    )
+  })
+})

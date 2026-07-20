@@ -283,7 +283,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       await git.submoduleSync(settings.nestedSubmodules)
       await git.submoduleUpdate(settings.fetchDepth, settings.nestedSubmodules)
       await git.submoduleForeach(
-        'git config --local gc.auto 0',
+        'git config --local maintenance.auto false && git config --local gc.auto 0',
         settings.nestedSubmodules
       )
       core.endGroup()
