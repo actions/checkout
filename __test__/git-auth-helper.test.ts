@@ -995,6 +995,91 @@ describe('git-auth-helper tests', () => {
     ).toBe(false)
     expect((authHelper as any).testCredentialsConfigPath('')).toBe(false)
   })
+
+  const configureAuth_uses_default_git_user_when_sshUser_empty =
+    'configureAuth uses default git user when sshUser is empty'
+  it(configureAuth_uses_default_git_user_when_sshUser_empty, async () => {
+    // Arrange
+    await setup(configureAuth_uses_default_git_user_when_sshUser_empty)
+    settings.sshUser = ''
+    settings.sshKey = ''
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+    await authHelper.configureGlobalAuth()
+
+    // Assert - verify that git@github.com is in the insteadOf config
+    const home = git.env['HOME'] || tempHomedir
+    const configContent = (
+      await fs.promises.readFile(path.join(home, '.gitconfig'))
+    ).toString()
+    expect(configContent.indexOf('url.https://github.com/.insteadOf git@github.com')).toBeGreaterThanOrEqual(0)
+  })
+
+  const configureAuth_uses_custom_ssh_user_when_sshUser_provided =
+    'configureAuth uses custom SSH user when sshUser is provided'
+  it(configureAuth_uses_custom_ssh_user_when_sshUser_provided, async () => {
+    // Arrange
+    await setup(configureAuth_uses_custom_ssh_user_when_sshUser_provided)
+    settings.sshUser = 'customuser'
+    settings.sshKey = ''
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+    await authHelper.configureGlobalAuth()
+
+    // Assert - verify that customuser@github.com is in the insteadOf config
+    const home = git.env['HOME'] || tempHomedir
+    const configContent = (
+      await fs.promises.readFile(path.join(home, '.gitconfig'))
+    ).toString()
+    expect(configContent.indexOf('url.https://github.com/.insteadOf customuser@github.com')).toBeGreaterThanOrEqual(0)
+  })
+
+  const configureGlobalAuth_with_custom_sshUser =
+    'configureGlobalAuth with custom sshUser'
+  it(configureGlobalAuth_with_custom_sshUser, async () => {
+    // Arrange
+    await setup(configureGlobalAuth_with_custom_sshUser)
+    settings.sshUser = 'admin'
+    settings.sshKey = ''
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+
+    // Act
+    await authHelper.configureAuth()
+    await authHelper.configureGlobalAuth()
+
+    // Assert - verify the .insteadOf config contains the custom user
+    const home = git.env['HOME'] || tempHomedir
+    const configContent = (
+      await fs.promises.readFile(path.join(home, '.gitconfig'))
+    ).toString()
+    expect(configContent.indexOf('url.https://github.com/.insteadOf admin@github.com')).toBeGreaterThanOrEqual(0)
+  })
+
+  const configureSubmoduleAuth_with_custom_sshUser =
+    'configureSubmoduleAuth with custom sshUser'
+  it(configureSubmoduleAuth_with_custom_sshUser, async () => {
+    // Arrange
+    await setup(configureSubmoduleAuth_with_custom_sshUser)
+    settings.sshUser = 'deploy'
+    settings.sshKey = ''
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+    const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
+    mockSubmoduleForeach.mockClear()
+
+    // Act
+    await authHelper.configureSubmoduleAuth()
+
+    // Assert - verify the insteadOf config uses the custom user
+    expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
+    expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(
+      /url.*insteadOf.*deploy@github.com:/
+    )
+  })
 })
 
 async function setup(testName: string): Promise<void> {
