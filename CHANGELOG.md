@@ -1,9 +1,9 @@
 # Changelog
 
 ## v7.0.1
-* skip running unsafe pr check if input is default by @aiqiaoy in https://github.com/actions/checkout/pull/2518
-* trim only ascii whitespace for branch by @aiqiaoy in https://github.com/actions/checkout/pull/2521
-* escape values passed to --unset by @aiqiaoy in https://github.com/actions/checkout/pull/2530
+* Skip running unsafe pr check if input is default by @aiqiaoy in https://github.com/actions/checkout/pull/2518
+* Trim only ascii whitespace for branch by @aiqiaoy in https://github.com/actions/checkout/pull/2521
+* Escape values passed to --unset by @aiqiaoy in https://github.com/actions/checkout/pull/2530
 * Various dependency updates
 
 ## v7.0.0
