@@ -29,6 +29,8 @@ jobs:
         run: __test__/verify-no-unstaged-changes.sh
 
   test:
+    env:
+      main_path: main_path_test
     strategy:
       matrix:
         runs-on: [ubuntu-latest, macos-latest, windows-latest]
@@ -61,6 +63,16 @@ jobs:
       - name: Verify clean
         shell: bash
         run: __test__/verify-clean.sh
+
+      # Use environment variable as path
+      - name: Environment path test
+        uses: ./
+        with:
+          ref: test-data/v2/basic
+          path: ${{ env.main_path }}
+      - name: Verify environment path test
+        shell: bash
+        run: __test__/verify-environment-path.sh
 
       # Side by side
       - name: Checkout side by side 1
