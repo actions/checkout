@@ -35816,6 +35816,9 @@ class GitCommandManager {
         const output = await this.execGit(['rev-parse', '--symbolic-full-name', '--verify', '--quiet', 'HEAD'], true);
         return !output.stdout.trim().startsWith('refs/heads/');
     }
+    async lfsCheckout() {
+        await this.execGit(['lfs', 'checkout']);
+    }
     async lfsFetch(ref) {
         const args = ['lfs', 'fetch', 'origin', ref];
         const that = this;
@@ -41879,6 +41882,12 @@ async function getSource(settings) {
         startGroup('Checking out the ref');
         await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
         endGroup();
+        // LFS checkout
+        if (settings.lfs && !settings.sparseCheckout) {
+            startGroup('Checking out LFS objects');
+            await git.lfsCheckout();
+            endGroup();
+        }
         // Submodules
         if (settings.submodules) {
             // Temporarily override global config
