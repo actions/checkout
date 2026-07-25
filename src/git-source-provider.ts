@@ -271,6 +271,13 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
     core.endGroup()
 
+    // LFS checkout
+    if (settings.lfs && !settings.sparseCheckout) {
+      core.startGroup('Checking out LFS objects')
+      await git.lfsCheckout()
+      core.endGroup()
+    }
+
     // Submodules
     if (settings.submodules) {
       // Temporarily override global config
