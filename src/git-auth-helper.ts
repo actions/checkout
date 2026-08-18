@@ -11,6 +11,7 @@ import * as urlHelper from './url-helper.js'
 import {randomUUID} from 'crypto'
 import {IGitCommandManager} from './git-command-manager.js'
 import {IGitSourceSettings} from './git-source-settings.js'
+import {escapeSingleQuote} from './shell-escape.js'
 
 const IS_WINDOWS = process.platform === 'win32'
 const SSH_COMMAND_KEY = 'core.sshCommand'
@@ -215,14 +216,14 @@ class GitAuthHelper {
       if (this.settings.sshKey) {
         // Configure core.sshCommand
         await this.git.submoduleForeach(
-          `git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`,
+          `git config --local '${SSH_COMMAND_KEY}' '${escapeSingleQuote(this.sshCommand)}'`,
           this.settings.nestedSubmodules
         )
       } else {
         // Configure HTTPS instead of SSH
         for (const insteadOfValue of this.insteadOfValues) {
           await this.git.submoduleForeach(
-            `git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`,
+            `git config --local --add '${escapeSingleQuote(this.insteadOfKey)}' '${escapeSingleQuote(insteadOfValue)}'`,
             this.settings.nestedSubmodules
           )
         }
@@ -536,7 +537,7 @@ class GitAuthHelper {
     const pattern = regexpHelper.escape(configKey)
     await this.git.submoduleForeach(
       // Wrap the pipeline in quotes to make sure it's handled properly by submoduleForeach, rather than just the first part of the pipeline.
-      `sh -c "git config --local --name-only --get-regexp '${pattern}' && git config --local --unset-all '${configKey}' || :"`,
+      `sh -c "git config --local --name-only --get-regexp '${escapeSingleQuote(pattern)}' && git config --local --unset-all '${escapeSingleQuote(configKey)}' || :"`,
       true
     )
   }
