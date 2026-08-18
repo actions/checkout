@@ -67,6 +67,7 @@ describe('git-auth-helper tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    githubServerUrl = ''
   })
 
   afterEach(() => {
@@ -663,6 +664,59 @@ describe('git-auth-helper tests', () => {
       expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/core\.sshCommand/)
     }
   )
+
+  const configureSubmoduleAuth_escapesSingleQuotesInServerUrl =
+    'configureSubmoduleAuth escapes single quotes in serverUrl to prevent command injection'
+  it(configureSubmoduleAuth_escapesSingleQuotesInServerUrl, async () => {
+    // Arrange: URL containing percent-encoded single quote (%27) which URL decoding expands to literal single quote
+    githubServerUrl = 'https://evil%27$(id)host.com'
+    await setup(configureSubmoduleAuth_escapesSingleQuotesInServerUrl)
+    settings.githubServerUrl = githubServerUrl
+    settings.persistCredentials = true
+    settings.sshKey = ''
+    settings.workflowOrganizationId = undefined
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+    const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
+    mockSubmoduleForeach.mockClear()
+
+    // Act
+    await authHelper.configureSubmoduleAuth()
+
+    // Assert
+    // Call 0: removeSubmoduleGitConfig for insteadOfKey
+    // Call 1: insteadOf configuration
+    expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
+    const unsetCommand = mockSubmoduleForeach.mock.calls[0][0] as string
+    expect(unsetCommand).toContain("'\\''")
+
+    const addCommand = mockSubmoduleForeach.mock.calls[1][0] as string
+    expect(addCommand).toBe(
+      "git config --local --add 'url.https://evil'\\''$(id)host.com/.insteadOf' 'git@evil'\\''$(id)host.com:'"
+    )
+  })
+
+  const removeAuth_escapesSingleQuotesInConfigKey =
+    'removeAuth removes token from submodules escaping single quotes'
+  it(removeAuth_escapesSingleQuotesInConfigKey, async () => {
+    // Arrange
+    githubServerUrl = 'https://evil%27$(id)host.com'
+    await setup(removeAuth_escapesSingleQuotesInConfigKey)
+    settings.githubServerUrl = githubServerUrl
+    const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+    await authHelper.configureAuth()
+    const mockSubmoduleForeach = git.submoduleForeach as jest.Mock<any>
+    mockSubmoduleForeach.mockClear()
+
+    // Act
+    await authHelper.removeAuth()
+
+    // Assert: removeSubmoduleGitConfig should have been called for SSH_COMMAND_KEY and tokenConfigKey
+    const calls = mockSubmoduleForeach.mock.calls.map(c => c[0] as string)
+    const tokenCleanupCall = calls.find(c => c.includes('extraheader'))
+    expect(tokenCleanupCall).toBeDefined()
+    expect(tokenCleanupCall).toContain("'\\''")
+  })
 
   const removeAuth_removesSshCommand = 'removeAuth removes SSH command'
   it(removeAuth_removesSshCommand, async () => {
