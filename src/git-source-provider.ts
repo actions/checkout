@@ -381,6 +381,9 @@ async function getGitCommandManager(
       settings.sparseCheckout != null
     )
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    core.info(`Failed to initialize CommandManager: ${errorMessage}`)
+
     // Git is required for LFS
     if (settings.lfs) {
       throw err
