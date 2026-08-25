@@ -41957,6 +41957,8 @@ async function getGitCommandManager(settings) {
         return await createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null);
     }
     catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        info(`Failed to initialize CommandManager: ${errorMessage}`);
         // Git is required for LFS
         if (settings.lfs) {
             throw err;
