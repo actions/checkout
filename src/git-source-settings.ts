@@ -60,6 +60,11 @@ export interface IGitSourceSettings {
   showProgress: boolean
 
   /**
+   * Indicates whether to use the --quiet option when fetching and checking out
+   */
+  quiet: boolean
+
+  /**
    * Indicates whether to fetch LFS objects
    */
   lfs: boolean

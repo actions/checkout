@@ -119,6 +119,7 @@ describe('input-helper tests', () => {
     expect(settings.fetchDepth).toBe(1)
     expect(settings.fetchTags).toBe(false)
     expect(settings.showProgress).toBe(true)
+    expect(settings.quiet).toBe(false)
     expect(settings.lfs).toBe(false)
     expect(settings.ref).toBe('refs/heads/some-ref')
     expect(settings.repositoryName).toBe('some-repo')
@@ -126,6 +127,12 @@ describe('input-helper tests', () => {
     expect(settings.repositoryPath).toBe(gitHubWorkspace)
     expect(settings.setSafeDirectory).toBe(true)
     expect(settings.allowUnsafePrCheckout).toBe(false)
+  })
+
+  it('sets quiet', async () => {
+    inputs.quiet = 'true'
+    const settings: IGitSourceSettings = await inputHelper.getInputs()
+    expect(settings.quiet).toBe(true)
   })
 
   it('qualifies ref', async () => {

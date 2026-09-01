@@ -80,6 +80,11 @@ inputs:
   show-progress:
     description: 'Whether to show progress status output when fetching.'
     default: true
+  quiet:
+    description: >
+      Whether to pass `--quiet` to the git commands that fetch and check out the
+      repository, suppressing their non-error output.
+    default: false
   lfs:
     description: 'Whether to download Git-LFS files'
     default: false

@@ -35597,8 +35597,8 @@ class GitVersion {
 // sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 const MinimumGitVersion = new GitVersion('2.18');
 const MinimumGitSparseCheckoutVersion = new GitVersion('2.28');
-async function createCommandManager(workingDirectory, lfs, doSparseCheckout) {
-    return await GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout);
+async function createCommandManager(workingDirectory, lfs, doSparseCheckout, quiet = false) {
+    return await GitCommandManager.createCommandManager(workingDirectory, lfs, doSparseCheckout, quiet);
 }
 class GitCommandManager {
     gitEnv = {
@@ -35608,6 +35608,7 @@ class GitCommandManager {
     gitPath = '';
     lfs = false;
     doSparseCheckout = false;
+    quiet = false;
     workingDirectory = '';
     gitVersion = new GitVersion();
     // Private constructor; use createCommandManager()
@@ -35702,7 +35703,14 @@ class GitCommandManager {
         await external_fs_namespaceObject.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
     }
     async checkout(ref, startPoint) {
-        const args = ['checkout', '--progress', '--force'];
+        // --quiet and --progress drive different output and compose: --progress
+        // controls the "Updating files" meter, --quiet silences the rest. Keeping
+        // both means a slow checkout still reports progress while going quiet.
+        const args = ['checkout'];
+        if (this.quiet) {
+            args.push('--quiet');
+        }
+        args.push('--progress', '--force');
         if (startPoint) {
             args.push('-B', ref, startPoint);
         }
@@ -35713,6 +35721,9 @@ class GitCommandManager {
     }
     async checkoutDetach() {
         const args = ['checkout', '--detach'];
+        if (this.quiet) {
+            args.push('--quiet');
+        }
         await this.execGit(args);
     }
     async config(configKey, configValue, globalConfig, add, configFile) {
@@ -35746,6 +35757,11 @@ class GitCommandManager {
         // Tags are fetched explicitly via refspec when needed
         args.push('--no-tags');
         args.push('--prune', '--no-recurse-submodules');
+        // Independent switches: --quiet drops the ref summary, --progress forces
+        // the transfer meter. Either, both, or neither is meaningful.
+        if (this.quiet) {
+            args.push('--quiet');
+        }
         if (options.showProgress) {
             args.push('--progress');
         }
@@ -35875,6 +35891,9 @@ class GitCommandManager {
     async submoduleUpdate(fetchDepth, recursive) {
         const args = ['-c', 'protocol.version=2'];
         args.push('submodule', 'update', '--init', '--force');
+        if (this.quiet) {
+            args.push('--quiet');
+        }
         if (fetchDepth > 0) {
             args.push(`--depth=${fetchDepth}`);
         }
@@ -35975,9 +35994,9 @@ class GitCommandManager {
     async version() {
         return this.gitVersion;
     }
-    static async createCommandManager(workingDirectory, lfs, doSparseCheckout) {
+    static async createCommandManager(workingDirectory, lfs, doSparseCheckout, quiet = false) {
         const result = new GitCommandManager();
-        await result.initializeCommandManager(workingDirectory, lfs, doSparseCheckout);
+        await result.initializeCommandManager(workingDirectory, lfs, doSparseCheckout, quiet);
         return result;
     }
     async execGit(args, allowAllExitCodes = false, silent = false, customListeners = {}) {
@@ -36010,8 +36029,9 @@ class GitCommandManager {
         core_debug(result.stdout);
         return result;
     }
-    async initializeCommandManager(workingDirectory, lfs, doSparseCheckout) {
+    async initializeCommandManager(workingDirectory, lfs, doSparseCheckout, quiet) {
         this.workingDirectory = workingDirectory;
+        this.quiet = quiet;
         // Git-lfs will try to pull down assets if any of the local/user/system setting exist.
         // If the user didn't enable `LFS` in their pipeline definition, disable LFS fetch/checkout.
         this.lfs = lfs;
@@ -41954,7 +41974,7 @@ async function cleanup(repositoryPath) {
 async function getGitCommandManager(settings) {
     info(`Working directory is '${settings.repositoryPath}'`);
     try {
-        return await createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null);
+        return await createCommandManager(settings.repositoryPath, settings.lfs, settings.sparseCheckout != null, settings.quiet);
     }
     catch (err) {
         // Git is required for LFS
@@ -42166,6 +42186,9 @@ async function getInputs() {
     result.showProgress =
         (getInput('show-progress') || 'true').toUpperCase() === 'TRUE';
     core_debug(`show progress = ${result.showProgress}`);
+    // Quiet
+    result.quiet = (getInput('quiet') || 'false').toUpperCase() === 'TRUE';
+    core_debug(`quiet = ${result.quiet}`);
     // LFS
     result.lfs = (getInput('lfs') || 'false').toUpperCase() === 'TRUE';
     core_debug(`lfs = ${result.lfs}`);

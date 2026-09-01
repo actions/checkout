@@ -572,3 +572,209 @@ describe('git user-agent with orchestration ID', () => {
     )
   })
 })
+
+describe('Test quiet option', () => {
+  beforeEach(async () => {
+    mockFileExistsSync.mockReset()
+    mockDirectoryExistsSync.mockReset()
+    mockExec.mockImplementation((path: any, args: any, options: any) => {
+      if (args.includes('version')) {
+        options.listeners.stdout(Buffer.from('2.18'))
+      }
+
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  async function createManager(quiet?: boolean): Promise<IGitCommandManager> {
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    return await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout,
+      quiet
+    )
+  }
+
+  it('should pass --quiet to fetch when quiet is true', async () => {
+    git = await createManager(true)
+
+    await git.fetch(['refspec1'], {fetchDepth: 0})
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--quiet',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should pass both --quiet and --progress to fetch when both are requested', async () => {
+    // The two flags drive different output and compose: --progress forces the
+    // transfer meter, --quiet drops the per-ref summary.
+    git = await createManager(true)
+
+    await git.fetch(['refspec1'], {fetchDepth: 0, showProgress: true})
+
+    const args = mockExec.mock.calls.at(-1)?.[1] as string[]
+    expect(args).toContain('--quiet')
+    expect(args).toContain('--progress')
+  })
+
+  it('should not pass --quiet to fetch when quiet is false', async () => {
+    git = await createManager(false)
+
+    await git.fetch(['refspec1'], {fetchDepth: 0})
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should default to not quiet when the option is omitted', async () => {
+    git = await createManager()
+
+    await git.fetch(['refspec1'], {fetchDepth: 0, showProgress: true})
+
+    const args = mockExec.mock.calls.at(-1)?.[1] as string[]
+    expect(args).toContain('--progress')
+    expect(args).not.toContain('--quiet')
+  })
+
+  it('should checkout with --quiet alongside --progress when quiet is true', async () => {
+    git = await createManager(true)
+
+    await git.checkout('refs/heads/main', '')
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['checkout', '--quiet', '--progress', '--force', 'refs/heads/main'],
+      expect.any(Object)
+    )
+  })
+
+  it('should checkout a start point with --quiet when quiet is true', async () => {
+    git = await createManager(true)
+
+    await git.checkout('refs/heads/main', 'refs/remotes/origin/main')
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        'checkout',
+        '--quiet',
+        '--progress',
+        '--force',
+        '-B',
+        'refs/heads/main',
+        'refs/remotes/origin/main'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should checkout with --progress when quiet is false', async () => {
+    git = await createManager(false)
+
+    await git.checkout('refs/heads/main', '')
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['checkout', '--progress', '--force', 'refs/heads/main'],
+      expect.any(Object)
+    )
+  })
+
+  it('should pass --quiet to checkout --detach when quiet is true', async () => {
+    git = await createManager(true)
+
+    await git.checkoutDetach()
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['checkout', '--detach', '--quiet'],
+      expect.any(Object)
+    )
+  })
+
+  it('should not pass --quiet to checkout --detach when quiet is false', async () => {
+    git = await createManager(false)
+
+    await git.checkoutDetach()
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      ['checkout', '--detach'],
+      expect.any(Object)
+    )
+  })
+
+  it('should pass --quiet to submodule update when quiet is true', async () => {
+    git = await createManager(true)
+
+    await git.submoduleUpdate(1, true)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'submodule',
+        'update',
+        '--init',
+        '--force',
+        '--quiet',
+        '--depth=1',
+        '--recursive'
+      ],
+      expect.any(Object)
+    )
+  })
+
+  it('should not pass --quiet to submodule update when quiet is false', async () => {
+    git = await createManager(false)
+
+    await git.submoduleUpdate(1, true)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'submodule',
+        'update',
+        '--init',
+        '--force',
+        '--depth=1',
+        '--recursive'
+      ],
+      expect.any(Object)
+    )
+  })
+})
