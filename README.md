@@ -145,6 +145,11 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     show-progress: ''
 
+    # Whether to pass `--quiet` to the git commands that fetch and check out the
+    # repository, suppressing their non-error output.
+    # Default: false
+    quiet: ''
+
     # Whether to download Git-LFS files
     # Default: false
     lfs: ''

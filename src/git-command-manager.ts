@@ -85,12 +85,14 @@ export interface IGitCommandManager {
 export async function createCommandManager(
   workingDirectory: string,
   lfs: boolean,
-  doSparseCheckout: boolean
+  doSparseCheckout: boolean,
+  quiet = false
 ): Promise<IGitCommandManager> {
   return await GitCommandManager.createCommandManager(
     workingDirectory,
     lfs,
-    doSparseCheckout
+    doSparseCheckout,
+    quiet
   )
 }
 
@@ -102,6 +104,7 @@ class GitCommandManager {
   private gitPath = ''
   private lfs = false
   private doSparseCheckout = false
+  private quiet = false
   private workingDirectory = ''
   private gitVersion: GitVersion = new GitVersion()
 
@@ -221,7 +224,14 @@ class GitCommandManager {
   }
 
   async checkout(ref: string, startPoint: string): Promise<void> {
-    const args = ['checkout', '--progress', '--force']
+    // --quiet and --progress drive different output and compose: --progress
+    // controls the "Updating files" meter, --quiet silences the rest. Keeping
+    // both means a slow checkout still reports progress while going quiet.
+    const args = ['checkout']
+    if (this.quiet) {
+      args.push('--quiet')
+    }
+    args.push('--progress', '--force')
     if (startPoint) {
       args.push('-B', ref, startPoint)
     } else {
@@ -233,6 +243,10 @@ class GitCommandManager {
 
   async checkoutDetach(): Promise<void> {
     const args = ['checkout', '--detach']
+    if (this.quiet) {
+      args.push('--quiet')
+    }
+
     await this.execGit(args)
   }
 
@@ -288,6 +302,12 @@ class GitCommandManager {
     args.push('--no-tags')
 
     args.push('--prune', '--no-recurse-submodules')
+    // Independent switches: --quiet drops the ref summary, --progress forces
+    // the transfer meter. Either, both, or neither is meaningful.
+    if (this.quiet) {
+      args.push('--quiet')
+    }
+
     if (options.showProgress) {
       args.push('--progress')
     }
@@ -455,6 +475,10 @@ class GitCommandManager {
   async submoduleUpdate(fetchDepth: number, recursive: boolean): Promise<void> {
     const args = ['-c', 'protocol.version=2']
     args.push('submodule', 'update', '--init', '--force')
+    if (this.quiet) {
+      args.push('--quiet')
+    }
+
     if (fetchDepth > 0) {
       args.push(`--depth=${fetchDepth}`)
     }
@@ -604,13 +628,15 @@ class GitCommandManager {
   static async createCommandManager(
     workingDirectory: string,
     lfs: boolean,
-    doSparseCheckout: boolean
+    doSparseCheckout: boolean,
+    quiet = false
   ): Promise<GitCommandManager> {
     const result = new GitCommandManager()
     await result.initializeCommandManager(
       workingDirectory,
       lfs,
-      doSparseCheckout
+      doSparseCheckout,
+      quiet
     )
     return result
   }
@@ -662,9 +688,11 @@ class GitCommandManager {
   private async initializeCommandManager(
     workingDirectory: string,
     lfs: boolean,
-    doSparseCheckout: boolean
+    doSparseCheckout: boolean,
+    quiet: boolean
   ): Promise<void> {
     this.workingDirectory = workingDirectory
+    this.quiet = quiet
 
     // Git-lfs will try to pull down assets if any of the local/user/system setting exist.
     // If the user didn't enable `LFS` in their pipeline definition, disable LFS fetch/checkout.

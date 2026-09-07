@@ -1180,6 +1180,7 @@ async function setup(testName: string): Promise<void> {
     fetchDepth: 1,
     fetchTags: false,
     showProgress: true,
+    quiet: false,
     lfs: false,
     submodules: false,
     nestedSubmodules: false,

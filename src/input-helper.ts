@@ -136,6 +136,10 @@ export async function getInputs(): Promise<IGitSourceSettings> {
     (core.getInput('show-progress') || 'true').toUpperCase() === 'TRUE'
   core.debug(`show progress = ${result.showProgress}`)
 
+  // Quiet
+  result.quiet = (core.getInput('quiet') || 'false').toUpperCase() === 'TRUE'
+  core.debug(`quiet = ${result.quiet}`)
+
   // LFS
   result.lfs = (core.getInput('lfs') || 'false').toUpperCase() === 'TRUE'
   core.debug(`lfs = ${result.lfs}`)
