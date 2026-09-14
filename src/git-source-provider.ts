@@ -271,6 +271,12 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
     await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint)
     core.endGroup()
 
+    if (settings.lfs && !settings.sparseCheckout) {
+      core.startGroup('Checking out LFS objects')
+      await git.lfsCheckout()
+      core.endGroup()
+    }
+
     // Submodules
     if (settings.submodules) {
       // Temporarily override global config
@@ -287,6 +293,15 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         settings.nestedSubmodules
       )
       core.endGroup()
+
+      if (settings.lfs) {
+        core.startGroup('Checking out submodule LFS objects')
+        await git.submoduleForeach(
+          'git lfs checkout',
+          settings.nestedSubmodules
+        )
+        core.endGroup()
+      }
 
       // Persist credentials
       if (settings.persistCredentials) {

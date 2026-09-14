@@ -136,6 +136,16 @@ jobs:
         run: __test__/verify-sparse-checkout-non-cone-mode.sh
 
       # LFS
+      # First check out without LFS so the reused worktree is left holding LFS
+      # pointer files; the `lfs: true` checkout below must then materialize them
+      # rather than leave the stale pointers in place (#270).
+      - name: Checkout LFS pointers (reused worktree setup)
+        uses: ./
+        with:
+          repository: actions/checkout # hardcoded, otherwise doesn't work from a fork
+          ref: test-data/v2/lfs
+          path: lfs
+          lfs: false
       - name: Checkout LFS
         uses: ./
         with:

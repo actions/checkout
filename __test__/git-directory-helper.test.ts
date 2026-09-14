@@ -497,6 +497,7 @@ async function setup(testName: string): Promise<void> {
     getWorkingDirectory: jest.fn(() => repositoryPath),
     init: jest.fn(),
     isDetached: jest.fn(),
+    lfsCheckout: jest.fn(),
     lfsFetch: jest.fn(),
     lfsInstall: jest.fn(),
     log1: jest.fn(),
