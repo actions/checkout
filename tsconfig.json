@@ -11,3 +11,4 @@
   },
   "exclude": ["__test__", "lib", "node_modules", "jest.config.ts"]
 }
+/id
