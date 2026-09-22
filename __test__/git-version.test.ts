@@ -45,6 +45,31 @@ describe('git-version tests', () => {
     expect(version.checkMinimum(new GitVersion('5.1.2'))).toBeFalsy()
   })
 
+  it('compares an explicit patch of zero', async () => {
+    // A patch component of zero must be compared, not treated as unspecified
+    // (0 is falsy). A patch left unspecified by a two-part version such as
+    // "2.28" is treated as satisfying any patch of that minor version.
+    expect(
+      new GitVersion('4.5.0').checkMinimum(new GitVersion('4.5.1'))
+    ).toBeFalsy()
+    expect(
+      new GitVersion('2.28.0').checkMinimum(new GitVersion('2.28.1'))
+    ).toBeFalsy()
+    expect(
+      new GitVersion('4.5.0').checkMinimum(new GitVersion('4.5.0'))
+    ).toBeTruthy()
+    expect(
+      new GitVersion('4.5.0').checkMinimum(new GitVersion('4.5'))
+    ).toBeTruthy()
+    expect(
+      new GitVersion('4.5.1').checkMinimum(new GitVersion('4.5.0'))
+    ).toBeTruthy()
+    // Unspecified patch satisfies any patch of the same minor version
+    expect(
+      new GitVersion('4.5').checkMinimum(new GitVersion('4.5.0'))
+    ).toBeTruthy()
+  })
+
   it('sparse checkout', async () => {
     const minSparseVer = MinimumGitSparseCheckoutVersion
     expect(new GitVersion('1.0').checkMinimum(minSparseVer)).toBeFalsy()

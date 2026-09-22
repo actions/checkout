@@ -43,8 +43,12 @@ export class GitVersion {
 
       // Minor is equal
       if (this.minor === minimum.minor) {
-        // Patch is insufficient
-        if (this.patch && this.patch < (minimum.patch || 0)) {
+        // Patch is insufficient. The patch component is only compared when it
+        // was explicitly specified: an instance built from a two-part version
+        // (e.g. "2.28") leaves patch as NaN, which is treated as satisfying any
+        // patch of that minor version. An explicit zero must not be mistaken for
+        // an unspecified value, because 0 is falsy.
+        if (!Number.isNaN(this.patch) && this.patch < (minimum.patch || 0)) {
           return false
         }
       }
