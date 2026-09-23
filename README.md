@@ -32,6 +32,8 @@ Only a single commit is fetched by default, for the ref/SHA that triggered the w
 
 The auth token is persisted in the local git config. This enables your scripts to run authenticated git commands. The token is removed during post-job cleanup. Set `persist-credentials: false` to opt-out.
 
+For token-authenticated submodules, checkout keeps its SSH-to-HTTPS URL rewrites in a temporary config alongside the submodule credentials. Both are removed during credential cleanup, without changing pre-existing URL rewrite rules. Unmarked local rewrites left by older checkout versions are not removed automatically because they cannot be distinguished from user configuration.
+
 When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
 ### Note

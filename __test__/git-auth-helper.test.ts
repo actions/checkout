@@ -30,6 +30,8 @@ jest.unstable_mockModule('@actions/core', () => ({
 jest.unstable_mockModule('../src/state-helper.js', () => ({
   setSshKeyPath: jest.fn(),
   setSshKnownHostsPath: jest.fn(),
+  setCredentialsConfigPaths: jest.fn(),
+  CredentialsConfigPaths: [],
   IsPost: false,
   RepositoryPath: ''
 }))
@@ -37,6 +39,7 @@ jest.unstable_mockModule('../src/state-helper.js', () => ({
 // Dynamic imports after mocking
 const core = await import('@actions/core')
 const gitAuthHelper = await import('../src/git-auth-helper.js')
+const stateHelper = await import('../src/state-helper.js')
 type IGitCommandManager =
   import('../src/git-command-manager.js').IGitCommandManager
 type IGitSourceSettings =
@@ -67,6 +70,7 @@ describe('git-auth-helper tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    stateHelper.CredentialsConfigPaths.length = 0
   })
 
   afterEach(() => {
@@ -557,10 +561,7 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toBeCalledTimes(1)
-      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
-        /unset-all.*insteadOf/
-      )
+      expect(mockSubmoduleForeach).not.toHaveBeenCalled()
     }
   )
 
@@ -590,10 +591,7 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(1)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
-      )
+      expect(mockSubmoduleForeach).not.toHaveBeenCalled()
     }
   )
 
@@ -616,16 +614,21 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      // Should configure insteadOf (2 calls for two values)
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
+      expect(mockSubmoduleForeach).not.toHaveBeenCalled()
+      const credentialsFiles = await fs.promises.readdir(runnerTemp)
+      const contents = await Promise.all(
+        credentialsFiles.map(file =>
+          fs.promises.readFile(path.join(runnerTemp, file), 'utf8')
+        )
       )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(
-        /url.*insteadOf.*git@github.com:/
+      const submoduleConfig = contents.find(content =>
+        content.includes('url.https://github.com/.insteadOf')
       )
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(
-        /url.*insteadOf.*org-123456@github.com:/
+      expect(submoduleConfig).toContain(
+        'url.https://github.com/.insteadOf git@github.com:'
+      )
+      expect(submoduleConfig).toContain(
+        'url.https://github.com/.insteadOf org-123456@github.com:'
       )
     }
   )
@@ -656,11 +659,8 @@ describe('git-auth-helper tests', () => {
 
       // Assert
       // Should configure sshCommand (1 call)
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
-      )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/core\.sshCommand/)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(1)
+      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(/core\.sshCommand/)
     }
   )
 
@@ -812,10 +812,11 @@ describe('git-auth-helper tests', () => {
   })
 
   const removeAuth_removesTokenFromSubmodules =
-    'removeAuth removes token from submodules'
+    'post removeAuth removes token and rewrites from submodules'
   it(removeAuth_removesTokenFromSubmodules, async () => {
     // Arrange
     await setup(removeAuth_removesTokenFromSubmodules)
+    settings.sshKey = ''
 
     // Create fake submodule config paths
     const submodule1Dir = path.join(workspace, '.git', 'modules', 'submodule-1')
@@ -844,14 +845,19 @@ describe('git-auth-helper tests', () => {
     let credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
       f => f.startsWith('git-credentials-') && f.endsWith('.config')
     )
-    expect(credentialsFiles.length).toBe(1)
-    const credentialsFilePath = path.join(runnerTemp, credentialsFiles[0])
+    expect(credentialsFiles.length).toBe(2)
+    const submodule1GitDir = submodule1Dir.replace(/\\/g, '/')
+    const [credentialsFilePath] = await git.tryGetConfigValues(
+      `includeIf.gitdir:${submodule1GitDir}.path`,
+      false,
+      submodule1ConfigPath
+    )
+    expect(credentialsFilePath).toBeTruthy()
 
     // Verify submodule 1 config has includeIf entries
     let submodule1Content = (
       await fs.promises.readFile(submodule1ConfigPath)
     ).toString()
-    const submodule1GitDir = submodule1Dir.replace(/\\/g, '/')
     expect(
       submodule1Content.indexOf(`includeIf.gitdir:${submodule1GitDir}.path`)
     ).toBeGreaterThanOrEqual(0)
@@ -883,12 +889,16 @@ describe('git-auth-helper tests', () => {
       submodule2Content.indexOf(containerCredentialsPath)
     ).toBeGreaterThanOrEqual(0)
 
-    // Act - ensure mock persists for removeAuth
-    mockGetSubmoduleConfigPaths.mockResolvedValue([
-      submodule1ConfigPath,
-      submodule2ConfigPath
-    ])
-    await authHelper.removeAuth()
+    // Restore saved state in a fresh helper, as the post action does.
+    const savedPaths = jest.mocked(stateHelper.setCredentialsConfigPaths).mock
+      .calls[1][0]
+    expect(savedPaths.map(file => path.basename(file)).sort()).toEqual(
+      credentialsFiles.sort()
+    )
+    stateHelper.CredentialsConfigPaths.push(
+      ...JSON.parse(JSON.stringify(savedPaths))
+    )
+    await gitAuthHelper.createAuthHelper(git).removeAuth()
 
     // Assert submodule 1 includeIf entries removed
     submodule1Content = (
@@ -922,6 +932,42 @@ describe('git-auth-helper tests', () => {
       }
     }
   })
+
+  it.each(['copy', 'rewrite'])(
+    'post removeAuth cleans up saved paths after submodule %s failure',
+    async stage => {
+      await setup(`post cleanup after ${stage} failure`)
+      settings.sshKey = ''
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const [mainPath] = jest.mocked(stateHelper.setCredentialsConfigPaths).mock
+        .calls[0][0]
+      const error = new Error('Submodule setup failed')
+      if (stage === 'copy') {
+        jest.spyOn(fs.promises, 'copyFile').mockRejectedValueOnce(error)
+      } else {
+        jest.mocked(git.config).mockRejectedValueOnce(error)
+      }
+
+      await expect(authHelper.configureSubmoduleAuth()).rejects.toThrow(error)
+      const savedPaths = jest.mocked(stateHelper.setCredentialsConfigPaths).mock
+        .calls[1][0]
+      expect(savedPaths).toHaveLength(2)
+      expect(savedPaths[0]).toBe(mainPath)
+      const existingPaths = stage === 'copy' ? [mainPath] : savedPaths
+      expect((await fs.promises.readdir(runnerTemp)).sort()).toEqual(
+        existingPaths.map(file => path.basename(file)).sort()
+      )
+
+      // No includes are discoverable; cleanup must use only the saved state.
+      await fs.promises.writeFile(localGitConfigPath, '')
+      stateHelper.CredentialsConfigPaths.push(
+        ...JSON.parse(JSON.stringify(savedPaths))
+      )
+      await gitAuthHelper.createAuthHelper(git).removeAuth()
+      expect(await fs.promises.readdir(runnerTemp)).toEqual([])
+    }
+  )
 
   const removeGlobalConfig_removesOverride =
     'removeGlobalConfig removes override'

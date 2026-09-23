@@ -26,6 +26,17 @@ export const SshKeyPath = core.getState('sshKeyPath')
 export const SshKnownHostsPath = core.getState('sshKnownHostsPath')
 
 /**
+ * Credentials config files owned by this action, including incomplete setup.
+ */
+export const CredentialsConfigPaths: string[] = JSON.parse(
+  core.getState('credentialsConfigPaths') || '[]'
+)
+
+export function setCredentialsConfigPaths(credentialsConfigPaths: string[]) {
+  core.saveState('credentialsConfigPaths', credentialsConfigPaths)
+}
+
+/**
  * Save the repository path so the POST action can retrieve the value.
  */
 export function setRepositoryPath(repositoryPath: string) {
