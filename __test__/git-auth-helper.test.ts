@@ -30,6 +30,8 @@ jest.unstable_mockModule('@actions/core', () => ({
 jest.unstable_mockModule('../src/state-helper.js', () => ({
   setSshKeyPath: jest.fn(),
   setSshKnownHostsPath: jest.fn(),
+  setCredentialsConfigPaths: jest.fn(),
+  CredentialsConfigPaths: [],
   IsPost: false,
   RepositoryPath: ''
 }))
@@ -557,10 +559,7 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toBeCalledTimes(1)
-      expect(mockSubmoduleForeach.mock.calls[0][0] as string).toMatch(
-        /unset-all.*insteadOf/
-      )
+      expect(mockSubmoduleForeach).not.toHaveBeenCalled()
     }
   )
 
@@ -590,10 +589,7 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(1)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
-      )
+      expect(mockSubmoduleForeach).not.toHaveBeenCalled()
     }
   )
 
@@ -616,16 +612,21 @@ describe('git-auth-helper tests', () => {
       await authHelper.configureSubmoduleAuth()
 
       // Assert
-      // Should configure insteadOf (2 calls for two values)
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(3)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
+      expect(mockSubmoduleForeach).not.toHaveBeenCalled()
+      const credentialsFiles = await fs.promises.readdir(runnerTemp)
+      const contents = await Promise.all(
+        credentialsFiles.map(file =>
+          fs.promises.readFile(path.join(runnerTemp, file), 'utf8')
+        )
       )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(
-        /url.*insteadOf.*git@github.com:/
+      const submoduleConfig = contents.find(content =>
+        content.includes('url.https://github.com/.insteadOf')
       )
-      expect(mockSubmoduleForeach.mock.calls[2][0]).toMatch(
-        /url.*insteadOf.*org-123456@github.com:/
+      expect(submoduleConfig).toContain(
+        'url.https://github.com/.insteadOf git@github.com:'
+      )
+      expect(submoduleConfig).toContain(
+        'url.https://github.com/.insteadOf org-123456@github.com:'
       )
     }
   )
@@ -656,11 +657,8 @@ describe('git-auth-helper tests', () => {
 
       // Assert
       // Should configure sshCommand (1 call)
-      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(2)
-      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(
-        /unset-all.*insteadOf/
-      )
-      expect(mockSubmoduleForeach.mock.calls[1][0]).toMatch(/core\.sshCommand/)
+      expect(mockSubmoduleForeach).toHaveBeenCalledTimes(1)
+      expect(mockSubmoduleForeach.mock.calls[0][0]).toMatch(/core\.sshCommand/)
     }
   )
 
@@ -816,6 +814,7 @@ describe('git-auth-helper tests', () => {
   it(removeAuth_removesTokenFromSubmodules, async () => {
     // Arrange
     await setup(removeAuth_removesTokenFromSubmodules)
+    settings.sshKey = ''
 
     // Create fake submodule config paths
     const submodule1Dir = path.join(workspace, '.git', 'modules', 'submodule-1')
@@ -844,14 +843,19 @@ describe('git-auth-helper tests', () => {
     let credentialsFiles = (await fs.promises.readdir(runnerTemp)).filter(
       f => f.startsWith('git-credentials-') && f.endsWith('.config')
     )
-    expect(credentialsFiles.length).toBe(1)
-    const credentialsFilePath = path.join(runnerTemp, credentialsFiles[0])
+    expect(credentialsFiles.length).toBe(2)
+    const submodule1GitDir = submodule1Dir.replace(/\\/g, '/')
+    const [credentialsFilePath] = await git.tryGetConfigValues(
+      `includeIf.gitdir:${submodule1GitDir}.path`,
+      false,
+      submodule1ConfigPath
+    )
+    expect(credentialsFilePath).toBeTruthy()
 
     // Verify submodule 1 config has includeIf entries
     let submodule1Content = (
       await fs.promises.readFile(submodule1ConfigPath)
     ).toString()
-    const submodule1GitDir = submodule1Dir.replace(/\\/g, '/')
     expect(
       submodule1Content.indexOf(`includeIf.gitdir:${submodule1GitDir}.path`)
     ).toBeGreaterThanOrEqual(0)

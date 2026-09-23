@@ -44,6 +44,7 @@ class GitAuthHelper {
   private sshKnownHostsPath = ''
   private temporaryHomePath = ''
   private credentialsConfigPath = '' // Path to separate credentials config file in RUNNER_TEMP
+  private submoduleCredentialsConfigPath = ''
 
   constructor(
     gitCommandManager: IGitCommandManager,
@@ -155,12 +156,27 @@ class GitAuthHelper {
   }
 
   async configureSubmoduleAuth(): Promise<void> {
-    // Remove possible previous HTTPS instead of SSH
-    await this.removeSubmoduleGitConfig(this.insteadOfKey)
-
     if (this.settings.persistCredentials) {
-      // Get the credentials config file path in RUNNER_TEMP
-      const credentialsConfigPath = this.getCredentialsConfigPath()
+      const credentialsConfigPath = this.getCredentialsConfigPath(
+        !this.settings.sshKey
+      )
+      if (!this.settings.sshKey) {
+        await fs.promises.copyFile(
+          this.getCredentialsConfigPath(),
+          credentialsConfigPath
+        )
+
+        // Keep rewrites with their credentials, without changing user config or main-repository URLs.
+        for (const insteadOfValue of this.insteadOfValues) {
+          await this.git.config(
+            this.insteadOfKey,
+            insteadOfValue,
+            false,
+            true,
+            credentialsConfigPath
+          )
+        }
+      }
 
       // Container credentials config path
       const containerCredentialsPath = path.posix.join(
@@ -181,11 +197,9 @@ class GitAuthHelper {
         submoduleGitDir = submoduleGitDir.replace(/\\/g, '/') // Use forward slashes, even on Windows
 
         // Configure host includeIf
-        await this.git.config(
+        await this.configureSubmoduleIncludeIf(
           `includeIf.gitdir:${submoduleGitDir}.path`,
           credentialsConfigPath,
-          false, // globalConfig?
-          false, // add?
           configPath
         )
 
@@ -203,11 +217,9 @@ class GitAuthHelper {
         )
 
         // Configure container includeIf
-        await this.git.config(
+        await this.configureSubmoduleIncludeIf(
           `includeIf.gitdir:${containerSubmoduleGitDir}.path`,
           containerCredentialsPath,
-          false, // globalConfig?
-          false, // add?
           configPath
         )
       }
@@ -218,14 +230,6 @@ class GitAuthHelper {
           `git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`,
           this.settings.nestedSubmodules
         )
-      } else {
-        // Configure HTTPS instead of SSH
-        for (const insteadOfValue of this.insteadOfValues) {
-          await this.git.submoduleForeach(
-            `git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`,
-            this.settings.nestedSubmodules
-          )
-        }
       }
     }
   }
@@ -240,6 +244,17 @@ class GitAuthHelper {
       core.debug(`Unsetting HOME override`)
       this.git.removeEnvironmentVariable('HOME')
       await io.rmRF(this.temporaryHomePath)
+    }
+  }
+
+  private async configureSubmoduleIncludeIf(
+    key: string,
+    value: string,
+    configPath: string
+  ): Promise<void> {
+    const values = await this.git.tryGetConfigValues(key, false, configPath)
+    if (!values.includes(value)) {
+      await this.git.config(key, value, false, true, configPath)
     }
   }
 
@@ -410,12 +425,15 @@ class GitAuthHelper {
   }
 
   /**
-   * Gets or creates the path to the credentials config file in RUNNER_TEMP.
+   * Gets or creates the path to a credentials config file in RUNNER_TEMP.
    * @returns The absolute path to the credentials config file
    */
-  private getCredentialsConfigPath(): string {
-    if (this.credentialsConfigPath) {
-      return this.credentialsConfigPath
+  private getCredentialsConfigPath(forSubmodules = false): string {
+    const existingPath = forSubmodules
+      ? this.submoduleCredentialsConfigPath
+      : this.credentialsConfigPath
+    if (existingPath) {
+      return existingPath
     }
 
     const runnerTemp = process.env['RUNNER_TEMP'] || ''
@@ -423,10 +441,21 @@ class GitAuthHelper {
 
     // Create a unique filename for this checkout instance
     const configFileName = `git-credentials-${randomUUID()}.config`
-    this.credentialsConfigPath = path.join(runnerTemp, configFileName)
+    const configPath = path.join(runnerTemp, configFileName)
+    if (forSubmodules) {
+      this.submoduleCredentialsConfigPath = configPath
+    } else {
+      this.credentialsConfigPath = configPath
+    }
+    // Save before writing so post cleanup also handles incomplete setup or removed submodules.
+    stateHelper.setCredentialsConfigPaths(
+      [this.credentialsConfigPath, this.submoduleCredentialsConfigPath].filter(
+        Boolean
+      )
+    )
 
-    core.debug(`Credentials config path: ${this.credentialsConfigPath}`)
-    return this.credentialsConfigPath
+    core.debug(`Credentials config path: ${configPath}`)
+    return configPath
   }
 
   /**
@@ -476,7 +505,13 @@ class GitAuthHelper {
     await this.removeSubmoduleGitConfig(this.tokenConfigKey)
 
     // Collect credentials config paths that need to be removed
-    const credentialsPaths = new Set<string>()
+    const credentialsPaths = new Set(
+      [
+        this.credentialsConfigPath,
+        this.submoduleCredentialsConfigPath,
+        ...stateHelper.CredentialsConfigPaths
+      ].filter(Boolean)
+    )
 
     // Remove includeIf entries that point to git-credentials-*.config files
     core.info('Removing includeIf entries pointing to credentials config files')

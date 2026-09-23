@@ -34927,6 +34927,13 @@ const SshKeyPath = getState('sshKeyPath');
  */
 const SshKnownHostsPath = getState('sshKnownHostsPath');
 /**
+ * Credentials config files owned by this action, including incomplete setup.
+ */
+const CredentialsConfigPaths = JSON.parse(getState('credentialsConfigPaths') || '[]');
+function setCredentialsConfigPaths(credentialsConfigPaths) {
+    saveState('credentialsConfigPaths', credentialsConfigPaths);
+}
+/**
  * Save the repository path so the POST action can retrieve the value.
  */
 function setRepositoryPath(repositoryPath) {
@@ -35051,6 +35058,7 @@ class GitAuthHelper {
     sshKnownHostsPath = '';
     temporaryHomePath = '';
     credentialsConfigPath = ''; // Path to separate credentials config file in RUNNER_TEMP
+    submoduleCredentialsConfigPath = '';
     constructor(gitCommandManager, gitSourceSettings) {
         this.git = gitCommandManager;
         this.settings = gitSourceSettings || {};
@@ -35135,11 +35143,15 @@ class GitAuthHelper {
         }
     }
     async configureSubmoduleAuth() {
-        // Remove possible previous HTTPS instead of SSH
-        await this.removeSubmoduleGitConfig(this.insteadOfKey);
         if (this.settings.persistCredentials) {
-            // Get the credentials config file path in RUNNER_TEMP
-            const credentialsConfigPath = this.getCredentialsConfigPath();
+            const credentialsConfigPath = this.getCredentialsConfigPath(!this.settings.sshKey);
+            if (!this.settings.sshKey) {
+                await external_fs_namespaceObject.promises.copyFile(this.getCredentialsConfigPath(), credentialsConfigPath);
+                // Keep rewrites with their credentials, without changing user config or main-repository URLs.
+                for (const insteadOfValue of this.insteadOfValues) {
+                    await this.git.config(this.insteadOfKey, insteadOfValue, false, true, credentialsConfigPath);
+                }
+            }
             // Container credentials config path
             const containerCredentialsPath = external_path_namespaceObject.posix.join('/github/runner_temp', external_path_namespaceObject.basename(credentialsConfigPath));
             // Get submodule config file paths.
@@ -35151,9 +35163,7 @@ class GitAuthHelper {
                 let submoduleGitDir = external_path_namespaceObject.dirname(configPath); // The config file is at .git/modules/submodule-name/config
                 submoduleGitDir = submoduleGitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                 // Configure host includeIf
-                await this.git.config(`includeIf.gitdir:${submoduleGitDir}.path`, credentialsConfigPath, false, // globalConfig?
-                false, // add?
-                configPath);
+                await this.configureSubmoduleIncludeIf(`includeIf.gitdir:${submoduleGitDir}.path`, credentialsConfigPath, configPath);
                 // Container submodule git directory
                 const githubWorkspace = process.env['GITHUB_WORKSPACE'];
                 external_assert_.ok(githubWorkspace, 'GITHUB_WORKSPACE is not defined');
@@ -35161,19 +35171,11 @@ class GitAuthHelper {
                 relativeSubmoduleGitDir = relativeSubmoduleGitDir.replace(/\\/g, '/'); // Use forward slashes, even on Windows
                 const containerSubmoduleGitDir = external_path_namespaceObject.posix.join('/github/workspace', relativeSubmoduleGitDir);
                 // Configure container includeIf
-                await this.git.config(`includeIf.gitdir:${containerSubmoduleGitDir}.path`, containerCredentialsPath, false, // globalConfig?
-                false, // add?
-                configPath);
+                await this.configureSubmoduleIncludeIf(`includeIf.gitdir:${containerSubmoduleGitDir}.path`, containerCredentialsPath, configPath);
             }
             if (this.settings.sshKey) {
                 // Configure core.sshCommand
                 await this.git.submoduleForeach(`git config --local '${SSH_COMMAND_KEY}' '${this.sshCommand}'`, this.settings.nestedSubmodules);
-            }
-            else {
-                // Configure HTTPS instead of SSH
-                for (const insteadOfValue of this.insteadOfValues) {
-                    await this.git.submoduleForeach(`git config --local --add '${this.insteadOfKey}' '${insteadOfValue}'`, this.settings.nestedSubmodules);
-                }
             }
         }
     }
@@ -35186,6 +35188,12 @@ class GitAuthHelper {
             core_debug(`Unsetting HOME override`);
             this.git.removeEnvironmentVariable('HOME');
             await rmRF(this.temporaryHomePath);
+        }
+    }
+    async configureSubmoduleIncludeIf(key, value, configPath) {
+        const values = await this.git.tryGetConfigValues(key, false, configPath);
+        if (!values.includes(value)) {
+            await this.git.config(key, value, false, true, configPath);
         }
     }
     /**
@@ -35305,20 +35313,31 @@ class GitAuthHelper {
         }
     }
     /**
-     * Gets or creates the path to the credentials config file in RUNNER_TEMP.
+     * Gets or creates the path to a credentials config file in RUNNER_TEMP.
      * @returns The absolute path to the credentials config file
      */
-    getCredentialsConfigPath() {
-        if (this.credentialsConfigPath) {
-            return this.credentialsConfigPath;
+    getCredentialsConfigPath(forSubmodules = false) {
+        const existingPath = forSubmodules
+            ? this.submoduleCredentialsConfigPath
+            : this.credentialsConfigPath;
+        if (existingPath) {
+            return existingPath;
         }
         const runnerTemp = process.env['RUNNER_TEMP'] || '';
         external_assert_.ok(runnerTemp, 'RUNNER_TEMP is not defined');
         // Create a unique filename for this checkout instance
         const configFileName = `git-credentials-${(0,external_crypto_namespaceObject.randomUUID)()}.config`;
-        this.credentialsConfigPath = external_path_namespaceObject.join(runnerTemp, configFileName);
-        core_debug(`Credentials config path: ${this.credentialsConfigPath}`);
-        return this.credentialsConfigPath;
+        const configPath = external_path_namespaceObject.join(runnerTemp, configFileName);
+        if (forSubmodules) {
+            this.submoduleCredentialsConfigPath = configPath;
+        }
+        else {
+            this.credentialsConfigPath = configPath;
+        }
+        // Save before writing so post cleanup also handles incomplete setup or removed submodules.
+        setCredentialsConfigPaths([this.credentialsConfigPath, this.submoduleCredentialsConfigPath].filter(Boolean));
+        core_debug(`Credentials config path: ${configPath}`);
+        return configPath;
     }
     /**
      * Removes SSH authentication configuration by cleaning up SSH keys,
@@ -35364,7 +35383,11 @@ class GitAuthHelper {
         await this.removeGitConfig(this.tokenConfigKey);
         await this.removeSubmoduleGitConfig(this.tokenConfigKey);
         // Collect credentials config paths that need to be removed
-        const credentialsPaths = new Set();
+        const credentialsPaths = new Set([
+            this.credentialsConfigPath,
+            this.submoduleCredentialsConfigPath,
+            ...CredentialsConfigPaths
+        ].filter(Boolean));
         // Remove includeIf entries that point to git-credentials-*.config files
         info('Removing includeIf entries pointing to credentials config files');
         const mainCredentialsPaths = await this.removeIncludeIfCredentials();
