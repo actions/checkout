@@ -39,6 +39,7 @@ jest.unstable_mockModule('../src/state-helper.js', () => ({
 // Dynamic imports after mocking
 const core = await import('@actions/core')
 const gitAuthHelper = await import('../src/git-auth-helper.js')
+const stateHelper = await import('../src/state-helper.js')
 type IGitCommandManager =
   import('../src/git-command-manager.js').IGitCommandManager
 type IGitSourceSettings =
@@ -69,6 +70,7 @@ describe('git-auth-helper tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    stateHelper.CredentialsConfigPaths.length = 0
   })
 
   afterEach(() => {
@@ -810,7 +812,7 @@ describe('git-auth-helper tests', () => {
   })
 
   const removeAuth_removesTokenFromSubmodules =
-    'removeAuth removes token from submodules'
+    'post removeAuth removes token and rewrites from submodules'
   it(removeAuth_removesTokenFromSubmodules, async () => {
     // Arrange
     await setup(removeAuth_removesTokenFromSubmodules)
@@ -887,12 +889,16 @@ describe('git-auth-helper tests', () => {
       submodule2Content.indexOf(containerCredentialsPath)
     ).toBeGreaterThanOrEqual(0)
 
-    // Act - ensure mock persists for removeAuth
-    mockGetSubmoduleConfigPaths.mockResolvedValue([
-      submodule1ConfigPath,
-      submodule2ConfigPath
-    ])
-    await authHelper.removeAuth()
+    // Restore saved state in a fresh helper, as the post action does.
+    const savedPaths = jest.mocked(stateHelper.setCredentialsConfigPaths).mock
+      .calls[1][0]
+    expect(savedPaths.map(file => path.basename(file)).sort()).toEqual(
+      credentialsFiles.sort()
+    )
+    stateHelper.CredentialsConfigPaths.push(
+      ...JSON.parse(JSON.stringify(savedPaths))
+    )
+    await gitAuthHelper.createAuthHelper(git).removeAuth()
 
     // Assert submodule 1 includeIf entries removed
     submodule1Content = (
@@ -926,6 +932,42 @@ describe('git-auth-helper tests', () => {
       }
     }
   })
+
+  it.each(['copy', 'rewrite'])(
+    'post removeAuth cleans up saved paths after submodule %s failure',
+    async stage => {
+      await setup(`post cleanup after ${stage} failure`)
+      settings.sshKey = ''
+      const authHelper = gitAuthHelper.createAuthHelper(git, settings)
+      await authHelper.configureAuth()
+      const [mainPath] = jest.mocked(stateHelper.setCredentialsConfigPaths).mock
+        .calls[0][0]
+      const error = new Error('Submodule setup failed')
+      if (stage === 'copy') {
+        jest.spyOn(fs.promises, 'copyFile').mockRejectedValueOnce(error)
+      } else {
+        jest.mocked(git.config).mockRejectedValueOnce(error)
+      }
+
+      await expect(authHelper.configureSubmoduleAuth()).rejects.toThrow(error)
+      const savedPaths = jest.mocked(stateHelper.setCredentialsConfigPaths).mock
+        .calls[1][0]
+      expect(savedPaths).toHaveLength(2)
+      expect(savedPaths[0]).toBe(mainPath)
+      const existingPaths = stage === 'copy' ? [mainPath] : savedPaths
+      expect((await fs.promises.readdir(runnerTemp)).sort()).toEqual(
+        existingPaths.map(file => path.basename(file)).sort()
+      )
+
+      // No includes are discoverable; cleanup must use only the saved state.
+      await fs.promises.writeFile(localGitConfigPath, '')
+      stateHelper.CredentialsConfigPaths.push(
+        ...JSON.parse(JSON.stringify(savedPaths))
+      )
+      await gitAuthHelper.createAuthHelper(git).removeAuth()
+      expect(await fs.promises.readdir(runnerTemp)).toEqual([])
+    }
+  )
 
   const removeGlobalConfig_removesOverride =
     'removeGlobalConfig removes override'
