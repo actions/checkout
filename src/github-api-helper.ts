@@ -24,11 +24,17 @@ export async function downloadRepository(
   commit: string,
   repositoryPath: string,
   baseUrl?: string
-): Promise<void> {
+): Promise<string> {
   // Determine the default branch
   if (!ref && !commit) {
     core.info('Determining the default branch')
     ref = await getDefaultBranch(authToken, owner, repo, baseUrl)
+  }
+
+  // Without a commit, resolve the ref to one and download that commit, so the
+  // content and the returned SHA agree even if the ref moves in the meantime.
+  if (!commit) {
+    commit = await tryGetCommitSha(authToken, owner, repo, ref, baseUrl)
   }
 
   // Download the archive
@@ -79,6 +85,45 @@ export async function downloadRepository(
     }
   }
   await io.rmRF(extractPath)
+
+  return commit
+}
+
+/**
+ * Resolves a ref to the SHA of the commit it points at. Returns an empty string
+ * when the ref cannot be resolved, so the download falls back to the ref itself.
+ */
+export async function tryGetCommitSha(
+  authToken: string,
+  owner: string,
+  repo: string,
+  ref: string,
+  baseUrl?: string
+): Promise<string> {
+  try {
+    return await retryHelper.execute(async () => {
+      core.info(`Resolving the commit for '${ref}'`)
+      const octokit = github.getOctokit(authToken, {
+        baseUrl: getServerApiUrl(baseUrl)
+      })
+      const response = await octokit.request(
+        'GET /repos/{owner}/{repo}/commits/{ref}',
+        {owner, repo, ref, headers: {accept: 'application/vnd.github.sha'}}
+      )
+      const sha = String(response.data).trim()
+      assert.ok(
+        /^([0-9a-f]{40}|[0-9a-f]{64})$/.test(sha),
+        `Unexpected commit SHA '${sha}'`
+      )
+      core.info(`Resolved '${ref}' to ${sha}`)
+      return sha
+    })
+  } catch (err) {
+    core.warning(
+      `Unable to resolve the commit for '${ref}': ${(err as any)?.message ?? err}`
+    )
+    return ''
+  }
 }
 
 /**
