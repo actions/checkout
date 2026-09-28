@@ -90,7 +90,7 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
         )
       }
 
-      await githubApiHelper.downloadRepository(
+      const downloadedCommit = await githubApiHelper.downloadRepository(
         settings.authToken,
         settings.repositoryOwner,
         settings.repositoryName,
@@ -101,8 +101,9 @@ export async function getSource(settings: IGitSourceSettings): Promise<void> {
       )
 
       // Set the commit output. The REST API fallback does not create a local
-      // Git repository, so the SHA can only come from the resolved settings.
-      core.setOutput('commit', settings.commit)
+      // Git repository, so the SHA is the commit that was downloaded: the one
+      // requested, or the one the ref resolved to.
+      core.setOutput('commit', downloadedCommit)
       return
     }
 

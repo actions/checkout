@@ -41324,6 +41324,11 @@ async function downloadRepository(authToken, owner, repo, ref, commit, repositor
         info('Determining the default branch');
         ref = await getDefaultBranch(authToken, owner, repo, baseUrl);
     }
+    // Without a commit, resolve the ref to one and download that commit, so the
+    // content and the returned SHA agree even if the ref moves in the meantime.
+    if (!commit) {
+        commit = await tryGetCommitSha(authToken, owner, repo, ref, baseUrl);
+    }
     // Download the archive
     let archiveData = await execute(async () => {
         info('Downloading the archive');
@@ -41367,6 +41372,30 @@ async function downloadRepository(authToken, owner, repo, ref, commit, repositor
         }
     }
     await rmRF(extractPath);
+    return commit;
+}
+/**
+ * Resolves a ref to the SHA of the commit it points at. Returns an empty string
+ * when the ref cannot be resolved, so the download falls back to the ref itself.
+ */
+async function tryGetCommitSha(authToken, owner, repo, ref, baseUrl) {
+    try {
+        return await execute(async () => {
+            info(`Resolving the commit for '${ref}'`);
+            const octokit = getOctokit(authToken, {
+                baseUrl: getServerApiUrl(baseUrl)
+            });
+            const response = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}', { owner, repo, ref, headers: { accept: 'application/vnd.github.sha' } });
+            const sha = String(response.data).trim();
+            external_assert_.ok(/^([0-9a-f]{40}|[0-9a-f]{64})$/.test(sha), `Unexpected commit SHA '${sha}'`);
+            info(`Resolved '${ref}' to ${sha}`);
+            return sha;
+        });
+    }
+    catch (err) {
+        warning(`Unable to resolve the commit for '${ref}': ${err?.message ?? err}`);
+        return '';
+    }
 }
 /**
  * Looks up the default branch name
@@ -41754,10 +41783,11 @@ async function getSource(settings) {
             else if (settings.sshKey) {
                 throw new Error(`Input 'ssh-key' not supported when falling back to download using the GitHub REST API. To create a local Git repository instead, add Git ${MinimumGitVersion} or higher to the PATH.`);
             }
-            await downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath, settings.githubServerUrl);
+            const downloadedCommit = await downloadRepository(settings.authToken, settings.repositoryOwner, settings.repositoryName, settings.ref, settings.commit, settings.repositoryPath, settings.githubServerUrl);
             // Set the commit output. The REST API fallback does not create a local
-            // Git repository, so the SHA can only come from the resolved settings.
-            setOutput('commit', settings.commit);
+            // Git repository, so the SHA is the commit that was downloaded: the one
+            // requested, or the one the ref resolved to.
+            setOutput('commit', downloadedCommit);
             return;
         }
         // Save state for POST action

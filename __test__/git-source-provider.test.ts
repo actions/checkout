@@ -35,7 +35,11 @@ jest.unstable_mockModule('../src/git-command-manager.js', () => ({
   MinimumGitSparseCheckoutVersion: '2.28'
 }))
 
-const mockDownloadRepository = jest.fn()
+// downloadRepository returns the commit it downloaded: the one requested, or the one the ref resolved to.
+const resolvedCommitSha = 'abcdefabcdefabcdefabcdefabcdefabcdefabcd'
+const mockDownloadRepository = jest.fn(
+  async (...args: any[]) => (args[4] as string) || resolvedCommitSha
+)
 jest.unstable_mockModule('../src/github-api-helper.js', () => ({
   downloadRepository: mockDownloadRepository,
   getDefaultBranch: jest.fn(async () => 'refs/heads/main'),
@@ -160,7 +164,7 @@ describe('git-source-provider tests', () => {
     expect(mockSetOutput).toHaveBeenCalledWith('commit', commitSha)
   })
 
-  it('sets the commit output when downloading using the REST API without a commit', async () => {
+  it('sets the commit output to the resolved commit when downloading using the REST API without a commit', async () => {
     // Arrange
     mockCreateCommandManager.mockImplementation(async () => {
       throw new Error('Git is not installed')
@@ -173,10 +177,10 @@ describe('git-source-provider tests', () => {
 
     // Assert
     expect(mockDownloadRepository).toHaveBeenCalled()
-    expect(mockSetOutput).toHaveBeenCalledWith('commit', '')
+    expect(mockSetOutput).toHaveBeenCalledWith('commit', resolvedCommitSha)
   })
 
-  it('sets an empty commit output when downloading a ref that is not a SHA', async () => {
+  it('sets the commit output to the resolved commit when downloading a ref that is not a SHA', async () => {
     // Arrange
     mockCreateCommandManager.mockImplementation(async () => {
       throw new Error('Git is not installed')
@@ -190,7 +194,7 @@ describe('git-source-provider tests', () => {
 
     // Assert
     expect(mockDownloadRepository).toHaveBeenCalled()
-    expect(mockSetOutput).toHaveBeenCalledWith('commit', undefined)
+    expect(mockSetOutput).toHaveBeenCalledWith('commit', resolvedCommitSha)
   })
 
   it('sets the commit output when downloading a SHA-256 object format repository', async () => {
