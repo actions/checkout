@@ -30,7 +30,8 @@ export interface IGitSourceSettings {
   clean: boolean
 
   /**
-   * The filter determining which objects to include
+   * The filter determining which objects to include.
+   * Defaults to 'blob:none' when sparse checkout is set, unless the input is 'none'.
    */
   filter: string | undefined
 

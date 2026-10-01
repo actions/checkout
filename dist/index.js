@@ -41810,9 +41810,6 @@ async function getSource(settings) {
         if (settings.filter) {
             fetchOptions.filter = settings.filter;
         }
-        else if (settings.sparseCheckout) {
-            fetchOptions.filter = 'blob:none';
-        }
         if (settings.fetchDepth <= 0) {
             // Fetch all branches and tags
             let refSpec = getRefSpecForAllHistory(settings.ref, settings.commit);
@@ -42137,18 +42134,26 @@ async function getInputs() {
     // Clean
     result.clean = (getInput('clean') || 'true').toUpperCase() === 'TRUE';
     core_debug(`clean = ${result.clean}`);
-    // Filter
-    const filter = getInput('filter');
-    if (filter) {
-        result.filter = filter;
-    }
-    core_debug(`filter = ${result.filter}`);
     // Sparse checkout
     const sparseCheckout = getMultilineInput('sparse-checkout');
     if (sparseCheckout.length) {
         result.sparseCheckout = sparseCheckout;
         core_debug(`sparse checkout = ${result.sparseCheckout}`);
     }
+    // Filter
+    // Sparse checkout implies 'blob:none' unless a filter is given.
+    // 'none' disables the filter.
+    const filter = getInput('filter');
+    if (filter.toUpperCase() === 'NONE') {
+        result.filter = undefined;
+    }
+    else if (filter) {
+        result.filter = filter;
+    }
+    else if (result.sparseCheckout) {
+        result.filter = 'blob:none';
+    }
+    core_debug(`filter = ${result.filter}`);
     result.sparseCheckoutConeMode =
         (getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
             'TRUE';

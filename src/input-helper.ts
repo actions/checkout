@@ -100,20 +100,26 @@ export async function getInputs(): Promise<IGitSourceSettings> {
   result.clean = (core.getInput('clean') || 'true').toUpperCase() === 'TRUE'
   core.debug(`clean = ${result.clean}`)
 
-  // Filter
-  const filter = core.getInput('filter')
-  if (filter) {
-    result.filter = filter
-  }
-
-  core.debug(`filter = ${result.filter}`)
-
   // Sparse checkout
   const sparseCheckout = core.getMultilineInput('sparse-checkout')
   if (sparseCheckout.length) {
     result.sparseCheckout = sparseCheckout
     core.debug(`sparse checkout = ${result.sparseCheckout}`)
   }
+
+  // Filter
+  // Sparse checkout implies 'blob:none' unless a filter is given.
+  // 'none' disables the filter.
+  const filter = core.getInput('filter')
+  if (filter.toUpperCase() === 'NONE') {
+    result.filter = undefined
+  } else if (filter) {
+    result.filter = filter
+  } else if (result.sparseCheckout) {
+    result.filter = 'blob:none'
+  }
+
+  core.debug(`filter = ${result.filter}`)
 
   result.sparseCheckoutConeMode =
     (core.getInput('sparse-checkout-cone-mode') || 'true').toUpperCase() ===
