@@ -60,7 +60,8 @@ inputs:
   filter:
     description: >
       Partially clone against a given filter.
-      Overrides sparse-checkout if set.
+      If sparse-checkout is set and filter is not, the filter is `blob:none`.
+      Set to `none` to fetch without a filter.
     default: null
   sparse-checkout:
     description: >

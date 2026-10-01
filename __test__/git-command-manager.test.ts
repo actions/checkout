@@ -401,6 +401,41 @@ describe('Test fetchDepth and fetchTags options', () => {
       expect.any(Object)
     )
   })
+
+  it('should not pass --filter when filter is not set', async () => {
+    // exec.exec is already mockExec
+    const workingDirectory = 'test'
+    const lfs = false
+    const doSparseCheckout = false
+    git = await commandManager.createCommandManager(
+      workingDirectory,
+      lfs,
+      doSparseCheckout
+    )
+
+    const refSpec = ['refspec1']
+    const options = {
+      fetchDepth: 1
+    }
+
+    await git.fetch(refSpec, options)
+
+    expect(mockExec).toHaveBeenCalledWith(
+      expect.any(String),
+      [
+        '-c',
+        'protocol.version=2',
+        'fetch',
+        '--no-tags',
+        '--prune',
+        '--no-recurse-submodules',
+        '--depth=1',
+        'origin',
+        'refspec1'
+      ],
+      expect.any(Object)
+    )
+  })
 })
 
 describe('repository initialization object format', () => {

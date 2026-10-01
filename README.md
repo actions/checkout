@@ -120,7 +120,8 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # Default: true
     clean: ''
 
-    # Partially clone against a given filter. Overrides sparse-checkout if set.
+    # Partially clone against a given filter. If sparse-checkout is set and filter is
+    # not, the filter is `blob:none`. Set to `none` to fetch without a filter.
     # Default: null
     filter: ''
 

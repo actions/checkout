@@ -215,6 +215,47 @@ describe('input-helper tests', () => {
     expect(settings.commit).toBe('1111111111222222222233333333334444444444')
   })
 
+  describe('filter', () => {
+    it('is not set without sparse checkout', async () => {
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings.filter).toBe(undefined)
+    })
+
+    it('defaults to blob:none with sparse checkout', async () => {
+      inputs['sparse-checkout'] = 'src\ndocs'
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings.sparseCheckout).toEqual(['src', 'docs'])
+      expect(settings.filter).toBe('blob:none')
+    })
+
+    it('uses the given filter with sparse checkout', async () => {
+      inputs['sparse-checkout'] = 'src'
+      inputs.filter = 'tree:0'
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings.filter).toBe('tree:0')
+    })
+
+    it('uses the given filter without sparse checkout', async () => {
+      inputs.filter = 'blob:limit=1m'
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings.filter).toBe('blob:limit=1m')
+    })
+
+    it('is not set when none with sparse checkout', async () => {
+      inputs['sparse-checkout'] = 'src'
+      inputs.filter = 'none'
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings.sparseCheckout).toEqual(['src'])
+      expect(settings.filter).toBe(undefined)
+    })
+
+    it('is not set when none without sparse checkout', async () => {
+      inputs.filter = 'None'
+      const settings: IGitSourceSettings = await inputHelper.getInputs()
+      expect(settings.filter).toBe(undefined)
+    })
+  })
+
   it('sets workflow organization ID', async () => {
     const settings: IGitSourceSettings = await inputHelper.getInputs()
     expect(settings.workflowOrganizationId).toBe(123456)
