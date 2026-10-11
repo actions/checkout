@@ -1,6 +1,30 @@
 [![Build and Test](https://github.com/actions/checkout/actions/workflows/test.yml/badge.svg)](https://github.com/actions/checkout/actions/workflows/test.yml)
 
-# Checkout V4
+# Checkout v7
+
+## What's new
+
+- Safer fork pull request handling: checkout now refuses to check out fork pull request code by default when the workflow is triggered by `pull_request_target` or `workflow_run`. These triggers run with the base repository's `GITHUB_TOKEN`, secrets, and runner access, where executing a fork's code commonly leads to "pwn request" vulnerabilities.
+  - To opt in after [reviewing the risks](https://gh.io/securely-using-pull_request_target), set the new `allow-unsafe-pr-checkout: true` input.
+- Migrated `actions/checkout` to ESM to support new versions of the `@actions/*` packages.
+- Updated direct and transitive dependencies, including security fixes for known vulnerabilities.
+
+# Checkout v6
+
+## What's new
+
+- Improved credential security: `persist-credentials` now stores credentials in a separate file under `$RUNNER_TEMP` instead of directly in `.git/config`
+- No workflow changes required — `git fetch`, `git push`, etc. continue to work automatically
+- Running authenticated git commands from a [Docker container action](https://docs.github.com/actions/sharing-automations/creating-actions/creating-a-docker-container-action) requires Actions Runner [v2.329.0](https://github.com/actions/runner/releases/tag/v2.329.0) or later
+
+# Checkout v5
+
+## What's new
+
+- Updated to the node24 runtime
+  - This requires a minimum Actions Runner version of [v2.327.1](https://github.com/actions/runner/releases/tag/v2.327.1) to run.
+
+# Checkout v4
 
 This action checks-out your repository under `$GITHUB_WORKSPACE`, so your workflow can access it.
 
@@ -10,6 +34,24 @@ The auth token is persisted in the local git config. This enables your scripts t
 
 When Git 2.18 or higher is not in your PATH, falls back to the REST API to download the files.
 
+### Note
+
+Thank you for your interest in this GitHub action, however, right now we are not taking contributions. 
+
+We continue to focus our resources on strategic areas that help our customers be successful while making developers' lives easier. While GitHub Actions remains a key part of this vision, we are allocating resources towards other areas of Actions and are not taking contributions to this repository at this time. The GitHub public roadmap is the best place to follow along for any updates on features we’re working on and what stage they’re in.
+
+We are taking the following steps to better direct requests related to GitHub Actions, including:
+
+1. We will be directing questions and support requests to our [Community Discussions area](https://github.com/orgs/community/discussions/categories/actions)
+
+2. High Priority bugs can be reported through Community Discussions or you can report these to our support team https://support.github.com/contact/bug-report.
+
+3. Security Issues should be handled as per our [security.md](security.md)
+
+We will still provide security updates for this project and fix major breaking changes during this time.
+
+You are welcome to still raise bugs in this repo.
+
 # What's new
 
 Please refer to the [release page](https://github.com/actions/checkout/releases/latest) for the latest release notes.
@@ -18,7 +60,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 <!-- start usage -->
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     # Repository name with owner. For example, actions/checkout
     # Default: ${{ github.repository }}
@@ -126,29 +168,47 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
     # running from unless specified. Example URLs are https://github.com or
     # https://my-ghes-server.example.com
     github-server-url: ''
+
+    # Required to check out fork pull request code from a workflow triggered by
+    # `pull_request_target` or `workflow_run`. These workflows run with the base
+    # repository's GITHUB_TOKEN, secrets, default-branch cache scope, and runner
+    # access; fetching and executing a fork's code in that trusted context commonly
+    # leads to "pwn request" vulnerabilities. Set to `true` only after reviewing the
+    # risks at https://gh.io/securely-using-pull_request_target.
+    # Default: false
+    allow-unsafe-pr-checkout: ''
 ```
 <!-- end usage -->
 
 # Scenarios
 
-- [Fetch only the root files](#Fetch-only-the-root-files)
-- [Fetch only the root files and `.github` and `src` folder](#Fetch-only-the-root-files-and-github-and-src-folder)
-- [Fetch only a single file](#Fetch-only-a-single-file)
-- [Fetch all history for all tags and branches](#Fetch-all-history-for-all-tags-and-branches)
-- [Checkout a different branch](#Checkout-a-different-branch)
-- [Checkout HEAD^](#Checkout-HEAD)
-- [Checkout multiple repos (side by side)](#Checkout-multiple-repos-side-by-side)
-- [Checkout multiple repos (nested)](#Checkout-multiple-repos-nested)
-- [Checkout multiple repos (private)](#Checkout-multiple-repos-private)
-- [Checkout pull request HEAD commit instead of merge commit](#Checkout-pull-request-HEAD-commit-instead-of-merge-commit)
-- [Checkout pull request on closed event](#Checkout-pull-request-on-closed-event)
-- [Push a commit using the built-in token](#Push-a-commit-using-the-built-in-token)
-- [Push a commit to a PR using the built-in token](#Push-a-commit-to-a-PR-using-the-built-in-token)
+- [Checkout V5](#checkout-v5)
+  - [What's new](#whats-new)
+- [Checkout V4](#checkout-v4)
+    - [Note](#note)
+- [What's new](#whats-new-1)
+- [Usage](#usage)
+- [Scenarios](#scenarios)
+  - [Fetch only the root files](#fetch-only-the-root-files)
+  - [Fetch only the root files and `.github` and `src` folder](#fetch-only-the-root-files-and-github-and-src-folder)
+  - [Fetch only a single file](#fetch-only-a-single-file)
+  - [Fetch all history for all tags and branches](#fetch-all-history-for-all-tags-and-branches)
+  - [Checkout a different branch](#checkout-a-different-branch)
+  - [Checkout HEAD^](#checkout-head)
+  - [Checkout multiple repos (side by side)](#checkout-multiple-repos-side-by-side)
+  - [Checkout multiple repos (nested)](#checkout-multiple-repos-nested)
+  - [Checkout multiple repos (private)](#checkout-multiple-repos-private)
+  - [Checkout pull request HEAD commit instead of merge commit](#checkout-pull-request-head-commit-instead-of-merge-commit)
+  - [Checkout pull request on closed event](#checkout-pull-request-on-closed-event)
+  - [Push a commit using the built-in token](#push-a-commit-using-the-built-in-token)
+  - [Push a commit to a PR using the built-in token](#push-a-commit-to-a-pr-using-the-built-in-token)
+- [Recommended permissions](#recommended-permissions)
+- [License](#license)
 
 ## Fetch only the root files
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     sparse-checkout: .
 ```
@@ -156,7 +216,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only the root files and `.github` and `src` folder
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     sparse-checkout: |
       .github
@@ -166,7 +226,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch only a single file
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     sparse-checkout: |
       README.md
@@ -176,7 +236,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Fetch all history for all tags and branches
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     fetch-depth: 0
 ```
@@ -184,7 +244,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout a different branch
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     ref: my-branch
 ```
@@ -192,7 +252,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout HEAD^
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     fetch-depth: 2
 - run: git checkout HEAD^
@@ -202,12 +262,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
   with:
     path: main
 
 - name: Checkout tools repo
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -218,10 +278,10 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
 
 - name: Checkout tools repo
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
   with:
     repository: my-org/my-tools
     path: my-tools
@@ -232,12 +292,12 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 
 ```yaml
 - name: Checkout
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
   with:
     path: main
 
 - name: Checkout private tools
-  uses: actions/checkout@v4
+  uses: actions/checkout@v7
   with:
     repository: my-org/my-private-tools
     token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
@@ -250,7 +310,7 @@ Please refer to the [release page](https://github.com/actions/checkout/releases/
 ## Checkout pull request HEAD commit instead of merge commit
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     ref: ${{ github.event.pull_request.head.sha }}
 ```
@@ -266,7 +326,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 ```
 
 ## Push a commit using the built-in token
@@ -277,7 +337,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: |
           date > generated.txt
           # Note: the following account information will not work on GHES
@@ -299,7 +359,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
       - run: |

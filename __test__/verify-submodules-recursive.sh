@@ -17,7 +17,7 @@ fi
 
 echo "Testing persisted credential"
 pushd ./submodules-recursive/submodule-level-1/submodule-level-2
-git config --local --name-only --get-regexp http.+extraheader && git fetch
+git config --local --includes --name-only --get-regexp http.+extraheader && git fetch
 if [ "$?" != "0" ]; then
     echo "Failed to validate persisted credential"
     popd

@@ -1,6 +1,6 @@
 ---
 name: "@actions/exec"
-version: 1.1.1
+version: 3.0.0
 type: npm
 summary: Actions exec lib
 homepage: https://github.com/actions/toolkit/tree/main/packages/exec

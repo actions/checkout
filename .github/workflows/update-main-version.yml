@@ -11,6 +11,7 @@ on:
         type: choice
         description: The major version to update
         options:
+          - v5
           - v4
           - v3
           - v2
@@ -22,7 +23,7 @@ jobs:
     # Note this update workflow can also be used as a rollback tool.
     # For that reason, it's best to pin `actions/checkout` to a known, stable version
     # (typically, about two releases back).
-    - uses: actions/checkout@v4.1.6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
     - name: Git config

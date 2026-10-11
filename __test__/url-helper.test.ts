@@ -1,4 +1,5 @@
-import * as urlHelper from '../src/url-helper'
+import {jest, describe, it, expect, beforeEach, afterAll} from '@jest/globals'
+import * as urlHelper from '../src/url-helper.js'
 
 describe('getServerUrl tests', () => {
   it('basics', async () => {

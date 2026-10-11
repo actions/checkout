@@ -1,10 +1,10 @@
 import * as assert from 'assert'
 import * as core from '@actions/core'
 import * as fs from 'fs'
-import * as fsHelper from './fs-helper'
+import * as fsHelper from './fs-helper.js'
 import * as io from '@actions/io'
 import * as path from 'path'
-import {IGitCommandManager} from './git-command-manager'
+import {IGitCommandManager} from './git-command-manager.js'
 
 export async function prepareExistingDirectory(
   git: IGitCommandManager | undefined,

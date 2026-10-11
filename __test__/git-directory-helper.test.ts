@@ -1,9 +1,36 @@
-import * as core from '@actions/core'
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach
+} from '@jest/globals'
 import * as fs from 'fs'
-import * as gitDirectoryHelper from '../lib/git-directory-helper'
 import * as io from '@actions/io'
 import * as path from 'path'
-import {IGitCommandManager} from '../lib/git-command-manager'
+import {fileURLToPath} from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Mock @actions/core before loading git-directory-helper
+jest.unstable_mockModule('@actions/core', () => ({
+  error: jest.fn(),
+  warning: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  setFailed: jest.fn(),
+  startGroup: jest.fn(),
+  endGroup: jest.fn()
+}))
+
+// Dynamic imports after mocking
+const core = await import('@actions/core')
+const gitDirectoryHelper = await import('../src/git-directory-helper.js')
+
+type IGitCommandManager =
+  import('../src/git-command-manager.js').IGitCommandManager
 
 const testWorkspace = path.join(__dirname, '_temp', 'git-directory-helper')
 let repositoryPath: string
@@ -19,16 +46,11 @@ describe('git-directory-helper tests', () => {
   })
 
   beforeEach(() => {
-    // Mock error/warning/info/debug
-    jest.spyOn(core, 'error').mockImplementation(jest.fn())
-    jest.spyOn(core, 'warning').mockImplementation(jest.fn())
-    jest.spyOn(core, 'info').mockImplementation(jest.fn())
-    jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+    jest.clearAllMocks()
   })
 
   afterEach(() => {
-    // Unregister mocks
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
   })
 
   const cleansWhenCleanTrue = 'cleans when clean true'
@@ -81,7 +103,7 @@ describe('git-directory-helper tests', () => {
     // Arrange
     await setup(doesNotCheckoutDetachWhenNotAlreadyDetached)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    const mockIsDetached = git.isDetached as jest.Mock<any, any>
+    const mockIsDetached = git.isDetached as jest.Mock<any>
     mockIsDetached.mockImplementation(async () => {
       return true
     })
@@ -132,7 +154,7 @@ describe('git-directory-helper tests', () => {
     // Arrange
     await setup(removesContentsWhenCleanFails)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    let mockTryClean = git.tryClean as jest.Mock<any, any>
+    let mockTryClean = git.tryClean as jest.Mock<any>
     mockTryClean.mockImplementation(async () => {
       return false
     })
@@ -210,7 +232,7 @@ describe('git-directory-helper tests', () => {
     // Arrange
     await setup(removesContentsWhenResetFails)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    let mockTryReset = git.tryReset as jest.Mock<any, any>
+    let mockTryReset = git.tryReset as jest.Mock<any>
     mockTryReset.mockImplementation(async () => {
       return false
     })
@@ -260,7 +282,7 @@ describe('git-directory-helper tests', () => {
     // Arrange
     await setup(removesLocalBranches)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    const mockBranchList = git.branchList as jest.Mock<any, any>
+    const mockBranchList = git.branchList as jest.Mock<any>
     mockBranchList.mockImplementation(async (remote: boolean) => {
       return remote ? [] : ['local-branch-1', 'local-branch-2']
     })
@@ -291,7 +313,7 @@ describe('git-directory-helper tests', () => {
 
     //mock bad submodule
 
-    const submoduleStatus = git.submoduleStatus as jest.Mock<any, any>
+    const submoduleStatus = git.submoduleStatus as jest.Mock<any>
     submoduleStatus.mockImplementation(async (remote: boolean) => {
       return false
     })
@@ -319,7 +341,7 @@ describe('git-directory-helper tests', () => {
     await setup(doesNotCleanWhenSubmoduleStatusIsTrue)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
 
-    const submoduleStatus = git.submoduleStatus as jest.Mock<any, any>
+    const submoduleStatus = git.submoduleStatus as jest.Mock<any>
     submoduleStatus.mockImplementation(async (remote: boolean) => {
       return true
     })
@@ -381,7 +403,7 @@ describe('git-directory-helper tests', () => {
     // Arrange
     await setup(removesAncestorRemoteBranch)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    const mockBranchList = git.branchList as jest.Mock<any, any>
+    const mockBranchList = git.branchList as jest.Mock<any>
     mockBranchList.mockImplementation(async (remote: boolean) => {
       return remote ? ['origin/remote-branch-1', 'origin/remote-branch-2'] : []
     })
@@ -411,7 +433,7 @@ describe('git-directory-helper tests', () => {
     // Arrange
     await setup(removesDescendantRemoteBranches)
     await fs.promises.writeFile(path.join(repositoryPath, 'my-file'), '')
-    const mockBranchList = git.branchList as jest.Mock<any, any>
+    const mockBranchList = git.branchList as jest.Mock<any>
     mockBranchList.mockImplementation(async (remote: boolean) => {
       return remote
         ? ['origin/remote-branch-1/conflict', 'origin/remote-branch-2']
@@ -471,6 +493,7 @@ async function setup(testName: string): Promise<void> {
     configExists: jest.fn(),
     fetch: jest.fn(),
     getDefaultBranch: jest.fn(),
+    getSubmoduleConfigPaths: jest.fn(async () => []),
     getWorkingDirectory: jest.fn(() => repositoryPath),
     init: jest.fn(),
     isDetached: jest.fn(),
@@ -493,15 +516,18 @@ async function setup(testName: string): Promise<void> {
       return true
     }),
     tryConfigUnset: jest.fn(),
+    tryConfigUnsetValue: jest.fn(),
     tryDisableAutomaticGarbageCollection: jest.fn(),
     tryGetFetchUrl: jest.fn(async () => {
       // Sanity check - this function shouldn't be called when the .git directory doesn't exist
       await fs.promises.stat(path.join(repositoryPath, '.git'))
       return repositoryUrl
     }),
+    tryGetConfigValues: jest.fn(),
+    tryGetConfigKeys: jest.fn(),
     tryReset: jest.fn(async () => {
       return true
     }),
     version: jest.fn()
-  }
+  } as unknown as IGitCommandManager
 }

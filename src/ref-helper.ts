@@ -1,7 +1,7 @@
-import {IGitCommandManager} from './git-command-manager'
+import {IGitCommandManager} from './git-command-manager.js'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {getServerApiUrl, isGhes} from './url-helper'
+import {getServerApiUrl, isGhes} from './url-helper.js'
 
 export const tagsRefSpec = '+refs/tags/*:refs/tags/*'
 
@@ -76,55 +76,75 @@ export function getRefSpecForAllHistory(ref: string, commit: string): string[] {
   return result
 }
 
-export function getRefSpec(ref: string, commit: string): string[] {
+export function getRefSpec(
+  ref: string,
+  commit: string,
+  fetchTags?: boolean
+): string[] {
   if (!ref && !commit) {
     throw new Error('Args ref and commit cannot both be empty')
   }
 
   const upperRef = (ref || '').toUpperCase()
+  const result: string[] = []
+
+  // When fetchTags is true, always include the tags refspec
+  if (fetchTags) {
+    result.push(tagsRefSpec)
+  }
 
   // SHA
   if (commit) {
     // refs/heads
     if (upperRef.startsWith('REFS/HEADS/')) {
       const branch = ref.substring('refs/heads/'.length)
-      return [`+${commit}:refs/remotes/origin/${branch}`]
+      result.push(`+${commit}:refs/remotes/origin/${branch}`)
     }
     // refs/pull/
     else if (upperRef.startsWith('REFS/PULL/')) {
       const branch = ref.substring('refs/pull/'.length)
-      return [`+${commit}:refs/remotes/pull/${branch}`]
+      result.push(`+${commit}:refs/remotes/pull/${branch}`)
     }
     // refs/tags/
     else if (upperRef.startsWith('REFS/TAGS/')) {
-      return [`+${commit}:${ref}`]
+      if (!fetchTags) {
+        result.push(`+${ref}:${ref}`)
+      }
     }
     // Otherwise no destination ref
     else {
-      return [commit]
+      result.push(commit)
     }
   }
   // Unqualified ref, check for a matching branch or tag
   else if (!upperRef.startsWith('REFS/')) {
-    return [
-      `+refs/heads/${ref}*:refs/remotes/origin/${ref}*`,
-      `+refs/tags/${ref}*:refs/tags/${ref}*`
-    ]
+    result.push(`+refs/heads/${ref}*:refs/remotes/origin/${ref}*`)
+    if (!fetchTags) {
+      result.push(`+refs/tags/${ref}*:refs/tags/${ref}*`)
+    }
   }
   // refs/heads/
   else if (upperRef.startsWith('REFS/HEADS/')) {
     const branch = ref.substring('refs/heads/'.length)
-    return [`+${ref}:refs/remotes/origin/${branch}`]
+    result.push(`+${ref}:refs/remotes/origin/${branch}`)
   }
   // refs/pull/
   else if (upperRef.startsWith('REFS/PULL/')) {
     const branch = ref.substring('refs/pull/'.length)
-    return [`+${ref}:refs/remotes/pull/${branch}`]
+    result.push(`+${ref}:refs/remotes/pull/${branch}`)
   }
   // refs/tags/
-  else {
-    return [`+${ref}:${ref}`]
+  else if (upperRef.startsWith('REFS/TAGS/')) {
+    if (!fetchTags) {
+      result.push(`+${ref}:${ref}`)
+    }
   }
+  // Other refs
+  else {
+    result.push(`+${ref}:${ref}`)
+  }
+
+  return result
 }
 
 /**
@@ -170,8 +190,10 @@ export async function testRef(
   // refs/tags/
   else if (upperRef.startsWith('REFS/TAGS/')) {
     const tagName = ref.substring('refs/tags/'.length)
+    // Use ^{commit} to dereference annotated tags to their underlying commit
     return (
-      (await git.tagExists(tagName)) && commit === (await git.revParse(ref))
+      (await git.tagExists(tagName)) &&
+      commit === (await git.revParse(`${ref}^{commit}`))
     )
   }
   // Unexpected
@@ -236,7 +258,9 @@ export async function checkCommitInfo(
     }
 
     // Extract details from message
-    const match = commitInfo.match(/Merge ([0-9a-f]{40}) into ([0-9a-f]{40})/)
+    const match = commitInfo.match(
+      /Merge ([0-9a-f]{40}|[0-9a-f]{64}) into ([0-9a-f]{40}|[0-9a-f]{64})/
+    )
     if (!match) {
       core.debug('Unexpected message format')
       return
@@ -268,7 +292,7 @@ export async function checkCommitInfo(
   }
 }
 
-function fromPayload(path: string): any {
+export function fromPayload(path: string): any {
   return select(github.context.payload, path)
 }
 

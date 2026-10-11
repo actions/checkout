@@ -1,13 +1,46 @@
+import {jest, describe, it, expect, beforeEach, afterEach} from '@jest/globals'
 import * as assert from 'assert'
-import * as refHelper from '../lib/ref-helper'
-import {IGitCommandManager} from '../lib/git-command-manager'
+
+// Mutable mock github context
+const mockGithubContext: any = {
+  eventName: '',
+  payload: {},
+  repo: {owner: 'some-owner', repo: 'some-repo'},
+  ref: '',
+  sha: ''
+}
+
+// Mock @actions/core
+const mockDebug = jest.fn()
+jest.unstable_mockModule('@actions/core', () => ({
+  debug: mockDebug,
+  info: jest.fn(),
+  warning: jest.fn(),
+  error: jest.fn(),
+  setFailed: jest.fn()
+}))
+
+// Mock @actions/github
+const mockGetOctokit = jest.fn()
+jest.unstable_mockModule('@actions/github', () => ({
+  context: mockGithubContext,
+  getOctokit: mockGetOctokit
+}))
+
+// Dynamic imports after mocking
+const refHelper = await import('../src/ref-helper.js')
+type IGitCommandManager =
+  import('../src/git-command-manager.js').IGitCommandManager
 
 const commit = '1234567890123456789012345678901234567890'
+const sha256Commit =
+  '1234567890123456789012345678901234567890123456789012345678901234'
 let git: IGitCommandManager
 
 describe('ref-helper tests', () => {
   beforeEach(() => {
     git = {} as unknown as IGitCommandManager
+    jest.clearAllMocks()
   })
 
   it('getCheckoutInfo requires git', async () => {
@@ -34,6 +67,12 @@ describe('ref-helper tests', () => {
   it('getCheckoutInfo sha only', async () => {
     const checkoutInfo = await refHelper.getCheckoutInfo(git, '', commit)
     expect(checkoutInfo.ref).toBe(commit)
+    expect(checkoutInfo.startPoint).toBeFalsy()
+  })
+
+  it('getCheckoutInfo sha-256 only', async () => {
+    const checkoutInfo = await refHelper.getCheckoutInfo(git, '', sha256Commit)
+    expect(checkoutInfo.ref).toBe(sha256Commit)
     expect(checkoutInfo.startPoint).toBeFalsy()
   })
 
@@ -152,7 +191,20 @@ describe('ref-helper tests', () => {
   it('getRefSpec sha + refs/tags/', async () => {
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit)
     expect(refSpec.length).toBe(1)
-    expect(refSpec[0]).toBe(`+${commit}:refs/tags/my-tag`)
+    expect(refSpec[0]).toBe(`+refs/tags/my-tag:refs/tags/my-tag`)
+  })
+
+  it('getRefSpec sha + refs/tags/ with fetchTags', async () => {
+    const refSpec = refHelper.getRefSpec('refs/tags/my-tag', commit, true)
+    expect(refSpec.length).toBe(1)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+  })
+
+  it('getRefSpec sha + refs/heads/ with fetchTags', async () => {
+    const refSpec = refHelper.getRefSpec('refs/heads/my/branch', commit, true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe(`+${commit}:refs/remotes/origin/my/branch`)
   })
 
   it('getRefSpec sha only', async () => {
@@ -166,6 +218,13 @@ describe('ref-helper tests', () => {
     expect(refSpec.length).toBe(2)
     expect(refSpec[0]).toBe('+refs/heads/my-ref*:refs/remotes/origin/my-ref*')
     expect(refSpec[1]).toBe('+refs/tags/my-ref*:refs/tags/my-ref*')
+  })
+
+  it('getRefSpec unqualified ref only with fetchTags', async () => {
+    const refSpec = refHelper.getRefSpec('my-ref', '', true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe('+refs/heads/my-ref*:refs/remotes/origin/my-ref*')
   })
 
   it('getRefSpec refs/heads/ only', async () => {
@@ -186,5 +245,156 @@ describe('ref-helper tests', () => {
     const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '')
     expect(refSpec.length).toBe(1)
     expect(refSpec[0]).toBe('+refs/tags/my-tag:refs/tags/my-tag')
+  })
+
+  it('getRefSpec refs/tags/ only with fetchTags', async () => {
+    const refSpec = refHelper.getRefSpec('refs/tags/my-tag', '', true)
+    expect(refSpec.length).toBe(1)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+  })
+
+  it('getRefSpec refs/heads/ only with fetchTags', async () => {
+    const refSpec = refHelper.getRefSpec('refs/heads/my/branch', '', true)
+    expect(refSpec.length).toBe(2)
+    expect(refSpec[0]).toBe('+refs/tags/*:refs/tags/*')
+    expect(refSpec[1]).toBe(
+      '+refs/heads/my/branch:refs/remotes/origin/my/branch'
+    )
+  })
+
+  describe('checkCommitInfo', () => {
+    const repositoryOwner = 'some-owner'
+    const repositoryName = 'some-repo'
+    const ref = 'refs/pull/123/merge'
+    const sha1Head = '1111111111222222222233333333334444444444'
+    const sha1Base = 'aaaaaaaaaabbbbbbbbbbccccccccccdddddddddd'
+    const sha256Head =
+      '1111111111222222222233333333334444444444555555555566666666667777'
+    const sha256Base =
+      'aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffff0000'
+    let repoGetSpy: jest.Mock<any>
+    let originalEventName: string
+    let originalPayload: unknown
+    let originalRef: string
+    let originalSha: string
+
+    function setPullRequestContext(
+      expectedHeadSha: string,
+      expectedBaseSha: string,
+      mergeCommit: string
+    ): void {
+      mockGithubContext.eventName = 'pull_request'
+      mockGithubContext.ref = ref
+      mockGithubContext.sha = mergeCommit
+      mockGithubContext.payload = {
+        action: 'synchronize',
+        after: expectedHeadSha,
+        number: 123,
+        pull_request: {
+          base: {
+            sha: expectedBaseSha
+          }
+        },
+        repository: {
+          private: false
+        }
+      }
+    }
+
+    beforeEach(() => {
+      originalEventName = mockGithubContext.eventName
+      originalPayload = mockGithubContext.payload
+      originalRef = mockGithubContext.ref
+      originalSha = mockGithubContext.sha
+
+      mockGithubContext.repo = {
+        owner: repositoryOwner,
+        repo: repositoryName
+      }
+
+      repoGetSpy = jest.fn(async () => ({}))
+      mockGetOctokit.mockReturnValue({
+        rest: {
+          repos: {
+            get: repoGetSpy
+          }
+        }
+      } as any)
+    })
+
+    afterEach(() => {
+      mockGithubContext.eventName = originalEventName
+      mockGithubContext.payload = originalPayload
+      mockGithubContext.ref = originalRef
+      mockGithubContext.sha = originalSha
+      jest.clearAllMocks()
+    })
+
+    it('returns early for SHA-1 merge commit', async () => {
+      setPullRequestContext(sha1Head, sha1Base, commit)
+
+      await refHelper.checkCommitInfo(
+        'token',
+        `Merge ${sha1Head} into ${sha1Base}`,
+        repositoryOwner,
+        repositoryName,
+        ref,
+        commit
+      )
+
+      expect(mockGetOctokit).not.toHaveBeenCalled()
+      expect(repoGetSpy).not.toHaveBeenCalled()
+    })
+
+    it('matches SHA-256 merge commit info', async () => {
+      const actualHeadSha =
+        '9999999999888888888877777777776666666666555555555544444444443333'
+      setPullRequestContext(sha256Head, sha256Base, sha256Commit)
+
+      await refHelper.checkCommitInfo(
+        'token',
+        `Merge ${actualHeadSha} into ${sha256Base}`,
+        repositoryOwner,
+        repositoryName,
+        ref,
+        sha256Commit
+      )
+
+      expect(mockGetOctokit).toHaveBeenCalledWith(
+        'token',
+        expect.objectContaining({
+          userAgent: expect.stringContaining(
+            `expected_head_sha=${sha256Head};actual_head_sha=${actualHeadSha}`
+          )
+        })
+      )
+      expect(repoGetSpy).toHaveBeenCalledWith({
+        owner: repositoryOwner,
+        repo: repositoryName
+      })
+      expect(mockDebug).toHaveBeenCalledWith(
+        `Expected head sha ${sha256Head}; actual head sha ${actualHeadSha}`
+      )
+      expect(mockDebug).not.toHaveBeenCalledWith('Unexpected message format')
+    })
+
+    it('does not match 50-char hex as a valid merge', async () => {
+      const invalidHeadSha =
+        '99999999998888888888777777777766666666665555555555'
+      setPullRequestContext(sha1Head, sha1Base, commit)
+
+      await refHelper.checkCommitInfo(
+        'token',
+        `Merge ${invalidHeadSha} into ${sha1Base}`,
+        repositoryOwner,
+        repositoryName,
+        ref,
+        commit
+      )
+
+      expect(mockGetOctokit).not.toHaveBeenCalled()
+      expect(repoGetSpy).not.toHaveBeenCalled()
+      expect(mockDebug).toHaveBeenCalledWith('Unexpected message format')
+    })
   })
 })
