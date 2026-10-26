@@ -48,10 +48,21 @@
     "eslint-plugin-github": "^6.0.0",
     "eslint-plugin-jest": "^29.12.1",
     "jest": "^29.7.0",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "4.3.2",
     "prettier": "^3.8.4",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
+  },
+  "overrides": {
+    "undici@6": "6.29.1",
+    "@babel/core@7": "7.29.7",
+    "baseline-browser-mapping@2": "2.11.33",
+    "brace-expansion@1": "1.1.21",
+    "brace-expansion@5": "5.0.12",
+    "browserslist@4": "4.29.5",
+    "handlebars@4": "4.7.10",
+    "js-yaml@3": "3.15.2",
+    "js-yaml@4": "4.3.2"
   }
 }
