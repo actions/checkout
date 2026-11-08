@@ -14,6 +14,8 @@ import {GitVersion} from './git-version.js'
 // sparse-checkout not [well-]supported before 2.28 (see https://github.com/actions/checkout/issues/1386)
 export const MinimumGitVersion = new GitVersion('2.18')
 export const MinimumGitSparseCheckoutVersion = new GitVersion('2.28')
+const MinimumGitRefetchVersion = new GitVersion('2.36')
+const MinimumGitFetchWithoutWritingHeadVersion = new GitVersion('2.29')
 
 export interface IGitCommandManager {
   branchDelete(remote: boolean, branch: string): Promise<void>
@@ -292,8 +294,22 @@ class GitCommandManager {
       args.push('--progress')
     }
 
+    const inheritedFilter =
+      !options.filter &&
+      (await this.configExists('remote.origin.partialclonefilter'))
+    const restoreFullHistory =
+      inheritedFilter && !(options.fetchDepth && options.fetchDepth > 0)
+
     if (options.filter) {
       args.push(`--filter=${options.filter}`)
+    } else if (inheritedFilter) {
+      args.push('--no-filter')
+      if (
+        restoreFullHistory &&
+        this.gitVersion.checkMinimum(MinimumGitRefetchVersion)
+      ) {
+        args.push('--refetch')
+      }
     }
 
     if (options.fetchDepth && options.fetchDepth > 0) {
@@ -315,6 +331,52 @@ class GitCommandManager {
     await retryHelper.execute(async () => {
       await that.execGit(args)
     })
+
+    if (restoreFullHistory) {
+      const canSkipFetchHead = this.gitVersion.checkMinimum(
+        MinimumGitFetchWithoutWritingHeadVersion
+      )
+      let fetchedMissingObjects = false
+      let previousMissing = new Set<string>()
+      while (true) {
+        const output = await this.execGit(
+          ['rev-list', '--objects', '--all', '--quiet', '--missing=print'],
+          false,
+          true
+        )
+        const missing = [
+          ...output.stdout.matchAll(/^\?([0-9a-f]{40}|[0-9a-f]{64})\r?$/gm)
+        ].map(match => match[1])
+        if (!missing.length) {
+          break
+        }
+        if (missing.some(oid => previousMissing.has(oid))) {
+          throw new Error(
+            'Unable to fetch all objects from the previous partial checkout.'
+          )
+        }
+        previousMissing = new Set(missing)
+        for (let i = 0; i < missing.length; i += 100) {
+          await this.execGit([
+            '-c',
+            'protocol.version=2',
+            'fetch',
+            '--no-tags',
+            '--no-recurse-submodules',
+            '--no-filter',
+            canSkipFetchHead ? '--no-write-fetch-head' : '--append',
+            'origin',
+            ...missing.slice(i, i + 100)
+          ])
+        }
+        fetchedMissingObjects = true
+      }
+      if (fetchedMissingObjects && !canSkipFetchHead) {
+        await this.execGit(args.filter(arg => arg !== '--unshallow'))
+      }
+      await this.tryConfigUnset('remote.origin.partialclonefilter')
+      await this.tryConfigUnset('remote.origin.promisor')
+    }
   }
 
   async getDefaultBranch(repositoryUrl: string): Promise<string> {
